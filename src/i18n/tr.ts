@@ -120,7 +120,7 @@ export const tr: typeof en = {
     body: [
       "Bu site çerez kullanmaz ve sizi başka sitelerde takip etmez.",
       "İletişim formunu gönderdiğinizde adınız, e-posta adresiniz ve mesajınız Web3Forms hizmeti aracılığıyla proje ekibine e-postayla iletilir. Bu bilgiler yalnızca mesajınıza yanıt vermek için kullanılır ve üçüncü kişilerle paylaşılmaz.",
-      "Ziyaretleri, çerez kullanmayan ve kişisel veri saklamayan açık kaynak bir hizmet olan GoatCounter ile sayıyoruz. Yalnızca ziyaret edilen sayfa, gelinen site, tarayıcı türü, ekran boyutu ve ülke kaydedilir.",
+      "Ziyaretleri çerez kullanmadan, IP adresi ya da başka bir kişisel veri saklamadan kendimiz sayıyoruz. Her sayfa görüntülemesi için yalnızca tarih, sayfa, gelinen web sitesi, cihaz türü ve ekran boyutu kaydedilir. Bu istatistikler projenin kendi tablosunda tutulur ve proje raporlamasında kullanılır.",
       "Verilerinizin silinmesini istemek için iletişim sayfasından bize ulaşın.",
     ],
   },

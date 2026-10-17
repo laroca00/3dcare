@@ -118,7 +118,7 @@ export const en = {
     body: [
       "This website does not use cookies and does not track you across sites.",
       "When you send the contact form, your name, email address and message are forwarded by email to the project team through the Web3Forms service. They are used only to answer your message and are not shared with third parties.",
-      "We count visits with GoatCounter, an open-source service that uses no cookies and stores no personal data. It records only the page, the referring site, the browser type, the screen size and the country.",
+      "We count visits ourselves, without cookies and without storing IP addresses or any other personal data. For each page view we record only the date, the page, the referring website, the device type and the screen size. These statistics are kept in the project’s own spreadsheet and used for project reporting.",
       "To ask for your data to be deleted, contact us through the contact page.",
     ],
   },
