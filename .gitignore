@@ -1,9 +1,3 @@
-# Local tooling (not part of the project)
-CLAUDE.md
-.claude/
-.agents/
-skills-lock.json
-
 # Application documents
 *.pdf
 
@@ -16,3 +10,7 @@ out/
 .env*
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+/coverage
