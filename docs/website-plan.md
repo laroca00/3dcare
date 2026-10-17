@@ -46,7 +46,7 @@ Her sayfa `/en/...` ve `/tr/...` altında yayınlanır.
 - **3D önizleme:** Model sayfasında tarayıcıda döndürülebilir STL görüntüleyici (three.js / react-three-fiber). Sadece o sayfada yüklenir.
 - **Model dosyaları:** Repoda `models/` klasöründe tutulur (dosya başı 100 MB sınırı). Büyük paketler GitHub Releases'a konur.
 - **İstatistik:** GoatCounter (ücretsiz, çerezsiz, KVKK/GDPR uyumlu). Çerez bandı gerekmez.
-- **Formlar:** İletişim → Web3Forms (site içi, e-postaya iletir). Merkez ağı başvurusu → Google Forms (yanıt tablosu DTSER ile paylaşılır). Model geri bildirimi → Google Forms + GitHub Issues. Mesajlar `info@3dcare.eu` adresine gider; alan adı alınana kadar geçici adres kullanılır.
+- **Formlar:** İletişim → Web3Forms (site içi, e-postaya iletir). Merkez ağı başvurusu → Google Forms (yanıt tablosu DTSER ile paylaşılır). Model geri bildirimi → Google Forms + GitHub Issues. Mesajlar `info@3dcare.eu` adresine gider; alan adı alınana kadar geçici olarak proje sorumlusunun kişisel adresi kullanılır (adres repoda yazılmaz).
 - **Videolar:** Tanıtım ve yaygınlaştırma videoları Remotion ile koddan üretilir (ortak dillerine çevrilmiş altyazılı versiyonlar kolay çıkar). Videolar YouTube'a yüklenir, siteye gömülür.
 
 ## 4. Lisanslar
@@ -73,9 +73,9 @@ Proje engelli bireylere yönelik olduğu için site WCAG 2.2 AA hedefleyecek:
 ## 7. Görsel kimlik (sıfırdan)
 
 Hazırlanacaklar:
-- Logo önerileri (3 alternatif). Fikir: katmanlı 3D baskı çizgileri + el/destek motifi.
-- Renk paleti (yüksek kontrastlı, AB mavisiyle çakışmayan)
-- Tipografi (Türkçe ve Baltık/Slav karakterlerini, örn. ş, ğ, č, ā, ė, destekleyen açık kaynak font)
+- **Logo:** "Duvarlar" seçildi. Yukarıdan bakılan bir baskının iç içe duvarları "C" (Care) harfini oluşturuyor. Dosyalar: `design/logo/`.
+- **Renkler:** Mürekkep `#15232B`, Kağıt `#F5F7F6`, Filament `#00756A`, Duvar `#5B3FA8`, Aktif katman `#F5C400`, Tabla `#DCE3E0`.
+- **Yazı:** Inter (SF Pro'ya en yakın açık kaynak font; SF Pro'nun lisansı Apple dışı sitelerde kullanıma izin vermiyor). Tüm ortak dillerinin karakterlerini destekliyor.
 - Model kartları için tutarlı fotoğraf/render şablonu
 
 ## 8. Aşamalar
@@ -101,5 +101,5 @@ Hazırlanacaklar:
 
 1. **Alan adı:** `3dcare.eu` seçildi (Ekim 2026'da boş görünüyordu). .eu yalnızca AB/AEA'da yerleşik kurumlarca kaydedilebilir. Bu yüzden kaydı HR, LV, MT veya LT ortağı yapmalı. Kayıt tamamlanana kadar site `laroca00.github.io/3dcare` adresinde yayınlanır.
 2. **Model lisansı:** Açık. Modeller gelene kadar şablon modeller kullanılacak.
-3. **Formlar:** Karma yapı seçildi (bkz. bölüm 3). Hedef adres `info@3dcare.eu`; geçici adres belirlenecek.
+3. **Formlar:** Karma yapı seçildi (bkz. bölüm 3). Hedef adres `info@3dcare.eu`; geçici adres proje sorumlusunun kişisel adresi.
 4. **Proje/sözleşme numarası:** Bilinmiyor. Koordinatör DTSER'den istenecek (Fondacija Tempus sözleşmesinde, `2026-1-RS01-KA220-ADU-000…` biçiminde). Gelene kadar footer'da yer tutucu kullanılacak.

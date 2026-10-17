@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D Care kimlik önerisi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F5F7F6;
+    --ink: #15232B;
+    --teal: #00756A;
+    --violet: #5B3FA8;
+    --layer: #F5C400;
+    --plate: #DCE3E0;
+    --muted: #4A5A62;
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: var(--font);
+  }
+  * { box-sizing: border-box; }
+  body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 1.125rem; line-height: 1.55; }
+  main { max-width: 1080px; margin: 0 auto; padding: 48px 16px 96px; }
+  h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.025em; }
+  h2 { font-size: 1.75rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; margin: 72px 0 8px; }
+  h3 { font-size: 1.25rem; margin: 0 0 4px; }
+  p { max-width: 68ch; margin: 0 0 12px; }
+  .lede { color: var(--muted); font-size: 1.25rem; }
+  :focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; }
+
+  /* Logo concepts */
+  .concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-top: 24px; }
+  .concept { background: #fff; border: 2px solid var(--plate); border-radius: 20px; padding: 24px; }
+  .concept .lockup { display: flex; align-items: center; gap: 14px; padding: 28px 0 32px; }
+  .concept .lockup svg { width: 64px; height: 64px; flex: none; }
+  .wordmark { font-weight: 700; font-size: 2rem; letter-spacing: -0.03em; line-height: 1; }
+  .wordmark small { display: block; font-weight: 500; font-size: 0.8rem; letter-spacing: 0; color: var(--muted); margin-top: 6px; }
+  .variants { display: flex; gap: 12px; align-items: center; border-top: 2px solid var(--plate); padding-top: 16px; }
+  .variants .dark { background: var(--ink); border-radius: 12px; padding: 10px; display: flex; }
+  .variants .dark svg { width: 40px; height: 40px; }
+  .variants .tiny svg { width: 20px; height: 20px; display: block; }
+  .variants .mid svg { width: 32px; height: 32px; display: block; }
+  .concept p { font-size: 1rem; color: var(--muted); margin-top: 12px; }
+
+  /* Palette */
+  .palette { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 24px; }
+  .swatch { border-radius: 16px; overflow: hidden; border: 2px solid var(--plate); background: #fff; }
+  .swatch .chip { height: 96px; display: flex; align-items: flex-end; padding: 10px 12px; font-weight: 700; }
+  .swatch dl { margin: 0; padding: 10px 12px 12px; font-size: 0.9rem; }
+  .swatch dt { font-weight: 700; }
+  .swatch dd { margin: 0; color: var(--muted); }
+  .swatch code { font-family: var(--mono); font-size: 0.85rem; }
+
+  /* Type */
+  .type { margin-top: 24px; display: grid; gap: 16px; }
+  .type .row { display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: baseline; border-bottom: 2px solid var(--plate); padding-bottom: 16px; }
+  .type .meta { font-size: 0.9rem; color: var(--muted); }
+  .t-display { font-size: clamp(2.25rem, 5vw, 3.5rem); font-weight: 700; line-height: 1.05; letter-spacing: -0.035em; }
+  .t-h2 { font-size: 1.75rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; }
+  .t-body { font-size: 1.125rem; }
+  .t-mono { font-size: 1rem; font-variant-numeric: tabular-nums; }
+  .langs { font-size: 1.25rem; line-height: 1.7; }
+  .langs span { color: var(--muted); font-size: 0.9rem; margin-right: 6px; }
+
+  /* Hero mockup */
+  .browser { margin-top: 24px; border: 2px solid var(--plate); border-radius: 20px; overflow: hidden; background: #fff; }
+  .browser .bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-bottom: 2px solid var(--plate); gap: 16px; flex-wrap: wrap; }
+  .browser .bar .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.03em; font-size: 1.25rem; }
+  .browser .bar svg { width: 32px; height: 32px; }
+  .browser nav { display: flex; gap: 20px; font-size: 1rem; flex-wrap: wrap; }
+  .browser nav a { color: var(--ink); text-decoration: none; }
+  .browser nav a[aria-current] { text-decoration: underline; text-decoration-color: var(--layer); text-decoration-thickness: 4px; text-underline-offset: 6px; }
+  .hero { display: grid; grid-template-columns: 1.1fr 1fr; gap: 32px; padding: 56px 40px; align-items: center; }
+  .hero h3 { font-size: clamp(2rem, 4.4vw, 3.25rem); line-height: 1.05; font-weight: 700; letter-spacing: -0.035em; margin: 0 0 16px; }
+  .hero p { color: var(--muted); font-size: 1.2rem; }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+  .btn { display: inline-block; padding: 14px 22px; border-radius: 999px; font-weight: 700; text-decoration: none; font-size: 1.05rem; }
+  .btn.primary { background: var(--teal); color: #fff; }
+  .btn.secondary { background: transparent; color: var(--ink); border: 2px solid var(--ink); }
+  .hero figure { margin: 0; }
+  .hero figcaption { margin-top: 12px; }
+  .settings { display: flex; flex-wrap: wrap; gap: 8px 20px; font-variant-numeric: tabular-nums; font-size: 0.9rem; color: var(--muted); margin: 0; }
+  .settings div { display: flex; gap: 6px; }
+  .settings dt { color: var(--ink); }
+  .settings dd { margin: 0; }
+  .eu { display: flex; align-items: center; gap: 16px; padding: 18px 40px; border-top: 2px solid var(--plate); font-size: 0.85rem; color: var(--muted); }
+  .eu .flag { width: 66px; height: 44px; background: #003399; flex: none; display: grid; place-items: center; color: #FFCC00; font-size: 0.7rem; }
+
+  .note { margin-top: 72px; padding: 24px; border-left: 6px solid var(--layer); background: #fff; border-radius: 0 16px 16px 0; }
+  .note ul { margin: 8px 0 0; padding-left: 20px; }
+
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; padding: 32px 20px; }
+    .eu { padding: 16px 20px; }
+    .type .row { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+<!-- Reusable marks -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- A: Katmanlar -->
+    <symbol id="mark-a" viewBox="0 0 64 64">
+      <rect x="8"  y="5"  width="48" height="5.5" rx="2.75" fill="var(--layer)"/>
+      <rect x="10" y="13.5" width="44" height="5.5" rx="2.75" fill="currentColor"/>
+      <rect x="13" y="22" width="38" height="5.5" rx="2.75" fill="currentColor"/>
+      <rect x="15" y="30.5" width="34" height="5.5" rx="2.75" fill="currentColor"/>
+      <rect x="13" y="39" width="38" height="5.5" rx="2.75" fill="currentColor"/>
+      <rect x="10" y="47.5" width="44" height="5.5" rx="2.75" fill="currentColor"/>
+      <rect x="8"  y="56" width="48" height="5.5" rx="2.75" fill="currentColor"/>
+    </symbol>
+    <!-- B: Duvarlar -->
+    <symbol id="mark-b" viewBox="0 0 64 64">
+      <g fill="none" stroke-width="5.5" stroke-linecap="round">
+        <path d="M50.38 13.62 A26 26 0 1 0 50.38 50.38" stroke="currentColor"/>
+        <path d="M44.73 19.27 A18 18 0 1 0 44.73 44.73" stroke="var(--teal)"/>
+        <path d="M39.07 24.93 A10 10 0 1 0 39.07 39.07" stroke="var(--violet)"/>
+      </g>
+      <circle cx="32" cy="32" r="3.5" fill="var(--layer)"/>
+    </symbol>
+    <!-- C: Baskı yolu -->
+    <symbol id="mark-c" viewBox="0 0 64 64">
+      <path d="M10 9 H48 A6.5 6.5 0 0 1 48 22 H16 A6.5 6.5 0 0 0 16 35 H48 A6.5 6.5 0 0 1 48 48 H16 A6.5 6.5 0 0 0 16 61 H40"
+            fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="50" cy="61" r="3" fill="var(--layer)" stroke="currentColor" stroke-width="0"/>
+    </symbol>
+  </defs>
+</svg>
+
+<main>
+  <h1>3D Care görsel kimlik önerisi</h1>
+  <p class="lede">Seçilen logo: <strong>B. Duvarlar</strong>. A ve C karşılaştırma için sayfada duruyor. Yazı ailesi Inter olarak güncellendi.</p>
+
+  <h2>Logo yönleri</h2>
+  <p>Her öneri büyük boyutta, koyu zeminde ve sekme ikonu (favicon) boyutunda gösteriliyor. Logo 16 piksele küçüldüğünde de okunabilmeli.</p>
+
+  <div class="concepts">
+    <section class="concept" aria-labelledby="ca">
+      <div class="lockup" style="color:var(--ink)">
+        <svg role="img" aria-label="Katmanlar işareti"><use href="#mark-a"/></svg>
+        <div class="wordmark">3D Care<small>Printing a More Inclusive Future</small></div>
+      </div>
+      <h3 id="ca">A. Katmanlar</h3>
+      <div class="variants">
+        <span class="dark" style="color:var(--paper)"><svg aria-hidden="true"><use href="#mark-a"/></svg></span>
+        <span class="mid" style="color:var(--ink)"><svg aria-hidden="true"><use href="#mark-a"/></svg></span>
+        <span class="tiny" style="color:var(--ink)"><svg aria-hidden="true"><use href="#mark-a"/></svg></span>
+      </div>
+      <p>Üst üste dizilmiş katmanlar ergonomik bir tutamak profili çiziyor. Sarı katman o anda basılan katmanı gösteriyor: proje hâlâ "basılıyor", yani devam ediyor.</p>
+    </section>
+
+    <section class="concept" aria-labelledby="cb">
+      <div class="lockup" style="color:var(--ink)">
+        <svg role="img" aria-label="Duvarlar işareti"><use href="#mark-b"/></svg>
+        <div class="wordmark">3D Care<small>Printing a More Inclusive Future</small></div>
+      </div>
+      <h3 id="cb">B. Duvarlar</h3>
+      <div class="variants">
+        <span class="dark" style="color:var(--paper)"><svg aria-hidden="true"><use href="#mark-b"/></svg></span>
+        <span class="mid" style="color:var(--ink)"><svg aria-hidden="true"><use href="#mark-b"/></svg></span>
+        <span class="tiny" style="color:var(--ink)"><svg aria-hidden="true"><use href="#mark-b"/></svg></span>
+      </div>
+      <p>Yukarıdan bakılan bir baskının iç içe duvarları "C" (Care) harfini oluşturuyor. Halkalar birbirini sarıyor; bu da destek ve kapsayıcılık fikrine bağlanıyor.</p>
+    </section>
+
+    <section class="concept" aria-labelledby="cc">
+      <div class="lockup" style="color:var(--ink)">
+        <svg role="img" aria-label="Baskı yolu işareti"><use href="#mark-c"/></svg>
+        <div class="wordmark">3D Care<small>Printing a More Inclusive Future</small></div>
+      </div>
+      <h3 id="cc">C. Baskı yolu</h3>
+      <div class="variants">
+        <span class="dark" style="color:var(--paper)"><svg aria-hidden="true"><use href="#mark-c"/></svg></span>
+        <span class="mid" style="color:var(--ink)"><svg aria-hidden="true"><use href="#mark-c"/></svg></span>
+        <span class="tiny" style="color:var(--ink)"><svg aria-hidden="true"><use href="#mark-c"/></svg></span>
+      </div>
+      <p>Yazıcı nozulunun dolgu yaparken çizdiği kesintisiz yol. Tek bir çizgiden oluşuyor ve sarı nokta nozulun kendisi. En sade ve en "teknik" öneri bu.</p>
+    </section>
+  </div>
+
+  <h2>Renk paleti</h2>
+  <p>Renkler dilimleyici (slicer) programlarının baskı önizlemesinden geliyor. Metin ve buton renkleri koyu ve açık zeminde WCAG AA kontrastını sağlıyor. Sarı yalnızca vurgu ve dolgu olarak, üzerinde koyu yazıyla kullanılıyor.</p>
+  <div class="palette">
+    <div class="swatch"><div class="chip" style="background:var(--ink);color:var(--paper)">Aa</div>
+      <dl><dt>Mürekkep</dt><dd><code>#15232B</code></dd><dd>Metin, logo. Kağıt zeminde 14,9:1</dd></dl></div>
+    <div class="swatch"><div class="chip" style="background:var(--paper);color:var(--ink)">Aa</div>
+      <dl><dt>Kağıt</dt><dd><code>#F5F7F6</code></dd><dd>Sayfa zemini</dd></dl></div>
+    <div class="swatch"><div class="chip" style="background:var(--teal);color:#fff">Aa</div>
+      <dl><dt>Filament</dt><dd><code>#00756A</code></dd><dd>Ana renk, butonlar, bağlantılar. Beyazla 5,6:1</dd></dl></div>
+    <div class="swatch"><div class="chip" style="background:var(--violet);color:#fff">Aa</div>
+      <dl><dt>Duvar</dt><dd><code>#5B3FA8</code></dd><dd>İkincil renk, odak çerçevesi. Beyazla 7,7:1</dd></dl></div>
+    <div class="swatch"><div class="chip" style="background:var(--layer);color:var(--ink)">Aa</div>
+      <dl><dt>Aktif katman</dt><dd><code>#F5C400</code></dd><dd>Vurgu. Sadece koyu yazıyla, 9,8:1</dd></dl></div>
+    <div class="swatch"><div class="chip" style="background:var(--plate);color:var(--ink)">Aa</div>
+      <dl><dt>Tabla</dt><dd><code>#DCE3E0</code></dd><dd>Çizgiler, kenarlıklar</dd></dl></div>
+  </div>
+
+  <h2>Yazı</h2>
+  <p>Tüm sitede tek aile: Inter. Apple'ın sistem fontu SF Pro'ya en yakın açık kaynak font; SF Pro'nun lisansı Apple dışı sitelerde kullanıma izin vermiyor. Okunabilirlik için 1, l ve I harflerini ayıran alternatif karakterler açık. Baskı ayarları gibi teknik veriler sabit genişlikli rakamlarla yazılıyor.</p>
+  <div class="type">
+    <div class="row"><div class="meta">Başlık<br>700 / 56 px</div><div class="t-display">Tools you can print tomorrow</div></div>
+    <div class="row"><div class="meta">Alt başlık<br>600 / 28 px</div><div class="t-h2">Adaptive cutlery handle</div></div>
+    <div class="row"><div class="meta">Gövde<br>400 / 18 px</div><div class="t-body">A wider, softer grip for people with limited hand strength. Tested by therapists and users in Kaunas and Gölcük before release.</div></div>
+    <div class="row"><div class="meta">Teknik veri<br>400, sabit rakam</div><div class="t-mono">Layer 0.2 mm, infill 20 %, PLA, 2 h 40 min</div></div>
+    <div class="row"><div class="meta">Ortak dilleri</div>
+      <div class="langs">
+        <div><span>TR</span>Günlük bağımsızlık için erişilebilir araçlar, sağlam tutuş</div>
+        <div><span>SR/HR</span>Pristupačni alati za svakodnevnu samostalnost, đaci, čaše</div>
+        <div><span>LV</span>Pieejami rīki ikdienas neatkarībai, ķermeņa ērtībai</div>
+        <div><span>LT</span>Prieinamos priemonės kasdieniam savarankiškumui, ąžuolas</div>
+        <div><span>MT</span>Għodod aċċessibbli għall-indipendenza ta' kuljum, żgħażagħ</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Sitede nasıl görünür</h2>
+  <p>B logosuyla ana sayfanın ilk ekranı. Yer tutucu içerik.</p>
+  <div class="browser">
+    <div class="bar">
+      <div class="brand" style="color:var(--ink)"><svg aria-hidden="true"><use href="#mark-b"/></svg>3D Care</div>
+      <nav aria-label="Örnek menü">
+        <a href="#" aria-current="page">Models</a><a href="#">Training</a><a href="#">Resources</a><a href="#">About</a><a href="#">TR</a>
+      </nav>
+    </div>
+    <div class="hero">
+      <div>
+        <h3>Assistive tools anyone can print</h3>
+        <p>Ten open 3D models, tested with adults with disabilities in four countries, with step-by-step guides for educators and care staff.</p>
+        <div class="actions">
+          <a class="btn primary" href="#">Browse the models</a>
+          <a class="btn secondary" href="#">Start the training</a>
+        </div>
+      </div>
+      <figure>
+        <svg viewBox="0 0 320 240" role="img" aria-label="Katman çizgileriyle çizilmiş kulplu bardak illüstrasyonu" style="width:100%;height:auto">
+          <g fill="none" stroke-linecap="round" stroke-width="7">
+            <g stroke="var(--ink)"><path d="M70 212 H200"/><path d="M70 200 H200"/><path d="M70 188 H200"/><path d="M70 176 H200"/><path d="M70 164 H200"/><path d="M70 152 H200"/><path d="M70 140 H200"/><path d="M70 128 H200"/><path d="M70 116 H200"/><path d="M70 104 H200"/><path d="M70 92 H200"/></g>
+            <g stroke="var(--teal)"><path d="M206 188 H244"/><path d="M232 176 H254"/><path d="M242 164 H258"/><path d="M242 152 H258"/><path d="M242 140 H258"/><path d="M242 128 H258"/><path d="M232 116 H254"/><path d="M206 104 H244"/></g>
+            <path d="M70 80 H200" stroke="var(--layer)"/>
+            <g stroke="var(--plate)"><path d="M70 68 H200"/><path d="M70 56 H200"/></g>
+          </g>
+          <path d="M40 226 H280" stroke="var(--plate)" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <figcaption>
+          <dl class="settings">
+            <div><dt>Model</dt><dd>Easy-grip mug</dd></div>
+            <div><dt>Layer</dt><dd>12 / 14</dd></div>
+            <div><dt>Infill</dt><dd>20 %</dd></div>
+          </dl>
+        </figcaption>
+      </figure>
+    </div>
+    <div class="eu"><div class="flag" aria-hidden="true">EU</div><span>Co-funded by the European Union. Views and opinions expressed are those of the author(s) only. (Resmi amblem burada yer alacak.)</span></div>
+  </div>
+
+  <div class="note">
+    <strong>Karar için:</strong>
+    <ul>
+      <li>Logo: B seçildi.</li>
+      <li>Renk paleti ve yazı ailesi uygun mu?</li>
+      <li>Logo ortaklara gösterilip onaylatılacak mı?</li>
+    </ul>
+  </div>
+</main>
+</body>
+</html>
