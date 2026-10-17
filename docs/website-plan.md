@@ -46,7 +46,7 @@ Her sayfa `/en/...` ve `/tr/...` altında yayınlanır.
 - **3D önizleme:** Model sayfasında tarayıcıda döndürülebilir STL görüntüleyici (three.js / react-three-fiber). Sadece o sayfada yüklenir.
 - **Model dosyaları:** Repoda `models/` klasöründe tutulur (dosya başı 100 MB sınırı). Büyük paketler GitHub Releases'a konur.
 - **İstatistik:** GoatCounter (ücretsiz, çerezsiz, KVKK/GDPR uyumlu). Çerez bandı gerekmez.
-- **Formlar:** Ağ katılım ve iletişim formları için statik sitede sunucu yok, bu yüzden form servisi kullanılacak (Formspree ücretsiz katman) ya da sadece e-posta bağlantısı verilecek.
+- **Formlar:** İletişim → Web3Forms (site içi, e-postaya iletir). Merkez ağı başvurusu → Google Forms (yanıt tablosu DTSER ile paylaşılır). Model geri bildirimi → Google Forms + GitHub Issues. Mesajlar `info@3dcare.eu` adresine gider; alan adı alınana kadar geçici adres kullanılır.
 - **Videolar:** Tanıtım ve yaygınlaştırma videoları Remotion ile koddan üretilir (ortak dillerine çevrilmiş altyazılı versiyonlar kolay çıkar). Videolar YouTube'a yüklenir, siteye gömülür.
 
 ## 4. Lisanslar
@@ -101,5 +101,5 @@ Hazırlanacaklar:
 
 1. **Alan adı:** `3dcare.eu` seçildi (Ekim 2026'da boş görünüyordu). .eu yalnızca AB/AEA'da yerleşik kurumlarca kaydedilebilir. Bu yüzden kaydı HR, LV, MT veya LT ortağı yapmalı. Kayıt tamamlanana kadar site `laroca00.github.io/3dcare` adresinde yayınlanır.
 2. **Model lisansı:** Açık. Modeller gelene kadar şablon modeller kullanılacak.
-3. **Formlar:** Açık.
+3. **Formlar:** Karma yapı seçildi (bkz. bölüm 3). Hedef adres `info@3dcare.eu`; geçici adres belirlenecek.
 4. **Proje/sözleşme numarası:** Bilinmiyor. Koordinatör DTSER'den istenecek (Fondacija Tempus sözleşmesinde, `2026-1-RS01-KA220-ADU-000…` biçiminde). Gelene kadar footer'da yer tutucu kullanılacak.
