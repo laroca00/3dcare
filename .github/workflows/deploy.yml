@@ -30,6 +30,7 @@ jobs:
           # Empty once the custom domain is configured.
           BASE_PATH: ${{ vars.BASE_PATH }}
           NEXT_PUBLIC_WEB3FORMS_KEY: ${{ vars.WEB3FORMS_KEY }}
+          NEXT_PUBLIC_GOATCOUNTER_CODE: ${{ vars.GOATCOUNTER_CODE }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

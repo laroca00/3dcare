@@ -647,20 +647,13 @@ main:focus {
 }
 
 .eu-emblem {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--white);
-  color: #003399;
-  font-weight: 600;
-  padding: 10px 16px 10px 10px;
-  border-radius: 6px;
-}
-
-.eu-emblem__flag {
-  width: 60px;
-  height: 40px;
-  flex: none;
+  display: block;
+  width: auto;
+  height: 60px;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left;
+  margin-bottom: 16px;
 }
 
 .site-footer__disclaimer {

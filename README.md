@@ -30,7 +30,7 @@ npm run build    # static site in out/
 
 - Page text lives in `src/i18n/en.ts` and `src/i18n/tr.ts`.
 - Partners and models live in `src/content/`. Model entries marked `template: true` are placeholders until the validated models are published.
-- Repository variables used by the deploy workflow: `BASE_PATH` (`/3dcare` while served from github.io, empty on the custom domain) and `WEB3FORMS_KEY` (contact form).
+- Repository variables used by the deploy workflow: `BASE_PATH` (`/3dcare` while served from github.io, empty on the custom domain), `WEB3FORMS_KEY` (contact form) and `GOATCOUNTER_CODE` (visitor statistics).
 
 ## Licence
 

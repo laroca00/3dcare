@@ -120,7 +120,7 @@ export const tr: typeof en = {
     body: [
       "Bu site çerez kullanmaz ve sizi başka sitelerde takip etmez.",
       "İletişim formunu gönderdiğinizde adınız, e-posta adresiniz ve mesajınız Web3Forms hizmeti aracılığıyla proje ekibine e-postayla iletilir. Bu bilgiler yalnızca mesajınıza yanıt vermek için kullanılır ve üçüncü kişilerle paylaşılmaz.",
-      "Ziyaretçi istatistikleri etkinleştirilirse çerez ve kişisel veri olmadan toplanır.",
+      "Ziyaretleri, çerez kullanmayan ve kişisel veri saklamayan açık kaynak bir hizmet olan GoatCounter ile sayıyoruz. Yalnızca ziyaret edilen sayfa, gelinen site, tarayıcı türü, ekran boyutu ve ülke kaydedilir.",
       "Verilerinizin silinmesini istemek için iletişim sayfasından bize ulaşın.",
     ],
   },
@@ -133,8 +133,7 @@ export const tr: typeof en = {
     ],
   },
   footer: {
-    // The EU emblem has official versions only in EU languages, so it stays in English.
-    cofunded: "Co-funded by the European Union",
+    cofunded: "Avrupa Birliği tarafından ortak finanse edilmektedir",
     disclaimer:
       "Avrupa Birliği tarafından finanse edilmiştir. Ancak ifade edilen görüş ve düşünceler yalnızca yazar(lar)a aittir ve Avrupa Birliği'nin veya hibe veren makamın görüşlerini yansıtmayabilir. Ne Avrupa Birliği ne de hibe veren makam bunlardan sorumlu tutulamaz.",
     project: "Erasmus+ KA220-ADU işbirliği ortaklığı",

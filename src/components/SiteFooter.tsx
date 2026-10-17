@@ -1,9 +1,15 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Dictionary, Locale } from "@/i18n/config";
-import { EuFlag } from "./EuEmblem";
+import emblemEn from "@/assets/eu/co-funded-en-neg.png";
+import emblemTr from "@/assets/eu/co-funded-tr-neg.png";
 import { LogoMark } from "./Logo";
 
 export const REPO_URL = "https://github.com/laroca00/3dcare";
+
+// Official "Co-funded by the European Union" emblems (negative version for dark
+// backgrounds) from the European Commission download centre.
+const emblems = { en: emblemEn, tr: emblemTr };
 
 export function SiteFooter({ lang, t }: { lang: Locale; t: Dictionary }) {
   return (
@@ -28,10 +34,7 @@ export function SiteFooter({ lang, t }: { lang: Locale; t: Dictionary }) {
           </ul>
         </div>
         <div className="site-footer__eu">
-          <p className="eu-emblem">
-            <EuFlag className="eu-emblem__flag" />
-            <span>{t.footer.cofunded}</span>
-          </p>
+          <Image src={emblems[lang]} alt={t.footer.cofunded} className="eu-emblem" />
           <p className="site-footer__disclaimer">{t.footer.disclaimer}</p>
         </div>
       </div>
