@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Locale } from "@/i18n/config";
+import { ThemeToggle } from "./ThemeToggle";
 
 type Item = { href: string; label: string };
 
@@ -11,11 +12,13 @@ export function SiteNav({
   items,
   menuLabel,
   switchLabel,
+  themeLabel,
 }: {
   lang: Locale;
   items: Item[];
   menuLabel: string;
   switchLabel: string;
+  themeLabel: string;
 }) {
   const pathname = usePathname();
   const other: Locale = lang === "en" ? "tr" : "en";
@@ -38,6 +41,9 @@ export function SiteNav({
           <Link href={switchHref} hrefLang={other} lang={other} className="lang-switch">
             {switchLabel}
           </Link>
+        </li>
+        <li>
+          <ThemeToggle label={themeLabel} />
         </li>
       </ul>
     </nav>

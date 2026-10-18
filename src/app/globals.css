@@ -1,19 +1,63 @@
 :root {
+  color-scheme: light;
   --paper: #f5f7f6;
-  --white: #ffffff;
+  --surface: #ffffff;
   --ink: #15232b;
   --muted: #4a5a62;
   --teal: #00756a;
   --teal-dark: #005c53;
+  --on-accent: #ffffff;
   --violet: #5b3fa8;
   --layer: #f5c400;
+  --on-layer: #15232b;
   --plate: #dce3e0;
   --plate-soft: #eaefed;
+  /* The footer stays dark in both themes, so the negative EU emblem fits both. */
+  --footer-bg: #15232b;
+  --footer-text: #f5f7f6;
+  --footer-muted: #c9d3cf;
 
   --font: "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --radius: 16px;
   --gutter: 16px;
   --measure: 68ch;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #101416;
+  --surface: #192024;
+  --ink: #e8eeeb;
+  --muted: #a3b1ab;
+  --teal: #3cc2b0;
+  --teal-dark: #74dccd;
+  --on-accent: #0b1a1c;
+  --violet: #a48be6;
+  --plate: #2a3338;
+  --plate-soft: #20282c;
+  --footer-bg: #0b0f11;
+  --footer-text: #e8eeeb;
+  --footer-muted: #a3b1ab;
+}
+
+/* Same palette when the device prefers dark and the pre-paint script has not run. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #101416;
+    --surface: #192024;
+    --ink: #e8eeeb;
+    --muted: #a3b1ab;
+    --teal: #3cc2b0;
+    --teal-dark: #74dccd;
+    --on-accent: #0b1a1c;
+    --violet: #a48be6;
+    --plate: #2a3338;
+    --plate-soft: #20282c;
+    --footer-bg: #0b0f11;
+    --footer-text: #e8eeeb;
+    --footer-muted: #a3b1ab;
+  }
 }
 
 *,
@@ -129,7 +173,7 @@ main:focus {
   left: var(--gutter);
   top: -100px;
   background: var(--ink);
-  color: var(--white);
+  color: var(--paper);
   padding: 10px 16px;
   border-radius: 8px;
   z-index: 10;
@@ -137,11 +181,11 @@ main:focus {
 
 .skip-link:focus {
   top: 12px;
-  color: var(--white);
+  color: var(--paper);
 }
 
 .site-header {
-  background: var(--white);
+  background: var(--surface);
   border-bottom: 2px solid var(--plate);
 }
 
@@ -206,6 +250,36 @@ main:focus {
   font-weight: 600;
 }
 
+.site-nav ul {
+  align-items: center;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--plate);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--ink);
+}
+
+.theme-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Buttons */
 
 .actions {
@@ -229,12 +303,12 @@ main:focus {
 
 .btn--primary {
   background: var(--teal);
-  color: var(--white);
+  color: var(--on-accent);
 }
 
 .btn--primary:hover {
   background: var(--teal-dark);
-  color: var(--white);
+  color: var(--on-accent);
 }
 
 .btn--primary:disabled {
@@ -249,7 +323,7 @@ main:focus {
 
 .btn--secondary:hover {
   background: var(--ink);
-  color: var(--white);
+  color: var(--paper);
 }
 
 /* Home */
@@ -349,7 +423,7 @@ main:focus {
 }
 
 .partner-strip li {
-  background: var(--white);
+  background: var(--surface);
   border: 2px solid var(--plate);
   border-radius: 999px;
   padding: 8px 18px;
@@ -393,7 +467,7 @@ main:focus {
 }
 
 .notice {
-  background: var(--white);
+  background: var(--surface);
   border-left: 6px solid var(--layer);
   border-radius: 0 var(--radius) var(--radius) 0;
   padding: 16px 20px;
@@ -412,12 +486,13 @@ main:focus {
   padding: 2px 12px;
   border-radius: 999px;
   border: 2px solid var(--plate);
-  background: var(--white);
+  background: var(--surface);
 }
 
 .tag--template {
   background: var(--layer);
   border-color: var(--layer);
+  color: var(--on-layer);
   font-weight: 600;
 }
 
@@ -597,7 +672,7 @@ main:focus {
   padding: 12px 14px;
   border: 2px solid var(--muted);
   border-radius: 10px;
-  background: var(--white);
+  background: var(--surface);
   color: var(--ink);
 }
 
@@ -653,7 +728,7 @@ main:focus {
 }
 
 .resource-list > li {
-  background: var(--white);
+  background: var(--surface);
   border: 2px solid var(--plate);
   border-radius: var(--radius);
   padding: 24px;
@@ -674,14 +749,14 @@ main:focus {
 .tag--available {
   background: var(--teal);
   border-color: var(--teal);
-  color: var(--white);
+  color: var(--on-accent);
   font-weight: 600;
 }
 
 /* Call to action */
 
 .callout {
-  background: var(--white);
+  background: var(--surface);
   border: 2px solid var(--plate);
   border-left: 8px solid var(--teal);
   border-radius: var(--radius);
@@ -709,14 +784,14 @@ main:focus {
 /* Footer */
 
 .site-footer {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--footer-bg);
+  color: var(--footer-text);
   padding-block: 48px;
   font-size: 0.95rem;
 }
 
 .site-footer a {
-  color: var(--paper);
+  color: var(--footer-text);
 }
 
 .site-footer__inner {
@@ -731,7 +806,7 @@ main:focus {
 }
 
 .brand--footer {
-  color: var(--paper);
+  color: var(--footer-text);
   margin-bottom: 8px;
 }
 
@@ -754,7 +829,7 @@ main:focus {
 }
 
 .site-footer__disclaimer {
-  color: #c9d3cf;
+  color: var(--footer-muted);
   max-width: var(--measure);
 }
 

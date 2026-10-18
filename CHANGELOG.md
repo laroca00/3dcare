@@ -7,6 +7,13 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-18 (continued)
 
+### Light and dark theme
+- The whole site now has a light and a dark theme. It follows the visitor's
+  device setting, and a button in the header switches between them. The
+  choice is remembered only in the visitor's browser.
+- Colour contrast is checked automatically for both themes against WCAG 2.2
+  AA, so every change to the palette is verified.
+
 ### New pages
 - News section with a page per article, and the latest news on the home page.
   First articles: the project start and the website launch.

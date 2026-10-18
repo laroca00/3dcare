@@ -25,7 +25,7 @@ export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
           <span>3D Care</span>
           <span className="visually-hidden">{t.nav.home}</span>
         </Link>
-        <SiteNav lang={lang} items={items} menuLabel={t.nav.menu} switchLabel={t.nav.language} />
+        <SiteNav lang={lang} items={items} menuLabel={t.nav.menu} switchLabel={t.nav.language} themeLabel={t.nav.themeLabel} />
       </div>
     </header>
   );
