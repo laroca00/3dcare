@@ -5,6 +5,18 @@ Fikirler Derneği) under WP5, Activity 5.1 (Dissemination of Project Results
 and Stakeholder Outreach). Every change is also recorded in the commit history
 of this repository: https://github.com/laroca00/3dcare/commits/main
 
+## 2026-10-19
+
+### Scroll story refinements
+- The story uses the project's own colours: the opening drawing is drawn in
+  bolder teal and violet lines, the printed mug and filament are teal, the
+  print head is yellow, and the dark theme's studio uses the site's dark blue
+  instead of warm brown.
+- The printer appears larger, and the story scrolls about 1.5 times more
+  slowly, so each step has more time on screen.
+- On wide screens the opening drawing is shown as a picture straight away,
+  so the page no longer opens with an empty half before the 3D scene loads.
+
 ## 2026-10-18 (continued)
 
 ### Scroll story on the home page

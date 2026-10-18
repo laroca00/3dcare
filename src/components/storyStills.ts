@@ -1,9 +1,11 @@
 import type { StaticImageData } from "next/image";
+import dark0 from "@/assets/story/dark-0.webp";
 import dark1 from "@/assets/story/dark-1.webp";
 import dark2 from "@/assets/story/dark-2.webp";
 import dark3 from "@/assets/story/dark-3.webp";
 import dark4 from "@/assets/story/dark-4.webp";
 import dark5 from "@/assets/story/dark-5.webp";
+import light0 from "@/assets/story/light-0.webp";
 import light1 from "@/assets/story/light-1.webp";
 import light2 from "@/assets/story/light-2.webp";
 import light3 from "@/assets/story/light-3.webp";
@@ -20,3 +22,6 @@ export const STILLS: Record<Theme, StaticImageData[]> = {
   light: [light1, light2, light3, light4, light5],
   dark: [dark1, dark2, dark3, dark4, dark5],
 };
+
+/** The scene at the very top of the page, shown on the stage until the scene loads. */
+export const POSTERS: Record<Theme, StaticImageData> = { light: light0, dark: dark0 };

@@ -4,16 +4,16 @@ import type { Theme } from "../theme/theme";
 import type { QualityLevel } from "./quality";
 import { StudioTransition, type StudioValues } from "./studioMix";
 
-// Dark: a warm, low-key studio like a product shoot at night.
+// Dark: a low-key studio on the site's dark ink, with a teal glow and rim.
 // Light: a soft, bright studio on the site's paper colour.
 const LOOKS: Record<Theme, StudioValues> = {
   dark: {
-    background: 0x15120f,
-    glow: 0x6b3416,
+    background: 0x101416,
+    glow: 0x0f3b3c,
     glowStrength: 0.85,
-    key: 0xffb070,
+    key: 0xe4efff,
     keyIntensity: 4.2,
-    rim: 0xffd2a0,
+    rim: 0x8fe3d6,
     rimIntensity: 3.2,
     fill: 0.35,
     env: 0.45,
@@ -59,7 +59,7 @@ export function createStudio(
   background.colorSpace = THREE.SRGBColorSpace;
   scene.background = background;
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x2a2420, 1);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x1f2a2e, 1);
   const key = new THREE.DirectionalLight(0xffffff, 1);
   key.position.set(-70, 95, 60);
   key.castShadow = quality > 0;

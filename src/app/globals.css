@@ -351,6 +351,24 @@ main:focus {
   overflow: hidden;
 }
 
+/* Until the scene loads, wide screens show its first frame. Scaled to the
+   stage height, it lines up with the canvas at any width. */
+@media (min-aspect-ratio: 11/10) {
+  .story__stage {
+    background: var(--poster-light) center / auto 100% no-repeat;
+  }
+
+  :root[data-theme="dark"] .story__stage {
+    background-image: var(--poster-dark);
+  }
+}
+
+@media (min-aspect-ratio: 11/10) and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .story__stage {
+    background-image: var(--poster-dark);
+  }
+}
+
 .story__canvas {
   position: absolute;
   inset: 0;
@@ -392,7 +410,7 @@ main:focus {
 }
 
 .story__beat {
-  min-height: 120svh;
+  min-height: 180svh;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -402,7 +420,7 @@ main:focus {
 }
 
 .story__beat--intro {
-  min-height: 100svh;
+  min-height: 150svh;
   opacity: 1;
 }
 
@@ -449,6 +467,7 @@ main:focus {
   position: fixed;
   inset: 0;
   height: 100vh;
+  background: none;
 }
 
 /* Still frames serve both languages, so they carry no label text. */
@@ -464,6 +483,11 @@ main:focus {
   .story__beat {
     justify-content: center;
     padding-block: 0;
+  }
+
+  /* The intro stays centred in the first screen; the rest is scroll room. */
+  .story__beat--intro {
+    padding-bottom: 50svh;
   }
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import type { Dictionary, Locale } from "@/i18n/config";
 import { PART_IDS, type PartId } from "@/scene/parts";
 import { initialQuality } from "@/scene/quality";
@@ -9,7 +9,7 @@ import type { SceneHandle } from "@/scene/runScene";
 import { progressFor } from "@/scene/scrollProgress";
 import { SCENES, localProgress } from "@/scene/timeline";
 import { readTheme, useTheme } from "@/theme/useTheme";
-import { STILLS } from "./storyStills";
+import { POSTERS, STILLS } from "./storyStills";
 
 type Mode = "pending" | "live" | "stills";
 
@@ -166,7 +166,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       className={`story story--${mode}${ready ? " story--ready" : ""}${still ? " story--still" : ""}`}
       aria-labelledby="story-title"
     >
-      <div className="story__stage">
+      <div
+        className="story__stage"
+        style={{ "--poster-light": `url(${POSTERS.light.src})`, "--poster-dark": `url(${POSTERS.dark.src})` } as CSSProperties}
+      >
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
         {/* Part labels; screen readers get the same list in the story text. */}
         <div className="story__labels" aria-hidden="true">

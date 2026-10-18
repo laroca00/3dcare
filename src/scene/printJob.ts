@@ -21,7 +21,7 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   const object = new THREE.Group();
   bedSurface.add(object);
 
-  const filament = new THREE.MeshStandardMaterial({ color: 0xe9e4d8, roughness: 0.42, metalness: 0 });
+  const filament = new THREE.MeshStandardMaterial({ color: 0x2aa898, roughness: 0.42, metalness: 0 });
   const current = new THREE.MeshStandardMaterial({ color: 0xf5c400, emissive: 0x6b4e00, roughness: 0.4 });
   const segments = quality === 2 ? 64 : 32;
   const thickness = LAYER_HEIGHT * 0.9;

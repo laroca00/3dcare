@@ -40,6 +40,9 @@ export interface SceneHandle {
 /** Lets the browser handle input and paint between the heavier set-up steps. */
 const yieldToMain = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+/** How much of the drawing shows at the very top of the page. */
+const DRAWING_START = 0.4;
+
 export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Promise<SceneHandle> {
   const quality = new QualityController(opts.quality);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 2, powerPreference: "high-performance" });
@@ -58,7 +61,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   scene.add(stage);
   const studio = createStudio(renderer, scene, opts.theme, opts.quality, stage, printer.root.position.y);
   await yieldToMain();
-  const drawing = createDrawing(printer);
+  const drawing = createDrawing(printer, opts.theme);
   await yieldToMain();
   const job = createPrintJob(printer.bedSurface, opts.quality);
   const hand = createHand(opts.quality);
@@ -74,10 +77,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const { clientWidth: w, clientHeight: h } = canvas;
     if (!w || !h) return;
     renderer.setSize(w, h, false);
+    drawing.setResolution(w, h);
     camera.aspect = w / h;
     // Wide screens keep the text on the left and the printer on the right.
     wide = camera.aspect > 1.1;
-    stage.position.x = wide ? 28 : 0;
+    stage.position.x = wide ? 34 : 0;
     stage.position.y = wide ? 4 : 16;
     camera.updateProjectionMatrix();
     handle.invalidate();
@@ -90,10 +94,12 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const home = new THREE.Vector3();
   const lookAt = new THREE.Vector3();
 
-  function placeCamera(use: number, mug: THREE.Vector3) {
-    // In the last scene the camera moves in and turns towards the mug.
+  function placeCamera(use: number, apart: number, mug: THREE.Vector3) {
+    // The camera steps back while the printer is apart, so every part stays in
+    // view. In the last scene it moves in and turns towards the mug.
     const push = smoothstep(use);
-    camera.position.set(85 - push * 35, 46 - push * 16, (wide ? 180 : 240) - push * (wide ? 90 : 120));
+    const back = apart * (wide ? 30 : 40);
+    camera.position.set(85 - push * 35, 46 - push * 16, (wide ? 140 : 190) + back - push * (wide ? 50 : 70));
     home.set(wide ? 20 : 0, 2, 0);
     lookAt.copy(home).lerp(mug, push * 0.85);
     camera.lookAt(lookAt);
@@ -127,9 +133,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
 
     const p = opts.getProgress();
 
-    // 1. Drawing → object.
+    // 1. Drawing → object. The drawing is already under way at the top of the
+    //    page, matching the poster frame shown before the scene loads.
     const draw = localProgress(p, "draw");
-    drawing.setReveal(smoothstep(draw / 0.6), smoothstep((draw - 0.55) / 0.45));
+    drawing.setReveal(DRAWING_START + (1 - DRAWING_START) * smoothstep(draw / 0.6), smoothstep((draw - 0.55) / 0.45));
 
     // 2–3. Turn, then take apart.
     stage.rotation.y = -0.7 + localProgress(p, "meet") * 1.4 + localProgress(p, "explode") * 0.5 - localProgress(p, "print") * 0.5;
@@ -167,7 +174,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     hand.object.position.set(mugInStage.x + 9 + (1 - use.hand) * 30, mugInStage.y + 3 - (1 - use.hand) * 18, mugInStage.z);
     hand.object.rotation.y = job.object.rotation.y;
     hand.setPose(use.grip);
-    placeCamera(u, mugWorld);
+    placeCamera(u, apart, mugWorld);
 
     renderer.render(scene, camera);
     updateLabels(apart);
@@ -177,6 +184,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const handle: SceneHandle = {
     setTheme(theme) {
       studio.setTheme(theme);
+      drawing.setTheme(theme);
       handle.invalidate();
     },
     invalidate() {
