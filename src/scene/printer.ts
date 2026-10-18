@@ -33,6 +33,10 @@ const FRAME_TOP = 50;
 const BED_Y = 9;
 const GANTRY_Y = 26;
 
+/** Top of the print sheet, and the nozzle tip with the tool at home, in printer space. */
+export const BED_SURFACE_Y = BED_Y + 0.44;
+export const NOZZLE_HOME = { y: GANTRY_Y - 8.4, z: FRAME_Z + 4.6 + 1.2 };
+
 function materials() {
   const pei = new THREE.MeshPhysicalMaterial({ color: 0x1c1c1e, roughness: 0.72, metalness: 0.05, clearcoat: 0.25 });
   return {
@@ -204,7 +208,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
     mesh(bed, new THREE.CylinderGeometry(1, 1, 1.2, quality === 2 ? 24 : 10), m.accent, kx * 11.5, BED_Y - 1.1, kz * 11.5);
   }
   const bedSurface = new THREE.Object3D();
-  bedSurface.position.set(0, BED_Y + 0.44, 0);
+  bedSurface.position.set(0, BED_SURFACE_Y, 0);
   bed.add(bedSurface);
 
   // Frame: two uprights, top bar, Z motors and lead screws.

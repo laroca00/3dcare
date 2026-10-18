@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Dictionary, Locale } from "@/i18n/config";
-import { PART_IDS } from "@/scene/parts";
+import { PART_IDS, type PartId } from "@/scene/parts";
 import { initialQuality } from "@/scene/quality";
 import type { SceneHandle } from "@/scene/runScene";
 import { progressFor } from "@/scene/scrollProgress";
@@ -31,6 +31,7 @@ function canRenderWebGL() {
 export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) {
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const labelRefs = useRef<Partial<Record<PartId, HTMLSpanElement | null>>>({});
   const [mode, setMode] = useState<Mode>("pending");
   const [ready, setReady] = useState(false);
   const [still, setStill] = useState(false);
@@ -98,6 +99,15 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           }),
           getProgress: () => progress,
           labels: t.story.labels,
+          ending: fixed !== null && params.get("ending") === "table" ? "table" : "hand",
+          onLabels(positions) {
+            for (const { id, x, y, opacity } of positions) {
+              const el = labelRefs.current[id];
+              if (!el) continue;
+              el.style.transform = `translate(${x}px, ${y}px)`;
+              el.style.opacity = String(opacity);
+            }
+          },
         });
         handle.invalidate();
         requestAnimationFrame(() =>
@@ -138,6 +148,20 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           <PrintFigure label="" />
         </div>
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
+        {/* Part labels; screen readers get the same list in the story text. */}
+        <div className="story__labels" aria-hidden="true">
+          {PART_IDS.map((id) => (
+            <span
+              key={id}
+              className="story__label"
+              ref={(el) => {
+                labelRefs.current[id] = el;
+              }}
+            >
+              {t.story.labels[id]}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="story__beats container">
