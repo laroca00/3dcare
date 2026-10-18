@@ -4,6 +4,7 @@ import { explodeAmount, setExplode } from "./explode";
 import type { PartId } from "./parts";
 import { buildPrinter } from "./printer";
 import { QualityController, type QualityLevel } from "./quality";
+import { createStudio } from "./studio";
 import { localProgress } from "./timeline";
 
 export interface SceneOptions {
@@ -20,8 +21,6 @@ export interface SceneHandle {
   dispose(): void;
 }
 
-const BACKGROUND: Record<Theme, number> = { dark: 0x15120f, light: 0xf5f7f6 };
-
 export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): SceneHandle {
   const quality = new QualityController(opts.quality);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 2, powerPreference: "high-performance" });
@@ -30,23 +29,14 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(BACKGROUND[opts.theme]);
   const camera = new THREE.PerspectiveCamera(30, 1, 1, 1000);
-
-  // Temporary lighting until the studio module replaces it.
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3028, 1.4));
-  const key = new THREE.DirectionalLight(0xffd8b0, 3);
-  key.position.set(-60, 90, 70);
-  key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
-  Object.assign(key.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60 });
-  scene.add(key);
 
   const printer = buildPrinter(opts.quality);
   const stage = new THREE.Group();
   stage.add(printer.root);
   printer.root.position.y = -32;
   scene.add(stage);
+  const studio = createStudio(renderer, scene, opts.theme, opts.quality, stage, printer.root.position.y);
 
   function applyPixelRatio(level: QualityLevel) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, level === 2 ? 2 : level === 1 ? 1.5 : 1));
@@ -80,7 +70,9 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
       const before = quality.level;
       if (quality.sample(now - last) !== before) applyPixelRatio(quality.level);
     }
+    const dt = last ? Math.min((now - last) / 1000, 0.1) : 0;
     last = now;
+    const transitioning = studio.update(dt);
 
     const p = opts.getProgress();
     stage.rotation.y = -0.7 + localProgress(p, "meet") * 1.4 + localProgress(p, "explode") * 0.5;
@@ -88,11 +80,12 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
     setExplode(printer.parts, apart);
     printer.filament.visible = apart < 0.02;
     renderer.render(scene, camera);
+    if (transitioning) handle.invalidate();
   }
 
   const handle: SceneHandle = {
     setTheme(theme) {
-      scene.background = new THREE.Color(BACKGROUND[theme]);
+      studio.setTheme(theme);
       handle.invalidate();
     },
     invalidate() {
@@ -102,6 +95,7 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
       cancelAnimationFrame(raf);
       resizeObserver.disconnect();
       printer.dispose();
+      studio.dispose();
       renderer.dispose();
     },
   };
