@@ -1,3 +1,41 @@
+/* Tailwind for the shadcn components in src/components/ui. No preflight, so the
+   site's own base styles stay as they are, and only that folder is scanned, so
+   utilities cannot collide with the site's class names (e.g. .container). The
+   utilities are unlayered so they win over the element styles below. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" source(none);
+@import "tw-animate-css";
+@source "../components/ui";
+
+/* The site palette as Tailwind colours; they follow the light and dark theme. */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-teal: var(--teal);
+  --color-yellow: #f5c400;
+  --color-plate: var(--plate);
+  --color-footer: var(--footer-bg);
+  --color-footer-text: var(--footer-text);
+  --color-footer-muted: var(--footer-muted);
+  --font-sans: var(--font);
+
+  /* shadcn's colour names, pointed at the site palette. */
+  --color-background: var(--surface);
+  --color-foreground: var(--ink);
+  --color-muted-foreground: var(--muted);
+  --color-primary: var(--teal);
+  --color-primary-foreground: var(--on-accent);
+  --color-secondary: var(--plate-soft);
+  --color-secondary-foreground: var(--ink);
+  --color-accent: var(--plate-soft);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: #b42318;
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--plate);
+  --color-input: var(--plate);
+  --color-ring: var(--violet);
+}
+
 /* Arial scaled to Inter's metrics, so text does not shift when Inter finishes loading. */
 @font-face {
   font-family: "Inter Fallback";
@@ -186,7 +224,7 @@ main:focus {
   color: var(--paper);
   padding: 10px 16px;
   border-radius: 8px;
-  z-index: 10;
+  z-index: 60;
 }
 
 .skip-link:focus {
@@ -194,18 +232,16 @@ main:focus {
   color: var(--paper);
 }
 
+/* The navigation floats over the page; the header keeps its room at the top. */
 .site-header {
-  background: var(--surface);
-  border-bottom: 2px solid var(--plate);
+  height: 80px;
 }
 
+/* The 404 page has no navigation, only the logo in the header. */
 .site-header__inner {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 24px;
-  padding-block: 14px;
+  height: 100%;
 }
 
 .brand {
@@ -226,42 +262,6 @@ main:focus {
 .brand__mark {
   width: 36px;
   height: 36px;
-}
-
-.site-nav ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 20px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.site-nav a {
-  display: inline-block;
-  padding-block: 8px;
-  color: var(--ink);
-  text-decoration: none;
-  font-size: 1rem;
-}
-
-.site-nav a:hover {
-  text-decoration: underline;
-}
-
-.site-nav a[aria-current="page"] {
-  text-decoration: underline;
-  text-decoration-color: var(--layer);
-  text-decoration-thickness: 4px;
-  text-underline-offset: 8px;
-}
-
-.site-nav .lang-switch {
-  font-weight: 600;
-}
-
-.site-nav ul {
-  align-items: center;
 }
 
 .theme-toggle {
@@ -918,58 +918,6 @@ main:focus {
   .not-found {
     grid-template-columns: 1fr 1fr;
   }
-}
-
-/* Footer */
-
-.site-footer {
-  background: var(--footer-bg);
-  color: var(--footer-text);
-  padding-block: 48px;
-  font-size: 0.95rem;
-}
-
-.site-footer a {
-  color: var(--footer-text);
-}
-
-.site-footer__inner {
-  display: grid;
-  gap: 32px;
-}
-
-@media (min-width: 900px) {
-  .site-footer__inner {
-    grid-template-columns: 1fr 1.4fr;
-  }
-}
-
-.brand--footer {
-  color: var(--footer-text);
-  margin-bottom: 8px;
-}
-
-.site-footer__links {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.eu-emblem {
-  display: block;
-  width: auto;
-  height: 60px;
-  max-width: 100%;
-  object-fit: contain;
-  object-position: left;
-  margin-bottom: 16px;
-}
-
-.site-footer__disclaimer {
-  color: var(--footer-muted);
-  max-width: var(--measure);
 }
 
 @media (prefers-reduced-motion: reduce) {

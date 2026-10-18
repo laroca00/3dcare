@@ -17,6 +17,7 @@ export const en = {
     themeLabel: "Dark mode",
     skip: "Skip to content",
     menu: "Main menu",
+    close: "Close",
   },
   home: {
     title: "Assistive tools anyone can print",
@@ -230,6 +231,8 @@ export const en = {
     disclaimer:
       "Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the granting authority. Neither the European Union nor the granting authority can be held responsible for them.",
     project: "Erasmus+ KA220-ADU cooperation partnership",
+    exploreTitle: "Explore",
+    materialsTitle: "Materials",
     network: "Network of learning centres",
     resources: "Resources",
     privacy: "Privacy",

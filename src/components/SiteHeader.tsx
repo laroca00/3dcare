@@ -1,7 +1,5 @@
-import Link from "next/link";
 import type { Dictionary, Locale } from "@/i18n/config";
-import { LogoMark } from "./Logo";
-import { SiteNav } from "./SiteNav";
+import { AnimatedNav } from "./ui/animated-nav";
 
 export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
   const items = [
@@ -19,14 +17,7 @@ export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
       <a href="#main" className="skip-link">
         {t.nav.skip}
       </a>
-      <div className="container site-header__inner">
-        <Link href={`/${lang}/`} className="brand">
-          <LogoMark className="brand__mark" />
-          <span>3D Care</span>
-          <span className="visually-hidden">{t.nav.home}</span>
-        </Link>
-        <SiteNav lang={lang} items={items} menuLabel={t.nav.menu} switchLabel={t.nav.language} themeLabel={t.nav.themeLabel} />
-      </div>
+      <AnimatedNav lang={lang} items={items} t={t.nav} />
     </header>
   );
 }

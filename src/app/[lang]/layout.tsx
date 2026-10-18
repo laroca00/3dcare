@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { SiteFooter } from "@/components/SiteFooter";
+import { TapedFooter } from "@/components/ui/footer-taped-design";
 import { PageViews } from "@/components/PageViews";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getDictionary, hasLocale, locales } from "@/i18n/config";
@@ -51,7 +51,7 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
         <main id="main" tabIndex={-1}>
           {children}
         </main>
-        <SiteFooter lang={lang} t={t} />
+        <TapedFooter lang={lang} t={t} />
         <PageViews />
       </body>
     </html>

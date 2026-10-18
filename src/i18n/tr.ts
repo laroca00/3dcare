@@ -19,6 +19,7 @@ export const tr: typeof en = {
     themeLabel: "Koyu mod",
     skip: "İçeriğe geç",
     menu: "Ana menü",
+    close: "Kapat",
   },
   home: {
     title: "Herkesin basabileceği yardımcı araçlar",
@@ -232,6 +233,8 @@ export const tr: typeof en = {
     disclaimer:
       "Avrupa Birliği tarafından finanse edilmiştir. Ancak ifade edilen görüş ve düşünceler yalnızca yazar(lar)a aittir ve Avrupa Birliği'nin veya hibe veren makamın görüşlerini yansıtmayabilir. Ne Avrupa Birliği ne de hibe veren makam bunlardan sorumlu tutulamaz.",
     project: "Erasmus+ KA220-ADU işbirliği ortaklığı",
+    exploreTitle: "Keşfedin",
+    materialsTitle: "Materyaller",
     network: "Öğrenme merkezleri ağı",
     resources: "Kaynaklar",
     privacy: "Gizlilik",

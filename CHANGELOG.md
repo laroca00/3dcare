@@ -17,6 +17,21 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 - On wide screens the opening drawing is shown as a picture straight away,
   so the page no longer opens with an empty half before the 3D scene loads.
 
+### New footer
+- The footer is now a dark card "taped" to the page, with the project's pages
+  in two columns, the EU funding emblem and disclaimer, and the privacy,
+  accessibility and source code links below it.
+- Tailwind CSS was added for interface components (in src/components/ui),
+  without changing the styles of the rest of the site.
+
+### New navigation
+- The main menu is now a bar floating at the top of the page. It folds into a
+  small round button while the visitor scrolls down and opens again when
+  they scroll back up or press it.
+- On phones the links open in a side panel, which also works with the
+  keyboard and screen readers. Visitors who prefer reduced motion get the
+  same menu without the animation.
+
 ## 2026-10-18 (continued)
 
 ### Scroll story on the home page
