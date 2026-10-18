@@ -1,20 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { THEME_STORAGE_KEY, type Theme } from "@/theme/theme";
-
-// The theme lives on <html data-theme>, set before paint by the inline script.
-function subscribe(onChange: () => void) {
-  const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  return () => observer.disconnect();
-}
-
-const readTheme = (): Theme => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+import { useTheme } from "@/theme/useTheme";
 
 /** Switches between the light and dark theme and remembers the choice in this browser. */
 export function ThemeToggle({ label }: { label: string }) {
-  const theme = useSyncExternalStore(subscribe, readTheme, () => null);
+  const theme = useTheme();
 
   function toggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";

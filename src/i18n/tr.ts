@@ -25,7 +25,6 @@ export const tr: typeof en = {
     lead: "Engelli yetişkinler için on açık kaynak 3D model tasarlıyoruz. Her model yayımlanmadan önce bakım merkezlerinde test ediliyor ve eğitmenler ile bakım personeli için bir kullanım rehberiyle geliyor.",
     browse: "Modellere göz at",
     training: "Eğitim hakkında",
-    figureCaption: "Kolay tutulan kulplu bir kupa, baskı katmanlarıyla gösteriliyor.",
     story: {
       scenes: [
         { title: "", text: "" },

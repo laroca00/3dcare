@@ -344,10 +344,14 @@ main:focus {
 .story__fallback {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: end center;
-  padding: 0 6vw 6svh;
   transition: opacity 0.8s ease;
+}
+
+.story__fallback img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 50%;
 }
 
 .story__canvas {
@@ -417,6 +421,30 @@ main:focus {
   visibility: hidden;
 }
 
+/* Reduced motion or no WebGL: no sticky stage, each beat shows its still frame. */
+.story--stills .story__stage {
+  display: none;
+}
+
+.story--stills .story__beats {
+  margin-top: 0;
+}
+
+.story--stills .story__beat {
+  min-height: 0;
+  max-width: none;
+  padding-block: 40px;
+  opacity: 1;
+}
+
+.story__still {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 24px;
+  border-radius: var(--radius);
+}
+
 /* ?story=… renders one frozen frame of the stage, used for the still images. */
 :root[data-story-still] .site-header,
 :root[data-story-still] .site-footer,
@@ -430,11 +458,17 @@ main:focus {
   height: 100vh;
 }
 
+/* Still frames serve both languages, so they carry no label text. */
+:root[data-story-still] .story__labels {
+  display: none;
+}
+
+:root[data-story-still] .story__canvas,
+:root[data-story-still] .story__fallback {
+  transition: none;
+}
+
 @media (min-width: 900px) {
-  .story__fallback {
-    place-items: center end;
-    padding: 0 8vw 0 50%;
-  }
   .story__beat {
     justify-content: center;
     padding-block: 0;
@@ -445,14 +479,6 @@ main:focus {
   .story__beat {
     opacity: 1;
   }
-}
-
-.print-figure {
-  width: 100%;
-  height: auto;
-  max-width: 480px;
-  display: block;
-  margin-inline: auto;
 }
 
 .section {

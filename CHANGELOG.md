@@ -7,6 +7,19 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-18 (continued)
 
+### Scroll story on the home page
+- The home page opens with a 3D story that moves as the visitor scrolls: a
+  technical drawing turns into a desktop 3D printer, the printer is shown in a
+  studio, taken apart with each part labelled, prints an easy-grip mug handle
+  layer by layer, and the finished mug ends up in a hand.
+- The printer and the scene are built in code and belong to the project; no
+  third-party models or footage are used. The scene follows the light and dark
+  theme.
+- The 3D code loads only after the page is shown, stays within a 200 KB
+  budget (checked automatically) and draws only while the visitor scrolls.
+- Visitors who prefer reduced motion, or whose browser cannot show 3D, see the
+  same story as still pictures with descriptions.
+
 ### Light and dark theme
 - The whole site now has a light and a dark theme. It follows the visitor's
   device setting, and a button in the header switches between them. The

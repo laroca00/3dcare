@@ -8,12 +8,10 @@ import { initialQuality } from "@/scene/quality";
 import type { SceneHandle } from "@/scene/runScene";
 import { progressFor } from "@/scene/scrollProgress";
 import { SCENES, localProgress } from "@/scene/timeline";
-import type { Theme } from "@/theme/theme";
-import { PrintFigure } from "./PrintFigure";
+import { readTheme, useTheme } from "@/theme/useTheme";
+import { STILLS } from "./storyStills";
 
 type Mode = "pending" | "live" | "stills";
-
-const readTheme = (): Theme => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 
 function canRenderWebGL() {
   try {
@@ -118,9 +116,11 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           }),
         );
       };
-      idle = window.requestIdleCallback
-        ? window.requestIdleCallback(() => void load(), { timeout: 1500 })
-        : window.setTimeout(() => void load(), 200);
+      // Frozen frames load straight away; visitors get the scene once the page is idle.
+      idle =
+        fixed === null && window.requestIdleCallback
+          ? window.requestIdleCallback(() => void load(), { timeout: 1500 })
+          : window.setTimeout(() => void load(), fixed === null ? 200 : 0);
     }
 
     return () => {
@@ -136,6 +136,19 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   }, [t.story.labels]);
 
   const [first, ...rest] = t.story.scenes;
+  const theme = useTheme() ?? "light";
+  // Reduced motion or no WebGL: each part of the story gets its still frame.
+  const stillFrame = (i: number) =>
+    mode === "stills" && (
+      <img
+        className="story__still"
+        src={STILLS[theme][i].src}
+        width={STILLS[theme][i].width}
+        height={STILLS[theme][i].height}
+        alt={t.story.stillAlt[i]}
+        loading={i === 0 ? "eager" : "lazy"}
+      />
+    );
 
   return (
     <section
@@ -144,9 +157,11 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       aria-labelledby="story-title"
     >
       <div className="story__stage">
-        <div className="story__fallback" aria-hidden="true">
-          <PrintFigure label="" />
-        </div>
+        {/* Shown until the 3D scene is ready; follows the device theme. */}
+        <picture className="story__fallback" aria-hidden="true">
+          <source media="(prefers-color-scheme: dark)" srcSet={STILLS.dark[0].src} />
+          <img src={STILLS.light[0].src} width={STILLS.light[0].width} height={STILLS.light[0].height} alt="" fetchPriority="high" />
+        </picture>
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
         {/* Part labels; screen readers get the same list in the story text. */}
         <div className="story__labels" aria-hidden="true">
@@ -177,11 +192,13 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             </Link>
           </p>
           {first.text && <p>{first.text}</p>}
+          {stillFrame(0)}
         </div>
         {rest.map((scene, i) => (
           <div className="story__beat" data-beat key={scene.title}>
             <h2>{scene.title}</h2>
             <p>{scene.text}</p>
+            {stillFrame(i + 1)}
             {i === 1 && (
               <>
                 <h3 className="visually-hidden">{t.story.partsListTitle}</h3>

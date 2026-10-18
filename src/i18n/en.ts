@@ -23,7 +23,6 @@ export const en = {
     lead: "We are designing ten open 3D models for adults with disabilities. Each one is tested in care centres before release and comes with a guide for educators and care staff.",
     browse: "Browse the models",
     training: "About the training",
-    figureCaption: "A mug with an easy-grip handle, shown as print layers.",
     story: {
       scenes: [
         { title: "", text: "" },
