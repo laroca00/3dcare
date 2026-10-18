@@ -118,7 +118,7 @@ export const en = {
     body: [
       "This website does not use cookies and does not track you across sites.",
       "When you send the contact form, your name, email address and message are forwarded by email to the project team through the Web3Forms service. They are used only to answer your message and are not shared with third parties.",
-      "We count visits ourselves, without cookies and without storing IP addresses or any other personal data. For each page view we record only the date, the page, the referring website, the device type and the screen size. These statistics are kept in the project’s own spreadsheet and used for project reporting.",
+      "We count visits ourselves, without cookies and without storing IP addresses or any other personal data. For each page view we record only the date, the page, the referring website, campaign tags in the link (such as utm_source), the device type, the screen size, the browser and operating system family, and the country estimated from your time zone and language. We also record how long a page was open and how far it was scrolled, which files were downloaded and which links to other websites were followed. These statistics are kept in the project’s own spreadsheet and used for project reporting.",
       "To ask for your data to be deleted, contact us through the contact page.",
     ],
   },

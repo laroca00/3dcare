@@ -120,7 +120,7 @@ export const tr: typeof en = {
     body: [
       "Bu site çerez kullanmaz ve sizi başka sitelerde takip etmez.",
       "İletişim formunu gönderdiğinizde adınız, e-posta adresiniz ve mesajınız Web3Forms hizmeti aracılığıyla proje ekibine e-postayla iletilir. Bu bilgiler yalnızca mesajınıza yanıt vermek için kullanılır ve üçüncü kişilerle paylaşılmaz.",
-      "Ziyaretleri çerez kullanmadan, IP adresi ya da başka bir kişisel veri saklamadan kendimiz sayıyoruz. Her sayfa görüntülemesi için yalnızca tarih, sayfa, gelinen web sitesi, cihaz türü ve ekran boyutu kaydedilir. Bu istatistikler projenin kendi tablosunda tutulur ve proje raporlamasında kullanılır.",
+      "Ziyaretleri çerez kullanmadan, IP adresi ya da başka bir kişisel veri saklamadan kendimiz sayıyoruz. Her sayfa görüntülemesi için yalnızca tarih, sayfa, gelinen web sitesi, bağlantıdaki kampanya etiketleri (utm_source gibi), cihaz türü, ekran boyutu, tarayıcı ve işletim sistemi türü ile saat diliminiz ve dilinizden tahmin edilen ülke kaydedilir. Ayrıca sayfanın ne kadar süre açık kaldığı ve ne kadar kaydırıldığı, hangi dosyaların indirildiği ve başka sitelere giden hangi bağlantılara tıklandığı kaydedilir. Bu istatistikler projenin kendi tablosunda tutulur ve proje raporlamasında kullanılır.",
       "Verilerinizin silinmesini istemek için iletişim sayfasından bize ulaşın.",
     ],
   },

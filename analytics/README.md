@@ -1,14 +1,25 @@
 # Visitor statistics
 
-The website counts page views without cookies or personal data. Each view is
-sent to a Google Apps Script web app (`Code.gs`) that appends one row to a
-Google Sheet owned by the project. The `Summary` sheet shows page views and
-sessions per month, the most visited pages, referring websites, and devices
-and languages.
+The website counts visits without cookies or personal data. Records are sent
+to a Google Apps Script web app (`Code.gs`) that appends rows to a Google
+Sheet owned by the project:
 
-Recorded per page view: time, page path, language, referring website (host
-only), device type (mobile, tablet or desktop), screen size, and whether it is
-the first page of a browser session.
+- `Dashboard`: key figures for this month and since launch, with charts.
+- `Reports`: the tables behind the charts (months, pages, countries,
+  referrers, devices, browsers, campaigns, downloads, outbound links, time on
+  page).
+- `Visits`: one row per page view: time, page path, language, referring
+  website (host only), device type, screen size, whether it is the first page
+  of a browser session, country (estimated from the browser's time zone and
+  language; no IP address is used), browser and OS family, and the
+  `utm_source`, `utm_medium` and `utm_campaign` tags of the link.
+- `Engagement`: one row when a page is left: seconds the page was visible and
+  how far it was scrolled.
+- `Events`: file downloads (`.stl`, `.3mf`, `.pdf`, ...) and clicks on links to
+  other websites.
+
+To see where visitors come from, add campaign tags to links you share, for
+example `https://3dcare.eu/en/?utm_source=newsletter&utm_campaign=kickoff`.
 
 ## Setup
 
@@ -28,5 +39,9 @@ the first page of a browser session.
 
 6. Re-run the **Deploy website** workflow. Statistics start with the next visit.
 
-After changing `Code.gs`, use **Deploy → Manage deployments → Edit → New
-version** so the URL stays the same.
+After changing `Code.gs`, run `setup` again (it keeps the data and rebuilds
+the dashboard), then use **Deploy → Manage deployments → Edit → New version**
+so the URL stays the same.
+
+If no rows appear, check **Executions** in the Apps Script editor: the web app
+always answers "ok", errors are only logged there.
