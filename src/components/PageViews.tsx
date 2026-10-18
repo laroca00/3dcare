@@ -72,7 +72,7 @@ function enabled() {
 }
 
 /** Records downloads and clicks on links to other websites. */
-function useLinkClicks() {
+function useLinkClicks(pathname: string) {
   useEffect(() => {
     if (!enabled()) return;
 
@@ -89,19 +89,19 @@ function useLinkClicks() {
         kind: download ? "download" : "outbound",
         // Without the query string, which may carry identifiers.
         target: outbound ? link.host + link.pathname : link.pathname,
-        path: location.pathname,
+        path: pathname,
       });
     };
 
     document.addEventListener("click", onClick, { capture: true });
     return () => document.removeEventListener("click", onClick, { capture: true });
-  }, []);
+  }, [pathname]);
 }
 
 /** Sends anonymous records per page view. No cookies, no identifiers. */
 export function PageViews() {
   const pathname = usePathname();
-  useLinkClicks();
+  useLinkClicks(pathname);
 
   useEffect(() => {
     if (!enabled()) return;

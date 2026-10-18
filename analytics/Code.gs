@@ -73,10 +73,14 @@ const COUNTRY_NAMES = {
   IS: "Iceland", CY: "Cyprus", US: "United States", CA: "Canada", AU: "Australia",
 };
 
+// Formula argument separator: "," or ";" depending on the spreadsheet locale.
+let separator = ",";
+
 /** Run from the editor to create or refresh the sheets, reports and dashboard. Data is kept. */
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   Object.keys(SHEETS).forEach((key) => setupDataSheet(ss, SHEETS[key]));
+  separator = detectSeparator(ss);
 
   const old = ss.getSheetByName(OLD_SUMMARY_SHEET);
   if (old) ss.deleteSheet(old);
@@ -97,6 +101,21 @@ function setupDataSheet(ss, def) {
   def.widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
   sheet.getRange("A2:A").setNumberFormat("yyyy-mm-dd hh:mm");
   sheet.getRange("B2:B").setNumberFormat("yyyy-mm");
+}
+
+function detectSeparator(ss) {
+  const scratch = ss.insertSheet();
+  scratch.getRange("A1").setFormula("=SUM(1,2)");
+  SpreadsheetApp.flush();
+  const comma = scratch.getRange("A1").getValue() === 3;
+  ss.deleteSheet(scratch);
+  return comma ? "," : ";";
+}
+
+/** Formulas are written with commas; this swaps them outside of quoted text if needed. */
+function localize(formula) {
+  if (separator === ",") return formula;
+  return formula.replace(/("[^"]*")|,/g, (match, quoted) => quoted || separator);
 }
 
 function resetSheet(ss, name, index) {
@@ -137,7 +156,7 @@ function setupReports(sheet) {
   Object.keys(blocks).forEach((key) => {
     const [title, width, formula] = blocks[key];
     sheet.getRange(1, col).setValue(title).setFontWeight("bold").setFontColor(COLORS.ink);
-    sheet.getRange(2, col).setFormula(formula);
+    sheet.getRange(2, col).setFormula(localize(formula));
     sheet.getRange(2, col, 1, width).setFontWeight("bold").setBackground(COLORS.paper);
     sheet.setColumnWidth(col, 200);
     sheet.setColumnWidth(col + width, 24);
@@ -187,7 +206,7 @@ function setupDashboard(sheet, reports, blocks) {
     items.forEach(([label, formula, format], i) => {
       const col = 2 + i * 2;
       sheet.getRange(row, col).setValue(label).setFontColor(COLORS.muted).setFontSize(10);
-      sheet.getRange(row + 1, col).setFormula(formula).setNumberFormat(format)
+      sheet.getRange(row + 1, col).setFormula(localize(formula)).setNumberFormat(format)
         .setFontSize(24).setFontWeight("bold").setFontColor(COLORS.ink).setHorizontalAlignment("left");
       sheet.getRange(row, col, 2, 1).setBackground(COLORS.paper)
         .setBorder(true, true, true, true, false, false, COLORS.plate, SpreadsheetApp.BorderStyle.SOLID);
@@ -202,14 +221,12 @@ function setupDashboard(sheet, reports, blocks) {
   };
   const base = (title) => ({
     title,
-    fontName: "Inter",
     titleTextStyle: { color: COLORS.ink, fontSize: 13, bold: true },
     legend: { position: "none" },
     colors: [COLORS.series[0]],
     backgroundColor: "#FFFFFF",
     hAxis: { gridlines: { color: COLORS.grid }, textStyle: { color: COLORS.muted } },
     vAxis: { gridlines: { color: COLORS.grid }, textStyle: { color: COLORS.muted } },
-    chartArea: { left: 140, top: 40, width: "65%", height: "75%" },
   });
   const add = (type, ranges, options, row, col, width) => {
     const builder = sheet.newChart().setChartType(type).setNumHeaders(1)
@@ -224,7 +241,6 @@ function setupDashboard(sheet, reports, blocks) {
   monthly.colors = COLORS.series;
   monthly.lineWidth = 2;
   monthly.pointSize = 6;
-  monthly.chartArea = { left: 60, top: 60, width: "88%", height: "65%" };
   add(Charts.ChartType.LINE, [range("monthly", 40)], monthly, 11, 2, 940);
 
   const bar = Charts.ChartType.BAR;
