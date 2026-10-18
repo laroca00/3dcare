@@ -262,19 +262,22 @@ function doPost(e) {
 
     const now = new Date();
     const month = new Date(now.getFullYear(), now.getMonth(), 1);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let def, row;
 
     if (data.type === "engagement") {
-      ss.getSheetByName(SHEETS.engagement.name).appendRow([
+      def = SHEETS.engagement;
+      row = [
         now, month, path,
         clamp(data.seconds, MAX_SECONDS),
         clamp(data.scroll, 100),
-      ]);
+      ];
     } else if (data.type === "event") {
       if (data.kind !== "download" && data.kind !== "outbound") return ok();
-      ss.getSheetByName(SHEETS.events.name).appendRow([now, month, data.kind, clean(data.target), path]);
+      def = SHEETS.events;
+      row = [now, month, data.kind, clean(data.target), path];
     } else {
-      ss.getSheetByName(SHEETS.visits.name).appendRow([
+      def = SHEETS.visits;
+      row = [
         now, month, path,
         path.slice(1, 3),
         clean(data.referrer) || (data.newSession === true ? "(direct)" : "(internal)"),
@@ -287,8 +290,13 @@ function doPost(e) {
         clean(data.source).toLowerCase(),
         clean(data.medium).toLowerCase(),
         clean(data.campaign).toLowerCase(),
-      ]);
+      ];
     }
+
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(def.name);
+    sheet.appendRow(row);
+    // Writing a date replaces the column's number format, so set it again.
+    sheet.getRange(sheet.getLastRow(), 1, 1, 2).setNumberFormats([["yyyy-mm-dd hh:mm", "yyyy-mm"]]);
   } catch (err) {
     // Shown under Executions in the Apps Script editor.
     console.error(err);
