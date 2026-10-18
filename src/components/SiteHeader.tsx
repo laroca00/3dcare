@@ -7,6 +7,8 @@ export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
   const items = [
     { href: `/${lang}/models/`, label: t.nav.models },
     { href: `/${lang}/training/`, label: t.nav.training },
+    { href: `/${lang}/resources/`, label: t.nav.resources },
+    { href: `/${lang}/news/`, label: t.nav.news },
     { href: `/${lang}/about/`, label: t.nav.about },
     { href: `/${lang}/partners/`, label: t.nav.partners },
     { href: `/${lang}/contact/`, label: t.nav.contact },

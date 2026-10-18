@@ -10,6 +10,8 @@ export const tr: typeof en = {
     home: "Ana sayfa",
     models: "Modeller",
     training: "Eğitim",
+    resources: "Kaynaklar",
+    news: "Haberler",
     about: "Proje",
     partners: "Ortaklar",
     contact: "İletişim",
@@ -39,6 +41,12 @@ export const tr: typeof en = {
     ],
     partnersTitle: "Altı ülkeden yedi kurum",
     partnersLink: "Ortaklarla tanışın",
+    newsTitle: "Son haberler",
+    newsLink: "Tüm haberler",
+    networkTitle: "3D Care’i merkezinize getirin",
+    networkText:
+      "Bakım merkezleri, dernekler ve yetişkin eğitimi kurumları yerel öğrenme merkezleri ağına katılabilir ve modelleri basıp kullanmaya başlamak için destek alabilir.",
+    networkLink: "Ağ hakkında",
   },
   models: {
     title: "Modeller",
@@ -72,6 +80,53 @@ export const tr: typeof en = {
       "Yerel bir atölye düzenlemek",
     ],
     when: "Paket, Malta'daki eğitici eğitimi haftasıyla birlikte hazırlanıyor. Materyaller test edildikten sonra burada yayımlanacak.",
+  },
+  news: {
+    title: "Haberler",
+    lead: "Ortaklıktan haberler: toplantılar, test oturumları, eğitimler ve yeni modeller.",
+    back: "Tüm haberler",
+    published: "Yayın tarihi",
+  },
+  resources: {
+    title: "Kaynaklar",
+    lead: "Projenin hazırladığı kılavuzlar, dosyalar ve planlar. Hepsi ücretsiz kullanılabilir. Tamamlandıkça buraya eklenir.",
+    available: "Hazır",
+    planned: "Hazırlanıyor",
+    wp: "İş paketi",
+    download: "İndir",
+    links: {
+      models: "Modellere git",
+      training: "Eğitim hakkında",
+      network: "Ağ hakkında",
+    },
+  },
+  network: {
+    title: "Yerel öğrenme merkezleri ağı",
+    lead: "Destek verdikleri yetişkinlerle birlikte yardımcı araçları basıp kullanan merkezlerden bir ağ kuruyoruz. Ortaklar dosyalarını, eğitimlerini ve deneyimlerini paylaşıyor ve yeni merkezlerin başlamasına yardım ediyor.",
+    whoTitle: "Kimler katılabilir",
+    who: [
+      "Bakım ve rehabilitasyon merkezleri",
+      "Engelli bireylerin ve engelliler için çalışan kuruluşlar",
+      "Yetişkin eğitimi kurumları ve yerel öğrenme merkezleri",
+      "Bakım kurumlarına destek veren meslek okulları ve atölyeler",
+    ],
+    getTitle: "Merkeziniz neler kazanır",
+    get: [
+      "Transfer Paketi: basılabilir dosyalar, eğitim materyalleri, güvenlik notları ve ekipman kontrol listesi",
+      "Uzaktan başlangıç desteği ve ilk baskılarınız için rehberlik",
+      "Çalışanlarınız için çevrim içi eğitim paketine ücretsiz erişim",
+      "Ağdaki diğer merkezlerle deneyim paylaşımı",
+    ],
+    kits: "Ağa ilk katılan merkezler için üç düşük maliyetli 3D baskı başlangıç seti ayrıldı: bir öncü pilot merkez ve iki erken katılımcı.",
+    askTitle: "Sizden beklediklerimiz",
+    ask: [
+      "Desteklediğiniz kişilerle en az bir ya da iki modeli denemek",
+      "Modelleri ve kılavuzları geliştirebilmemiz için ilk kullanımın nasıl geçtiğini bize anlatmak",
+      "Katılımınızı yazılı olarak onaylamak",
+    ],
+    joinTitle: "Nasıl katılırım",
+    join: "Başvuru formu, ilk doğrulanmış modeller hazır olduğunda 2027’de açılacak. Şimdiden ilgileniyorsanız bize yazın, sizi bilgilendirelim.",
+    contact: "Bize yazın",
   },
   about: {
     title: "Proje hakkında",
@@ -114,6 +169,7 @@ export const tr: typeof en = {
     networkTitle: "Öğrenme merkezleri ağına katılın",
     networkText:
       "Modelleri kullanmak isteyen bir bakım merkezi, dernek ya da yetişkin eğitimi kurumu musunuz? Ağa katılım başvuru formu 2027'de burada açılacak.",
+    networkLink: "Ağ hakkında",
   },
   privacy: {
     title: "Gizlilik bildirimi",
@@ -137,6 +193,8 @@ export const tr: typeof en = {
     disclaimer:
       "Avrupa Birliği tarafından finanse edilmiştir. Ancak ifade edilen görüş ve düşünceler yalnızca yazar(lar)a aittir ve Avrupa Birliği'nin veya hibe veren makamın görüşlerini yansıtmayabilir. Ne Avrupa Birliği ne de hibe veren makam bunlardan sorumlu tutulamaz.",
     project: "Erasmus+ KA220-ADU işbirliği ortaklığı",
+    network: "Öğrenme merkezleri ağı",
+    resources: "Kaynaklar",
     privacy: "Gizlilik",
     accessibility: "Erişilebilirlik",
     source: "Kaynak kodu ve model dosyaları GitHub'da",

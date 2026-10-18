@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   trailingSlash: true,
   basePath,
   images: { unoptimized: true },
+  // One 404 page for every unknown address (see src/app/global-not-found.tsx).
+  experimental: { globalNotFound: true },
 };
 
 export default nextConfig;

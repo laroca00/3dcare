@@ -27,6 +27,9 @@ export default async function ContactPage({ params }: PageProps<"/[lang]/contact
       <aside aria-labelledby="network">
         <h2 id="network">{t.networkTitle}</h2>
         <p>{t.networkText}</p>
+        <p>
+          <Link href={`/${lang}/network/`}>{t.networkLink}</Link>
+        </p>
       </aside>
     </div>
   );

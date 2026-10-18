@@ -29,6 +29,8 @@ jobs:
         env:
           # Empty once the custom domain is configured.
           BASE_PATH: ${{ vars.BASE_PATH }}
+          # Public address for the sitemap and share cards; defaults to the GitHub Pages address.
+          SITE_URL: ${{ vars.SITE_URL }}
           NEXT_PUBLIC_WEB3FORMS_KEY: ${{ vars.WEB3FORMS_KEY }}
           NEXT_PUBLIC_STATS_URL: ${{ vars.STATS_URL }}
       - uses: actions/upload-pages-artifact@v3

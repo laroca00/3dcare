@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { PageViews } from "@/components/PageViews";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getDictionary, hasLocale, locales } from "@/i18n/config";
+import { shareImage } from "@/site";
 import "@fontsource-variable/inter";
 import "../globals.css";
 
@@ -20,6 +21,15 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
   return {
     title: { default: t.meta.title, template: `%s | 3D Care` },
     description: t.meta.description,
+    openGraph: {
+      type: "website",
+      siteName: "3D Care",
+      locale: lang === "tr" ? "tr_TR" : "en_GB",
+      title: t.meta.title,
+      description: t.meta.description,
+      images: shareImage(lang, t.meta.title),
+    },
+    twitter: { card: "summary_large_image" },
   };
 }
 

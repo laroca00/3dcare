@@ -8,6 +8,8 @@ export const en = {
     home: "Home",
     models: "Models",
     training: "Training",
+    resources: "Resources",
+    news: "News",
     about: "About",
     partners: "Partners",
     contact: "Contact",
@@ -37,6 +39,12 @@ export const en = {
     ],
     partnersTitle: "Seven organisations from six countries",
     partnersLink: "Meet the partners",
+    newsTitle: "Latest news",
+    newsLink: "All news",
+    networkTitle: "Bring 3D Care to your centre",
+    networkText:
+      "Care centres, NGOs and adult education providers can join the network of local learning centres and get support to start printing and using the models.",
+    networkLink: "About the network",
   },
   models: {
     title: "Models",
@@ -70,6 +78,53 @@ export const en = {
       "Running a local workshop",
     ],
     when: "The package is being prepared alongside a train-the-trainers week in Malta. Materials will be published here once they have been tested.",
+  },
+  news: {
+    title: "News",
+    lead: "Updates from the partnership: meetings, testing sessions, trainings and new models.",
+    back: "All news",
+    published: "Published",
+  },
+  resources: {
+    title: "Resources",
+    lead: "Guides, files and plans produced by the project. Everything is free to use. Items are added here as they are completed.",
+    available: "Available",
+    planned: "In preparation",
+    wp: "Work package",
+    download: "Download",
+    links: {
+      models: "Go to the models",
+      training: "About the training",
+      network: "About the network",
+    },
+  },
+  network: {
+    title: "Network of local learning centres",
+    lead: "We are building a network of centres that print and use assistive tools with the adults they support. Partners share files, training and experience, and help new centres get started.",
+    whoTitle: "Who can join",
+    who: [
+      "Care and rehabilitation centres",
+      "Organisations of and for persons with disabilities",
+      "Adult education providers and local learning centres",
+      "Vocational schools and makerspaces that support care settings",
+    ],
+    getTitle: "What your centre gets",
+    get: [
+      "The Transfer Package: printable files, training materials, safety notes and an equipment checklist",
+      "Remote onboarding and guidance for your first prints",
+      "Free access to the online training package for your staff",
+      "Exchange with other centres in the network",
+    ],
+    kits: "Three low-cost 3D printing starter kits are reserved for the first centres to join: one lead pilot centre and two early adopters.",
+    askTitle: "What we ask",
+    ask: [
+      "Try at least one or two models with the people you support",
+      "Tell us how the first use went, so we can improve the models and guides",
+      "Confirm your participation in writing",
+    ],
+    joinTitle: "How to join",
+    join: "The application form opens in 2027, when the first validated models are available. If you are interested now, contact us and we will keep you informed.",
+    contact: "Contact us",
   },
   about: {
     title: "About the project",
@@ -112,6 +167,7 @@ export const en = {
     networkTitle: "Join the network of learning centres",
     networkText:
       "Are you a care centre, NGO or adult education provider interested in using the models? An application form for the network will open here in 2027.",
+    networkLink: "About the network",
   },
   privacy: {
     title: "Privacy notice",
@@ -135,6 +191,8 @@ export const en = {
     disclaimer:
       "Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the granting authority. Neither the European Union nor the granting authority can be held responsible for them.",
     project: "Erasmus+ KA220-ADU cooperation partnership",
+    network: "Network of learning centres",
+    resources: "Resources",
     privacy: "Privacy",
     accessibility: "Accessibility",
     source: "Source code and model files on GitHub",

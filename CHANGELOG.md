@@ -5,6 +5,25 @@ Fikirler Derneği) under WP5, Activity 5.1 (Dissemination of Project Results
 and Stakeholder Outreach). Every change is also recorded in the commit history
 of this repository: https://github.com/laroca00/3dcare/commits/main
 
+## 2026-10-18 (continued)
+
+### New pages
+- News section with a page per article, and the latest news on the home page.
+  First articles: the project start and the website launch.
+- Resources page listing the guides, files and plans the project will produce,
+  by work package. The project logo can already be downloaded there.
+- Network page for the Network of Innovative Local Learning Centres
+  (Activity 5.3): who can join, what centres receive, what is asked of them
+  and how to join. Linked from the home page, contact page and footer.
+
+### Sharing and search engines
+- Share cards: links shared on social media, messaging apps or by email now
+  show the project title, a short description and an image (English and
+  Turkish versions, with the EU emblem).
+- Sitemap and robots file so search engines can find every page in both
+  languages.
+- Bilingual "page not found" page with links back to the site.
+
 ## 2026-10-18
 
 ### Planning

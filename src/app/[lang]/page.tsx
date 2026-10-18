@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { NewsList } from "@/components/NewsList";
 import { PrintFigure } from "@/components/PrintFigure";
+import { posts } from "@/content/news";
 import { partners } from "@/content/partners";
 import { getDictionary, hasLocale } from "@/i18n/config";
 import { notFound } from "next/navigation";
@@ -66,6 +68,26 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
         <p>
           <Link href={`/${lang}/partners/`}>{t.partnersLink}</Link>
         </p>
+      </section>
+
+      <section className="section container" aria-labelledby="news">
+        <h2 id="news">{t.newsTitle}</h2>
+        <NewsList lang={lang} posts={posts.slice(0, 3)} headingLevel={3} />
+        <p>
+          <Link href={`/${lang}/news/`}>{t.newsLink}</Link>
+        </p>
+      </section>
+
+      <section className="section container" aria-labelledby="network">
+        <div className="callout">
+          <h2 id="network">{t.networkTitle}</h2>
+          <p>{t.networkText}</p>
+          <p className="actions">
+            <Link href={`/${lang}/network/`} className="btn btn--primary">
+              {t.networkLink}
+            </Link>
+          </p>
+        </div>
       </section>
     </>
   );

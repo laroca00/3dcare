@@ -23,6 +23,12 @@ export function SiteFooter({ lang, t }: { lang: Locale; t: Dictionary }) {
           <p>{t.footer.project}</p>
           <ul className="site-footer__links">
             <li>
+              <Link href={`/${lang}/network/`}>{t.footer.network}</Link>
+            </li>
+            <li>
+              <Link href={`/${lang}/resources/`}>{t.footer.resources}</Link>
+            </li>
+            <li>
               <Link href={`/${lang}/privacy/`}>{t.footer.privacy}</Link>
             </li>
             <li>
