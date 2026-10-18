@@ -44,8 +44,9 @@ export function PageViews() {
       screen: `${screen.width}x${screen.height}`,
       newSession: !internal,
     });
-    // text/plain avoids a CORS preflight, which Apps Script does not answer.
-    navigator.sendBeacon(STATS_URL, new Blob([body], { type: "text/plain" }));
+    // A plain-text body avoids a CORS preflight, which Apps Script does not
+    // answer. Apps Script rejects sendBeacon requests (503), so use fetch.
+    fetch(STATS_URL, { method: "POST", mode: "no-cors", keepalive: true, body }).catch(() => {});
   }, [pathname]);
 
   return null;
