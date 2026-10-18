@@ -328,26 +328,88 @@ main:focus {
 
 /* Home */
 
-.hero {
+/* Home story: sticky 3D stage with the story text scrolling over it */
+
+.story {
+  position: relative;
+}
+
+.story__stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.story__fallback {
+  position: absolute;
+  inset: 0;
   display: grid;
-  gap: 32px;
-  align-items: center;
-  padding-block: 48px;
+  place-items: end center;
+  padding: 0 6vw 6svh;
+  transition: opacity 0.8s ease;
 }
 
-@media (min-width: 900px) {
-  .hero {
-    grid-template-columns: 1.1fr 1fr;
-    padding-block: 88px;
-  }
+.story__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.8s ease;
 }
 
-.hero h1 {
+.story--ready .story__canvas {
+  opacity: 1;
+}
+
+.story--ready .story__fallback {
+  opacity: 0;
+}
+
+.story__beats {
+  position: relative;
+  margin-top: -100svh;
+}
+
+.story__beat {
+  min-height: 120svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-block: 12svh;
+  max-width: 34rem;
+  opacity: calc(0.3 + 0.7 * min(var(--reveal, 1), 1));
+}
+
+.story__beat--intro {
+  min-height: 100svh;
+  opacity: 1;
+}
+
+.story h1 {
   max-width: 14ch;
 }
 
-.hero__figure {
-  margin: 0;
+.story--still .story__beats {
+  visibility: hidden;
+}
+
+@media (min-width: 900px) {
+  .story__fallback {
+    place-items: center end;
+    padding: 0 8vw 0 50%;
+  }
+  .story__beat {
+    justify-content: center;
+    padding-block: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story__beat {
+    opacity: 1;
+  }
 }
 
 .print-figure {

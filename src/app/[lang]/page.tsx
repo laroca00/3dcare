@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { HomeStory } from "@/components/HomeStory";
 import { NewsList } from "@/components/NewsList";
-import { PrintFigure } from "@/components/PrintFigure";
 import { posts } from "@/content/news";
 import { partners } from "@/content/partners";
 import { getDictionary, hasLocale } from "@/i18n/config";
@@ -13,23 +13,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
 
   return (
     <>
-      <section className="hero container">
-        <div className="hero__text">
-          <h1>{t.title}</h1>
-          <p className="lead">{t.lead}</p>
-          <p className="actions">
-            <Link href={`/${lang}/models/`} className="btn btn--primary">
-              {t.browse}
-            </Link>
-            <Link href={`/${lang}/training/`} className="btn btn--secondary">
-              {t.training}
-            </Link>
-          </p>
-        </div>
-        <figure className="hero__figure">
-          <PrintFigure label={t.figureCaption} />
-        </figure>
-      </section>
+      <HomeStory lang={lang} t={t} />
 
       <section className="section container" aria-labelledby="delivers">
         <h2 id="delivers">{t.deliversTitle}</h2>

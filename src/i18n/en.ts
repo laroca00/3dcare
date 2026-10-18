@@ -24,6 +24,44 @@ export const en = {
     browse: "Browse the models",
     training: "About the training",
     figureCaption: "A mug with an easy-grip handle, shown as print layers.",
+    story: {
+      scenes: [
+        { title: "", text: "" },
+        {
+          title: "Low-cost printers, already within reach",
+          text: "A desktop 3D printer costs less than many of the assistive tools it can make.",
+        },
+        {
+          title: "Simple parts, nothing hidden",
+          text: "Every part of the printer and every model file is open, so any centre can learn, repair and adapt.",
+        },
+        {
+          title: "Ten tools, tested with the people who use them",
+          text: "Each model is printed layer by layer, then tried by adults with disabilities and their therapists.",
+        },
+        {
+          title: "From the printer to everyday life",
+          text: "An easy-grip mug handle, printed in an afternoon, makes a morning coffee possible without help.",
+        },
+      ],
+      labels: {
+        base: "Base and electronics",
+        bed: "Heated print bed",
+        frame: "Aluminium frame",
+        gantry: "Moving axis",
+        head: "Print head",
+        spool: "Filament spool",
+        display: "Control screen",
+      },
+      partsListTitle: "Parts of the printer",
+      stillAlt: [
+        "Technical drawing of a desktop 3D printer turning into the real printer.",
+        "A desktop 3D printer lit from the side in a studio.",
+        "The printer taken apart: base, heated bed, frame, moving axis, print head, filament spool and screen.",
+        "The printer printing a mug handle layer by layer.",
+        "A hand holding a mug with the printed easy-grip handle.",
+      ],
+    },
     deliversTitle: "What the project will deliver by 2028",
     delivers: [
       { value: "10", text: "validated 3D models, free to download, print and adapt" },

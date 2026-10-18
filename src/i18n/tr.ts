@@ -26,6 +26,44 @@ export const tr: typeof en = {
     browse: "Modellere göz at",
     training: "Eğitim hakkında",
     figureCaption: "Kolay tutulan kulplu bir kupa, baskı katmanlarıyla gösteriliyor.",
+    story: {
+      scenes: [
+        { title: "", text: "" },
+        {
+          title: "Düşük maliyetli yazıcılar, zaten ulaşılabilir",
+          text: "Bir masaüstü 3D yazıcı, basabildiği birçok yardımcı araçtan daha ucuz.",
+        },
+        {
+          title: "Basit parçalar, gizli hiçbir şey yok",
+          text: "Yazıcının her parçası ve her model dosyası açık; her merkez öğrenebilir, onarabilir ve uyarlayabilir.",
+        },
+        {
+          title: "On araç, onları kullanacak kişilerle test ediliyor",
+          text: "Her model katman katman basılıyor, sonra engelli yetişkinler ve terapistleri tarafından deneniyor.",
+        },
+        {
+          title: "Yazıcıdan günlük hayata",
+          text: "Bir öğleden sonrada basılan kolay tutulan kupa kulpu, sabah kahvesini yardım almadan içmeyi mümkün kılıyor.",
+        },
+      ],
+      labels: {
+        base: "Gövde ve elektronik",
+        bed: "Isıtmalı baskı tablası",
+        frame: "Alüminyum çerçeve",
+        gantry: "Hareketli eksen",
+        head: "Baskı kafası",
+        spool: "Filament makarası",
+        display: "Kontrol ekranı",
+      },
+      partsListTitle: "Yazıcının parçaları",
+      stillAlt: [
+        "Bir masaüstü 3D yazıcının teknik çizimi, gerçek yazıcıya dönüşüyor.",
+        "Stüdyoda yandan aydınlatılmış bir masaüstü 3D yazıcı.",
+        "Parçalarına ayrılmış yazıcı: gövde, ısıtmalı tabla, çerçeve, hareketli eksen, baskı kafası, filament makarası ve ekran.",
+        "Yazıcı bir kupa kulpunu katman katman basıyor.",
+        "Basılan kolay tutulan kulplu kupayı tutan bir el.",
+      ],
+    },
     deliversTitle: "Proje 2028'e kadar neler sunacak",
     delivers: [
       { value: "10", text: "doğrulanmış 3D model; ücretsiz indirilebilir, basılabilir ve uyarlanabilir" },
