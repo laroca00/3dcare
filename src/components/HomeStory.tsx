@@ -23,8 +23,9 @@ function canRenderWebGL() {
 
 /**
  * The scroll story at the top of the home page: a sticky 3D stage with the
- * story text scrolling over it. Text and a static picture render first; the
- * 3D scene loads after the page has painted.
+ * story text scrolling over it. The text renders first; the 3D scene loads on
+ * the visitor's first interaction. Without WebGL or with reduced motion, the
+ * story is told with still frames instead.
  */
 export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -83,50 +84,59 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     const themeObserver = new MutationObserver(() => handle?.setTheme(readTheme()));
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-    let idle = 0;
+    const INTENT = ["scroll", "wheel", "pointermove", "pointerdown", "touchstart", "keydown"] as const;
+    let loading = false;
+    const load = async () => {
+      if (loading) return;
+      loading = true;
+      INTENT.forEach((type) => window.removeEventListener(type, load));
+      const { startScene } = await import("@/scene/runScene");
+      if (cancelled) return;
+      const started = await startScene(canvas, {
+        theme: readTheme(),
+        quality: initialQuality({
+          width: window.innerWidth,
+          dpr: window.devicePixelRatio,
+          cores: navigator.hardwareConcurrency || 4,
+        }),
+        getProgress: () => progress,
+        labels: t.story.labels,
+        ending: fixed !== null && params.get("ending") === "table" ? "table" : "hand",
+        onLabels(positions) {
+          for (const { id, x, y, opacity } of positions) {
+            const el = labelRefs.current[id];
+            if (!el) continue;
+            el.style.transform = `translate(${x}px, ${y}px)`;
+            el.style.opacity = String(opacity);
+          }
+        },
+      });
+      if (cancelled) {
+        started.dispose();
+        return;
+      }
+      handle = started;
+      handle.invalidate();
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          setReady(true);
+          if (fixed !== null) document.documentElement.dataset.storyReady = "1";
+        }),
+      );
+    };
+
     if (live) {
-      const load = async () => {
-        const { startScene } = await import("@/scene/runScene");
-        if (cancelled) return;
-        handle = startScene(canvas, {
-          theme: readTheme(),
-          quality: initialQuality({
-            width: window.innerWidth,
-            dpr: window.devicePixelRatio,
-            cores: navigator.hardwareConcurrency || 4,
-          }),
-          getProgress: () => progress,
-          labels: t.story.labels,
-          ending: fixed !== null && params.get("ending") === "table" ? "table" : "hand",
-          onLabels(positions) {
-            for (const { id, x, y, opacity } of positions) {
-              const el = labelRefs.current[id];
-              if (!el) continue;
-              el.style.transform = `translate(${x}px, ${y}px)`;
-              el.style.opacity = String(opacity);
-            }
-          },
-        });
-        handle.invalidate();
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            if (cancelled) return;
-            setReady(true);
-            if (fixed !== null) document.documentElement.dataset.storyReady = "1";
-          }),
-        );
-      };
-      // Frozen frames load straight away; visitors get the scene once the page is idle.
-      idle =
-        fixed === null && window.requestIdleCallback
-          ? window.requestIdleCallback(() => void load(), { timeout: 1500 })
-          : window.setTimeout(() => void load(), fixed === null ? 200 : 0);
+      // At the top of the page the story has not started yet, so the scene can
+      // wait for the visitor's first scroll, touch or key press. This keeps its
+      // set-up work out of the page's first seconds. Frozen frames load at once.
+      if (fixed !== null) void load();
+      else INTENT.forEach((type) => window.addEventListener(type, load, { passive: true, once: true }));
     }
 
     return () => {
       cancelled = true;
-      if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
-      else clearTimeout(idle);
+      INTENT.forEach((type) => window.removeEventListener(type, load));
       window.removeEventListener("scroll", measure);
       window.removeEventListener("resize", measure);
       io.disconnect();
@@ -157,11 +167,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       aria-labelledby="story-title"
     >
       <div className="story__stage">
-        {/* Shown until the 3D scene is ready; follows the device theme. */}
-        <picture className="story__fallback" aria-hidden="true">
-          <source media="(prefers-color-scheme: dark)" srcSet={STILLS.dark[0].src} />
-          <img src={STILLS.light[0].src} width={STILLS.light[0].width} height={STILLS.light[0].height} alt="" fetchPriority="high" />
-        </picture>
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
         {/* Part labels; screen readers get the same list in the story text. */}
         <div className="story__labels" aria-hidden="true">

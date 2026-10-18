@@ -37,7 +37,10 @@ export interface SceneHandle {
   dispose(): void;
 }
 
-export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): SceneHandle {
+/** Lets the browser handle input and paint between the heavier set-up steps. */
+const yieldToMain = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Promise<SceneHandle> {
   const quality = new QualityController(opts.quality);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 2, powerPreference: "high-performance" });
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -48,12 +51,15 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
   const camera = new THREE.PerspectiveCamera(30, 1, 1, 1000);
 
   const printer = buildPrinter(opts.quality);
+  await yieldToMain();
   const stage = new THREE.Group();
   stage.add(printer.root);
   printer.root.position.y = -32;
   scene.add(stage);
   const studio = createStudio(renderer, scene, opts.theme, opts.quality, stage, printer.root.position.y);
+  await yieldToMain();
   const drawing = createDrawing(printer);
+  await yieldToMain();
   const job = createPrintJob(printer.bedSurface, opts.quality);
   const hand = createHand(opts.quality);
   stage.add(hand.object);
@@ -77,7 +83,6 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
     handle.invalidate();
   }
   const resizeObserver = new ResizeObserver(resize);
-  resizeObserver.observe(canvas);
 
   const mugWorld = new THREE.Vector3();
   const anchor = new THREE.Vector3();
@@ -190,5 +195,8 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
   };
 
   resize();
+  // Compile shaders in parallel where supported, so the first frame does not stall.
+  await renderer.compileAsync(scene, camera);
+  resizeObserver.observe(canvas);
   return handle;
 }

@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { getDictionary, hasLocale, locales } from "@/i18n/config";
 import { shareImage } from "@/site";
 import { themeInitScript } from "@/theme/theme";
-import "@fontsource-variable/inter";
+import { FontFaces } from "../FontFaces";
 import "../globals.css";
 
 export const dynamicParams = false;
@@ -44,6 +44,7 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
     <html lang={lang} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <FontFaces extended={lang === "tr"} />
       </head>
       <body>
         <SiteHeader lang={lang} t={t} />

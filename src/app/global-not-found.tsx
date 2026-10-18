@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LogoMark } from "@/components/Logo";
-import "@fontsource-variable/inter";
+import { FontFaces } from "./FontFaces";
 import "./globals.css";
 
 // Shown for any address that does not exist. The language is unknown here,
@@ -13,6 +13,9 @@ export const metadata: Metadata = {
 export default function GlobalNotFound() {
   return (
     <html lang="en">
+      <head>
+        <FontFaces extended />
+      </head>
       <body>
         <header className="site-header">
           <div className="container site-header__inner">
