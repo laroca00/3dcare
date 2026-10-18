@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import type { Theme } from "../theme/theme";
+import { explodeAmount, setExplode } from "./explode";
 import type { PartId } from "./parts";
+import { buildPrinter } from "./printer";
 import { QualityController, type QualityLevel } from "./quality";
 import { localProgress } from "./timeline";
 
@@ -24,20 +26,27 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
   const quality = new QualityController(opts.quality);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 2, powerPreference: "high-performance" });
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.enabled = opts.quality > 0;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(BACKGROUND[opts.theme]);
-  const camera = new THREE.PerspectiveCamera(32, 1, 1, 1000);
-  camera.position.set(70, 38, 110);
-  camera.lookAt(0, 0, 0);
+  const camera = new THREE.PerspectiveCamera(30, 1, 1, 1000);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
-  // Placeholder until the printer model replaces it.
-  const placeholder = new THREE.Mesh(
-    new THREE.BoxGeometry(30, 40, 30),
-    new THREE.MeshStandardMaterial({ color: 0x00756a, roughness: 0.5 }),
-  );
-  scene.add(placeholder);
+  // Temporary lighting until the studio module replaces it.
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3028, 1.4));
+  const key = new THREE.DirectionalLight(0xffd8b0, 3);
+  key.position.set(-60, 90, 70);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  Object.assign(key.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60 });
+  scene.add(key);
+
+  const printer = buildPrinter(opts.quality);
+  const stage = new THREE.Group();
+  stage.add(printer.root);
+  printer.root.position.y = -32;
+  scene.add(stage);
 
   function applyPixelRatio(level: QualityLevel) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, level === 2 ? 2 : level === 1 ? 1.5 : 1));
@@ -49,6 +58,12 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
+    // Wide screens keep the text on the left and the printer on the right.
+    const wide = camera.aspect > 1.1;
+    stage.position.x = wide ? 28 : 0;
+    stage.position.y = wide ? 4 : 16;
+    camera.position.set(85, 46, wide ? 180 : 240);
+    camera.lookAt(wide ? 20 : 0, 2, 0);
     camera.updateProjectionMatrix();
     handle.invalidate();
   }
@@ -68,7 +83,10 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
     last = now;
 
     const p = opts.getProgress();
-    placeholder.rotation.y = -0.6 + localProgress(p, "meet") * 2.1;
+    stage.rotation.y = -0.7 + localProgress(p, "meet") * 1.4 + localProgress(p, "explode") * 0.5;
+    const apart = explodeAmount(p);
+    setExplode(printer.parts, apart);
+    printer.filament.visible = apart < 0.02;
     renderer.render(scene, camera);
   }
 
@@ -83,8 +101,7 @@ export function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Scene
     dispose() {
       cancelAnimationFrame(raf);
       resizeObserver.disconnect();
-      placeholder.geometry.dispose();
-      (placeholder.material as THREE.Material).dispose();
+      printer.dispose();
       renderer.dispose();
     },
   };

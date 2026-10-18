@@ -395,6 +395,19 @@ main:focus {
   visibility: hidden;
 }
 
+/* ?story=… renders one frozen frame of the stage, used for the still images. */
+:root[data-story-still] .site-header,
+:root[data-story-still] .site-footer,
+:root[data-story-still] .story ~ * {
+  display: none;
+}
+
+:root[data-story-still] .story__stage {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+}
+
 @media (min-width: 900px) {
   .story__fallback {
     place-items: center end;

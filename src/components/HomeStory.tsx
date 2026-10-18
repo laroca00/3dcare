@@ -45,6 +45,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     if (fixed !== null && (forcedTheme === "light" || forcedTheme === "dark")) {
       document.documentElement.dataset.theme = forcedTheme;
     }
+    // A frozen frame shows the stage alone, filling the window.
+    if (fixed !== null) document.documentElement.dataset.storyStill = "1";
 
     const beats = [...section.querySelectorAll<HTMLElement>("[data-beat]")];
     let progress = fixed ?? 0;
