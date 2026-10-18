@@ -5,6 +5,7 @@ import { PageViews } from "@/components/PageViews";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getDictionary, hasLocale, locales } from "@/i18n/config";
 import { shareImage } from "@/site";
+import { themeInitScript } from "@/theme/theme";
 import "@fontsource-variable/inter";
 import "../globals.css";
 
@@ -39,7 +40,11 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
   const t = getDictionary(lang);
 
   return (
-    <html lang={lang}>
+    // The pre-paint script sets data-theme before React hydrates.
+    <html lang={lang} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         <SiteHeader lang={lang} t={t} />
         <main id="main" tabIndex={-1}>
