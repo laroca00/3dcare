@@ -13,7 +13,9 @@ import { SCENES, localProgress, smoothstep } from "@/scene/timeline";
 import { readTheme, useTheme } from "@/theme/useTheme";
 import emblemEn from "@/assets/eu/co-funded-en-neg.png";
 import emblemTr from "@/assets/eu/co-funded-tr-neg.png";
+import { RevealText } from "./RevealText";
 import { makeSouvenirCard } from "./souvenirCard";
+import { smoothWheel } from "./smoothWheel";
 import { POSTERS, STILLS } from "./storyStills";
 
 type Mode = "pending" | "live" | "stills";
@@ -149,6 +151,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
 
     measure();
     window.addEventListener("scroll", measure, { passive: true });
+    // The mouse wheel glides through the live story.
+    const stopWheel = live && fixed === null ? smoothWheel() : () => {};
     window.addEventListener("resize", measure);
 
     const io = new IntersectionObserver(([entry]) => {
@@ -178,6 +182,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         getProgress: () => progress,
         labels: t.story.labels,
         isVisible: () => visible,
+        frozen: fixed !== null,
         onGrabbable(target) {
           if (target) section.dataset.grab = target;
           else delete section.dataset.grab;
@@ -261,6 +266,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       INTENT.forEach((type) => window.removeEventListener(type, load));
       window.removeEventListener("scroll", measure);
       window.removeEventListener("resize", measure);
+      stopWheel();
       io.disconnect();
       themeObserver.disconnect();
       handle?.dispose();
@@ -506,9 +512,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         {rest.map((scene, i) => (
           // The taken-apart scene shows its text as the stage's caption instead.
           <div className={`story__beat${i === 1 ? " story__beat--caption" : ""}`} data-beat key={scene.title}>
+            {/* Each line rises from behind its own mask as the story reaches it. */}
             <div className="story__text">
-              <h2>{scene.title}</h2>
-              <p>{scene.text}</p>
+              <RevealText as="h2" text={scene.title} />
+              <RevealText as="p" text={scene.text} first={2} />
             </div>
             {stillFrame(i + 1)}
             {i === 1 && (

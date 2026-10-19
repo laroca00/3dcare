@@ -4,43 +4,8 @@ import { HorizontalBlurShader } from "three/addons/shaders/HorizontalBlurShader.
 import { VerticalBlurShader } from "three/addons/shaders/VerticalBlurShader.js";
 import type { Theme } from "../theme/theme";
 import type { QualityLevel } from "./quality";
-import { StudioTransition, mixStudio, type StudioValues } from "./studioMix";
-
-// Dark: a low-key studio on the site's dark ink, with a teal glow and rim.
-// Light: a soft, bright studio on the site's paper colour.
-const LOOKS: Record<Theme, StudioValues> = {
-  dark: {
-    background: 0x101416,
-    glow: 0x0f3b3c,
-    glowStrength: 0.85,
-    key: 0xe4efff,
-    keyIntensity: 3.6,
-    rim: 0x6fe0cf,
-    rimIntensity: 4,
-    fill: 0.3,
-    env: 0.55,
-    shadow: 0.9,
-  },
-  light: {
-    background: 0xf5f7f6,
-    glow: 0xdfe5e2,
-    glowStrength: 0.9,
-    key: 0xffffff,
-    keyIntensity: 2.6,
-    rim: 0xffffff,
-    rimIntensity: 1.4,
-    fill: 1.1,
-    env: 0.9,
-    shadow: 0.55,
-  },
-};
-
-/** The morning at the end of the story: warm sunlight and a warmer room, per theme. */
-const MORNING: Record<Theme, Pick<StudioValues, "background" | "glow" | "key" | "keyIntensity" | "fill">> = {
-  // The studio lights dim so the sunbeam through the window reads on the table.
-  dark: { background: 0x17120e, glow: 0x4a2a12, key: 0xffcf9a, keyIntensity: 1.1, fill: 0.16 },
-  light: { background: 0xf6ebdd, glow: 0xf1cf9f, key: 0xffe2bd, keyIntensity: 0.9, fill: 0.55 },
-};
+import { storyLook } from "./lightArc";
+import { StudioTransition, type StudioValues } from "./studioMix";
 
 /** How strongly the glossy floor reflects the printer, per theme. */
 const REFLECTION: Record<Theme, number> = { dark: 0.3, light: 0.16 };
@@ -52,13 +17,15 @@ export interface Studio {
   setTheme(theme: Theme): void;
   /** Advances a theme transition; returns true while it still needs frames. */
   update(dtSeconds: number): boolean;
+  /** Lights the studio for this point in the story (see lightArc). */
+  setStory(progress: number): void;
   /** Renders the soft contact shadow under everything on the floor; call before each frame. */
   renderShadow(hidden: readonly THREE.Object3D[]): void;
   /** Turns the floor reflection off when the device turns out to be too slow for it. */
   setReflection(enabled: boolean): void;
   /**
-   * The morning at the end (0..1): a wooden table fades in under everything,
-   * sunlight through a window falls across it onto `target`, and the room warms up.
+   * The morning at the end (0..1): a wooden table fades in under everything
+   * and sunlight through a window falls across it onto `target`.
    */
   setMorning(amount: number, target: THREE.Vector3): void;
   dispose(): void;
@@ -156,7 +123,8 @@ export function createStudio(
   floorParent: THREE.Object3D,
   floorY: number,
 ): Studio {
-  const transition = new StudioTransition(LOOKS[theme]);
+  let storyProgress = 0;
+  const transition = new StudioTransition(storyLook(theme, storyProgress));
 
   // Background: base colour with a soft glow from the lower left, painted on a small canvas.
   const canvas = document.createElement("canvas");
@@ -302,10 +270,7 @@ export function createStudio(
   floorParent.add(sun, sun.target);
 
   let currentTheme = theme;
-  let morning = 0;
-  function apply(base: StudioValues) {
-    // In the morning the room warms up towards sunrise colours.
-    const v = morning > 0 ? mixStudio(base, { ...base, ...MORNING[currentTheme] }, morning * 0.85) : base;
+  function apply(v: StudioValues) {
     const c = canvas.getContext("2d")!;
     c.fillStyle = hex(v.background);
     c.fillRect(0, 0, 256, 256);
@@ -339,8 +304,17 @@ export function createStudio(
     setTheme(next) {
       currentTheme = next;
       applyReflection();
-      transition.start(LOOKS[next]);
+      transition.start(storyLook(next, storyProgress));
       changing = true;
+    },
+    setStory(progress) {
+      if (Math.abs(progress - storyProgress) < 0.0005) return;
+      storyProgress = progress;
+      // During a theme change the transition paints; it picks up the new point when it ends.
+      if (changing) return;
+      transition.start(storyLook(currentTheme, progress));
+      transition.step(Infinity);
+      apply(transition.current);
     },
     update(dtSeconds) {
       if (!changing) return false;
@@ -360,10 +334,6 @@ export function createStudio(
       sun.intensity = amount * 70000;
       floorParent.worldToLocal(sun.target.position.copy(target));
       sun.position.set(sun.target.position.x - 55, sun.target.position.y + 70, sun.target.position.z - 45);
-      if (Math.abs(amount - morning) > 0.01 || (amount === 0) !== (morning === 0)) {
-        morning = amount;
-        apply(transition.current);
-      }
     },
     setReflection(enabled) {
       if (reflector) reflector.visible = enabled;

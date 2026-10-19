@@ -35,6 +35,8 @@ export interface Printer {
   setPrinting(progress: number, heat: number): void;
   /** Colour of the filament on the spool. */
   setFilament(color: number): void;
+  /** Signs of life while the visitor pauses: extra fan turn (radians) and a blinking cursor on screen. */
+  setIdle(fanTurn: number, cursor: boolean): void;
   dispose(): void;
 }
 
@@ -299,12 +301,14 @@ export function buildPrinter(quality: QualityLevel): Printer {
   screenTexture.colorSpace = THREE.SRGBColorSpace;
   textures.push(screenTexture);
   let shown = "";
+  let cursorOn = false;
+  let idleFan = 0;
   /** The print job on screen: percentage, layer count and time left (the mug takes about two hours). */
   function drawScreen(progress: number) {
     const percent = Math.round(progress * 100);
     const layer = Math.min(Math.ceil(progress * 30), 30);
     const minutesLeft = Math.round((1 - progress) * 120);
-    const key = `${percent}|${layer}|${minutesLeft}`;
+    const key = `${percent}|${layer}|${minutesLeft}|${cursorOn}`;
     if (key === shown) return;
     shown = key;
     const c = screenCanvas.getContext("2d")!;
@@ -320,6 +324,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
     c.fillStyle = "#9fb3ad";
     c.font = "14px Inter, sans-serif";
     c.fillText("two-handled-mug.gcode", 18, 58);
+    if (cursorOn) c.fillRect(18 + c.measureText("two-handled-mug.gcode").width + 3, 47, 7, 13);
     // Layer stack icon and count, clock icon and time left.
     c.fillStyle = "#e3efec";
     c.font = "600 15px Inter, sans-serif";
@@ -544,8 +549,12 @@ export function buildPrinter(quality: QualityLevel): Printer {
       m.filament.color.setHex(color);
       flowMaterial.color.setHex(color);
     },
+    setIdle(fanTurn, cursor) {
+      idleFan = fanTurn;
+      cursorOn = cursor;
+    },
     setPrinting(progress, heat) {
-      headFan.rotation.z = -progress * Math.PI * 160;
+      headFan.rotation.z = -progress * Math.PI * 160 - idleFan;
       reel.rotation.z = progress * Math.PI * 1.2;
       // The reel wobbles a little on its rod as it is pulled round.
       reel.rotation.x = Math.sin(progress * 70) * 0.025 * Math.min(progress * 20, 1);

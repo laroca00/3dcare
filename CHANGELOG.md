@@ -52,6 +52,20 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
   the table and the coffee. Any scroll, tap or key press takes over.
   Visitors who simply keep scrolling get the teal mug as before.
 
+### The story as one film
+- The light tells the story: a cool blueprint blue for the opening drawing,
+  a neutral studio when the printer appears, a darker workshop with one
+  strong light while it is taken apart, a slightly warmer room while it
+  prints and a sunny morning at the end, in both themes.
+- Story text enters with the scene: each line rises from behind its own
+  mask, one after another, in step with the scroll.
+- When the visitor stops scrolling, the scene keeps breathing for a few
+  seconds (the camera floats a little, the fan turns, a cursor blinks on the
+  printer's screen), then settles and stops drawing to save battery.
+- The mouse wheel glides through the story instead of jumping a notch at a
+  time. Touchpads, touch screens, the keyboard and the scroll bar work as
+  before, and it is off with reduced motion.
+
 ### Time-lapse, a morning ending and a souvenir card
 - While it prints, the camera swings slowly round the printer like a print
   time-lapse, and the printer's screen counts the layers (n / 30) and the

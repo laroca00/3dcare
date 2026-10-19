@@ -534,6 +534,44 @@ main:focus {
   opacity: 1;
 }
 
+/* Story text enters with the scene: each line rises from behind its own mask,
+   one after another, in step with the scroll (--reveal is set from script). */
+.story__line {
+  display: block;
+  overflow: hidden;
+  /* Room for descenders inside the mask. */
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+.story__line > span {
+  --t: clamp(0, (var(--reveal, 2) - 0.06 - var(--i, 0) * 0.08) * 6, 1);
+  display: inline-block;
+  transform: translateY(calc((1 - var(--t)) * 110%));
+  opacity: calc(0.15 + 0.85 * var(--t));
+  will-change: transform;
+}
+
+.story__beat:not(.story__beat--intro) .actions {
+  --t: clamp(0, (var(--reveal, 2) - 0.5) * 5, 1);
+  transform: translateY(calc((1 - var(--t)) * 18px));
+  opacity: var(--t);
+}
+
+.story--stills .story__line > span,
+.story--stills .story__beat .actions {
+  transform: none;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story__line > span,
+  .story__beat .actions {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
 /* While the printer is apart in the middle of the stage, its text is shown as
    a caption at the bottom of the stage; the beat keeps the same text for
    screen readers and for the still frames. */

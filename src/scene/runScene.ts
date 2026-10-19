@@ -37,6 +37,8 @@ export interface SceneOptions {
   onLabels?: (labels: LabelPosition[]) => void;
   /** Whether the stage is on screen; the steam only keeps animating while it is. */
   isVisible?: () => boolean;
+  /** A frozen frame (for still images): nothing moves on its own. */
+  frozen?: boolean;
   /** Called when what the visitor can drag to turn changes: the printer while apart, the mug at the end. */
   onGrabbable?: (target: GrabTarget | null) => void;
   /** Called when the pointer moves onto or off a part of the taken-apart printer. */
@@ -242,6 +244,24 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     return Math.abs(parallax.toX - parallax.x) > 0.002 || Math.abs(parallax.toY - parallax.y) > 0.002;
   }
 
+  // When the visitor stops scrolling, the scene keeps breathing for a few
+  // seconds: the camera floats a little, the fan turns, a cursor blinks on the
+  // printer's screen. Then it settles and stops drawing frames.
+  const breath = { amount: 0, lastProgress: -1, lastActivity: 0, fan: 0, clock: 0 };
+  const BREATH_FOR_MS = 9000;
+  /** Advances the breathing; returns true while it needs frames. */
+  function updateBreath(now: number, dt: number, progress: number) {
+    if (Math.abs(progress - breath.lastProgress) > 1e-5 || drag.spin) breath.lastActivity = now;
+    breath.lastProgress = progress;
+    const idle = now - breath.lastActivity;
+    const target = !opts.frozen && idle > 500 && idle < BREATH_FOR_MS && (opts.isVisible?.() ?? true) ? 1 : 0;
+    breath.amount += (target - breath.amount) * (1 - Math.exp(-1.6 * dt));
+    if (target === 0 && breath.amount < 0.002) breath.amount = 0;
+    breath.clock += dt * breath.amount;
+    breath.fan += dt * breath.amount * 2.5;
+    return breath.amount > 0 || target > 0;
+  }
+
   // Depth of field on the hovered or selected part while the printer is apart.
   let selected: PrinterPart | null = null;
   let focusAmount = 0;
@@ -288,9 +308,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       camera.position.lerp(screenCloseUp(), ease);
       lookAt.lerp(screenCenter, ease);
     }
-    // The camera drifts a little with the mouse, keeping its aim (less when up close).
-    camera.position.x += parallax.x * 3 * (1 - zoom);
-    camera.position.y += parallax.y * 2 * (1 - zoom);
+    // The camera drifts a little with the mouse, keeping its aim (less when up close),
+    // and floats gently while the visitor pauses.
+    const float = breath.amount * (1 - zoom);
+    camera.position.x += parallax.x * 3 * (1 - zoom) + Math.sin(breath.clock * 0.55) * 0.9 * float;
+    camera.position.y += parallax.y * 2 * (1 - zoom) + Math.sin(breath.clock * 0.41 + 1) * 0.6 * float;
     camera.lookAt(lookAt);
   }
 
@@ -463,6 +485,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const transitioning = studio.update(dt);
 
     const p = opts.getProgress();
+    const breathing = updateBreath(now, dt, p);
+    printer.setIdle(breath.fan, breath.amount > 0.5 && Math.floor(now / 530) % 2 === 0);
 
     // 1. Drawing → object. The drawing is already under way at the top of the
     //    page, matching the poster frame shown before the scene loads.
@@ -519,6 +543,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     job.object.getWorldPosition(mugWorld);
     const zoom = screenZoom(p);
     placeCamera(u, apart, center, mugWorld, zoom, printed);
+    // The light follows the story, from a cool blueprint to a warm morning.
+    studio.setStory(p);
     // The morning comes as the mug lands on the table.
     studio.setMorning(smoothstep((u - 0.3) / 0.4), mugWorld);
     mugTop.copy(mugWorld).y += LAYERS * LAYER_HEIGHT;
@@ -556,7 +582,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     }
     updateLabels(apart);
     updateScreen(zoom);
-    if (transitioning || turning || steaming || drifting || focusing) handle.invalidate();
+    if (transitioning || turning || steaming || drifting || focusing || breathing) handle.invalidate();
   }
 
   const handle: SceneHandle = {
