@@ -18,9 +18,10 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
   printer behind it goes out of focus. The mug can then be dragged to turn it.
   The hand from the earlier ending was removed. Story text and still frames
   were updated to match.
-- The navigation bar marks the current page with a "limelight": a teal bar
-  that shines down onto the page's link and slides to the next one. On the
-  home page it shines on the 3D Care logo.
+- The navigation bar marks the current page with a "limelight": a teal bar as
+  wide as the page's link that shines down onto it. When the page changes the
+  light closes, slides to the next link and opens again. On the home page it
+  covers the 3D Care logo.
 
 ### Scroll story refinements
 - The story uses the project's own colours: the opening drawing is drawn in
