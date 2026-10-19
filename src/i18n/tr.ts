@@ -43,7 +43,7 @@ export const tr: typeof en = {
         },
         {
           title: "Yazıcıdan günlük hayata",
-          text: "Bir öğleden sonrada basılan kolay tutulan kupa kulpu, sabah kahvesini yardım almadan içmeyi mümkün kılıyor.",
+          text: "Bir öğleden sonrada basılan çift kulplu kupa, sabah kahvesini yardım almadan içmeyi mümkün kılıyor.",
         },
       ],
       labels: {
@@ -56,12 +56,13 @@ export const tr: typeof en = {
         display: "Kontrol ekranı",
       },
       partsListTitle: "Yazıcının parçaları",
+      dragHint: { printer: "Yazıcıyı döndürmek için sürükleyin", mug: "Kupayı döndürmek için sürükleyin" },
       stillAlt: [
         "Bir masaüstü 3D yazıcının teknik çizimi, gerçek yazıcıya dönüşüyor.",
         "Stüdyoda yandan aydınlatılmış bir masaüstü 3D yazıcı.",
         "Parçalarına ayrılmış yazıcı: gövde, ısıtmalı tabla, çerçeve, hareketli eksen, baskı kafası, filament makarası ve ekran.",
-        "Yazıcı bir kupa kulpunu katman katman basıyor.",
-        "Basılan kolay tutulan kulplu kupayı tutan bir el.",
+        "Yazıcı çift kulplu bir kupayı katman katman basıyor.",
+        "Basılan çift kulplu kupa, içinde dumanı tüten kahveyle yazıcının yanındaki masada.",
       ],
     },
     deliversTitle: "Proje 2028'e kadar neler sunacak",

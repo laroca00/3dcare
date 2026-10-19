@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { ExplodablePart } from "./explode.ts";
 import type { PartId } from "./parts.ts";
 import type { QualityLevel } from "./quality.ts";
@@ -37,12 +38,48 @@ const GANTRY_Y = 26;
 export const BED_SURFACE_Y = BED_Y + 0.44;
 export const NOZZLE_HOME = { y: GANTRY_Y - 8.4, z: FRAME_Z + 4.6 + 1.2 };
 
-function materials() {
+/** Greyscale canvas texture: fine grain, or streaks along x for brushed metal. */
+function surfaceTexture(kind: "grain" | "brushed", repeat: number) {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const c = canvas.getContext("2d")!;
+  const image = c.createImageData(size, size);
+  let seed = kind === "grain" ? 7 : 13;
+  const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const rows = Array.from({ length: size }, () => random());
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const v = kind === "grain" ? 110 + random() * 110 : 140 + rows[y] * 70 + random() * 25;
+      const i = (y * size + x) * 4;
+      image.data[i] = image.data[i + 1] = image.data[i + 2] = v;
+      image.data[i + 3] = 255;
+    }
+  }
+  c.putImageData(image, 0, 0);
+  const t = new THREE.CanvasTexture(canvas);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(repeat, repeat);
+  return t;
+}
+
+function materials(quality: QualityLevel) {
   const pei = new THREE.MeshPhysicalMaterial({ color: 0x1c1c1e, roughness: 0.72, metalness: 0.05, clearcoat: 0.25 });
+  const frame = new THREE.MeshStandardMaterial({ color: 0x1d2024, metalness: 0.7, roughness: 0.38 });
+  const alu = new THREE.MeshStandardMaterial({ color: 0xa9aeb4, metalness: 1, roughness: 0.32 });
+  if (quality > 0) {
+    // Textured print sheet and powder-coated frame catch the light unevenly;
+    // aluminium gets fine brushing marks.
+    const grain = surfaceTexture("grain", 6);
+    Object.assign(pei, { roughnessMap: grain, bumpMap: grain, bumpScale: 0.6, clearcoatRoughness: 0.5 });
+    Object.assign(frame, { bumpMap: grain, bumpScale: 0.15 });
+    const brushed = surfaceTexture("brushed", 1);
+    Object.assign(alu, { roughnessMap: brushed, bumpMap: brushed, bumpScale: 0.2 });
+  }
   return {
-    frame: new THREE.MeshStandardMaterial({ color: 0x1d2024, metalness: 0.7, roughness: 0.38 }),
+    frame,
     steel: new THREE.MeshStandardMaterial({ color: 0xc9cdd2, metalness: 1, roughness: 0.22 }),
-    alu: new THREE.MeshStandardMaterial({ color: 0xa9aeb4, metalness: 1, roughness: 0.32 }),
+    alu,
     bed: new THREE.MeshStandardMaterial({ color: 0xb48c42, metalness: 0.9, roughness: 0.33 }),
     pei,
     plastic: new THREE.MeshStandardMaterial({ color: 0x24272b, metalness: 0.1, roughness: 0.48 }),
@@ -60,7 +97,7 @@ function materials() {
 type Materials = ReturnType<typeof materials>;
 
 export function buildPrinter(quality: QualityLevel): Printer {
-  const m = materials();
+  const m = materials(quality);
   const geometries: THREE.BufferGeometry[] = [];
   const textures: THREE.Texture[] = [];
   const root = new THREE.Group();
@@ -80,8 +117,15 @@ export function buildPrinter(quality: QualityLevel): Printer {
     return o;
   }
 
+  /** Boxes get softly rounded edges at full quality, so they catch highlights like real parts. */
+  function rounded(w: number, h: number, d: number) {
+    const radius = Math.min(w, h, d) * 0.2;
+    if (quality < 2 || radius < 0.05) return new THREE.BoxGeometry(w, h, d);
+    return new RoundedBoxGeometry(w, h, d, 2, Math.min(radius, 0.6));
+  }
+
   const box = (p: THREE.Object3D, w: number, h: number, d: number, mat: THREE.Material, x = 0, y = 0, z = 0) =>
-    mesh(p, new THREE.BoxGeometry(w, h, d), mat, x, y, z);
+    mesh(p, rounded(w, h, d), mat, x, y, z);
 
   function rod(p: THREE.Object3D, r: number, length: number, mat: THREE.Material, axis: "x" | "y" | "z", x = 0, y = 0, z = 0) {
     const o = mesh(p, new THREE.CylinderGeometry(r, r, length, quality === 2 ? 24 : 12), mat, x, y, z);
@@ -166,7 +210,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
     c.fillText("3D Care", 18, 38);
     c.fillStyle = "#9fb3ad";
     c.font = "15px Inter, sans-serif";
-    c.fillText("easy-grip-mug.gcode", 18, 66);
+    c.fillText("two-handled-mug.gcode", 18, 66);
     c.fillStyle = "#1f3a3f";
     c.fillRect(18, 86, 220, 10);
     c.fillStyle = "#f5c400";
@@ -178,7 +222,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
   }
 
   // Base with electronics, feet and the Y axis.
-  const base = part("base", [0, -12, 0], [-BASE.w / 2 + 4, BASE.h, BASE.d / 2]);
+  const base = part("base", [0, -4, 0], [-BASE.w / 2 + 4, BASE.h, BASE.d / 2]);
   box(base, BASE.w, BASE.h, BASE.d, m.frame, 0, BASE.h / 2 + 1, 0);
   for (const [fx, fz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
     mesh(base, new THREE.CylinderGeometry(1.4, 1.6, 1, 16), m.rubber, fx * (BASE.w / 2 - 3), 0.5, fz * (BASE.d / 2 - 3));
@@ -190,7 +234,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
   if (quality === 2) for (let i = 0; i < 9; i++) box(base, 0.3, 2.6, 6, m.alu, BASE.w / 2 - 0.1, 3.8, -8 + i * 1.6 - 4);
 
   // Control screen on the front right.
-  const display = part("display", [8, -6, 16], [BASE.w / 2 - 7, 7, BASE.d / 2 + 2]);
+  const display = part("display", [8, -2, 18], [BASE.w / 2 - 7, 7, BASE.d / 2 + 2]);
   const panel = box(display, 11, 6, 2.2, m.plastic, BASE.w / 2 - 7, 4.4, BASE.d / 2 + 0.6);
   panel.rotation.x = -0.35;
   const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(8.4, 4.2)), m.screen.clone());
@@ -200,7 +244,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
   if (quality > 0) mesh(panel, new THREE.CylinderGeometry(0.7, 0.7, 0.8, 20), m.alu, 4.4, -1.6, 1.2).rotation.x = Math.PI / 2;
 
   // Heated bed with its carriage, levelling knobs and print sheet.
-  const bed = part("bed", [0, -3, 18], [-12, BED_Y + 1.2, 12]);
+  const bed = part("bed", [0, 0, 16], [-12, BED_Y + 1.2, 12]);
   box(bed, 20, 0.6, 20, m.alu, 0, BED_Y - 1.2, 0);
   box(bed, 26, 0.5, 26, m.bed, 0, BED_Y, 0);
   box(bed, 25, 0.18, 25, m.pei, 0, BED_Y + 0.34, 0);
@@ -212,7 +256,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
   bed.add(bedSurface);
 
   // Frame: two uprights, top bar, Z motors and lead screws.
-  const frame = part("frame", [0, 4, -18], [UPRIGHT_X, FRAME_TOP, FRAME_Z]);
+  const frame = part("frame", [0, 1, -16], [UPRIGHT_X, FRAME_TOP, FRAME_Z]);
   const uprightH = FRAME_TOP - BASE.h;
   profile(frame, uprightH, "y", -UPRIGHT_X, BASE.h + uprightH / 2, FRAME_Z);
   profile(frame, uprightH, "y", UPRIGHT_X, BASE.h + uprightH / 2, FRAME_Z);
@@ -223,7 +267,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
   rod(frame, 0.4, uprightH - 6, m.brass, "y", UPRIGHT_X - 3.2, BASE.h + uprightH / 2 + 3, FRAME_Z);
 
   // Gantry: X rods, X ends with the X motor and belt. Moves with the print head in Z.
-  const gantry = part("gantry", [0, 8, 6], [-UPRIGHT_X + 3, GANTRY_Y + 3, FRAME_Z + 2]);
+  const gantry = part("gantry", [-4, 5, 8], [-UPRIGHT_X + 3, GANTRY_Y + 3, FRAME_Z + 2]);
   const gantryBody = new THREE.Group();
   gantry.add(gantryBody);
   rod(gantryBody, 0.4, UPRIGHT_X * 2 - 4, m.steel, "x", 0, GANTRY_Y + 1.5, FRAME_Z + 2);
@@ -237,7 +281,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
   }
 
   // Print head: carriage, heat sink, heater block, nozzle, cooling fan and shroud.
-  const head = part("head", [0, 6, 24], [3.5, GANTRY_Y + 5, FRAME_Z + 7]);
+  const head = part("head", [9, 3, 22], [3.5, GANTRY_Y + 5, FRAME_Z + 7]);
   const headBody = new THREE.Group();
   headBody.position.set(0, GANTRY_Y, FRAME_Z + 4.6);
   head.add(headBody);
@@ -262,7 +306,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
   headBody.add(nozzle);
 
   // Spool on a holder on top of the frame.
-  const spool = part("spool", [0, 9, -12], [7, FRAME_TOP + 13, FRAME_Z - 4]);
+  const spool = part("spool", [26, -10, -4], [7, FRAME_TOP + 13, FRAME_Z - 4]);
   const spoolY = FRAME_TOP + 9;
   const spoolZ = FRAME_Z - 3;
   box(spool, 1.4, 7, 1.4, m.plastic, 0, FRAME_TOP + 5.5, FRAME_Z);
@@ -298,7 +342,10 @@ export function buildPrinter(quality: QualityLevel): Printer {
     dispose() {
       geometries.forEach((g) => g.dispose());
       textures.forEach((t) => t.dispose());
-      Object.values(m as Materials).forEach((mat) => mat.dispose());
+      Object.values(m as Materials).forEach((mat) => {
+        [mat.roughnessMap, mat.bumpMap].forEach((t) => t?.dispose());
+        mat.dispose();
+      });
       (screen.material as THREE.Material).dispose();
     },
   };

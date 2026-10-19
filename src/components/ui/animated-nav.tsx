@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { LogoMark } from "../Logo";
 import { ThemeToggle } from "../ThemeToggle";
 import { Button } from "./button";
+import { Limelight } from "./limelight-nav";
 
 // The mobile menu (Radix dialog) loads only when it is first opened, so its
 // code stays out of every page load.
@@ -74,6 +75,7 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
   const other: Locale = lang === "en" ? "tr" : "en";
   const switchHref = pathname.replace(new RegExp(`^/${lang}(?=/|$)`), `/${other}`);
   const isActive = (href: string) => `${pathname.replace(/\/$/, "")}/`.startsWith(href);
+  const isHome = pathname.replace(/\/$/, "") === `/${lang}`;
 
   const [isExpanded, setExpanded] = React.useState(true);
   const [sheetOpen, setSheetOpen] = React.useState(false);
@@ -117,10 +119,12 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
             className="relative flex h-12 items-center overflow-hidden rounded-full border border-border bg-background/80 shadow-lg backdrop-blur-sm"
           >
             {/* While folded the contents are hidden from keyboard and screen readers too. */}
-            <div className="flex items-center" inert={!isExpanded}>
-              <m.div variants={logoVariants} className="flex shrink-0 items-center pl-2">
+            <Limelight className="flex h-12 items-center" inert={!isExpanded}>
+              <m.div variants={logoVariants} className="relative z-10 flex shrink-0 items-center pl-2">
                 <Link
                   href={`/${lang}/`}
+                  data-limelight
+                  aria-current={isHome ? "page" : undefined}
                   className="flex items-center gap-2 rounded-full px-2 py-1 text-lg font-bold tracking-tight whitespace-nowrap text-foreground no-underline hover:text-foreground"
                 >
                   <LogoMark className="h-7 w-7" />
@@ -131,13 +135,20 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
 
               <ul className="m-0 hidden list-none items-center gap-1 p-0 pl-2 lg:flex">
                 {items.map((item) => (
-                  <m.li key={item.href} variants={itemVariants}>
-                    <Link href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={cn(linkClass, "whitespace-nowrap")}>
+                  <m.li key={item.href} variants={itemVariants} className="relative z-10">
+                    <Link
+                      href={item.href}
+                      data-limelight
+                      aria-current={isActive(item.href) ? "page" : undefined}
+                      className={cn(linkClass, "whitespace-nowrap aria-[current=page]:bg-transparent")}
+                    >
                       {item.label}
                     </Link>
                   </m.li>
                 ))}
-                <m.li variants={itemVariants}>{switchLink("whitespace-nowrap")}</m.li>
+                <m.li variants={itemVariants} className="relative z-10">
+                  {switchLink("whitespace-nowrap")}
+                </m.li>
               </ul>
 
               <m.div variants={itemVariants} className="flex items-center gap-1 pr-1 pl-2">
@@ -176,7 +187,7 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
                   </React.Suspense>
                 )}
               </m.div>
-            </div>
+            </Limelight>
 
             {/* The folded circle: one button that opens the bar again. */}
             <button

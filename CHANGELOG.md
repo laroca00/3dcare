@@ -7,6 +7,21 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-19
 
+### Interactive printer and a new story ending
+- When the printer comes apart it now fills more of the screen, and visitors
+  can drag it to turn it and look at the parts from any side (touch screens:
+  swipe sideways). It eases back to its place when the story moves on.
+- The printer has softer, rounded edges, a textured print sheet and frame,
+  and brushed aluminium.
+- New ending: the printed mug now has two handles, is set down on the table
+  next to the printer, fills with coffee and starts to steam, while the
+  printer behind it goes out of focus. The mug can then be dragged to turn it.
+  The hand from the earlier ending was removed. Story text and still frames
+  were updated to match.
+- The navigation bar marks the current page with a "limelight": a teal bar
+  that shines down onto the page's link and slides to the next one. On the
+  home page it shines on the 3D Care logo.
+
 ### Scroll story refinements
 - The story uses the project's own colours: the opening drawing is drawn in
   bolder teal and violet lines, the printed mug and filament are teal, the

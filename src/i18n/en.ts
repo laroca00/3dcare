@@ -41,7 +41,7 @@ export const en = {
         },
         {
           title: "From the printer to everyday life",
-          text: "An easy-grip mug handle, printed in an afternoon, makes a morning coffee possible without help.",
+          text: "A mug with two handles, printed in an afternoon, makes a morning coffee possible without help.",
         },
       ],
       labels: {
@@ -54,12 +54,13 @@ export const en = {
         display: "Control screen",
       },
       partsListTitle: "Parts of the printer",
+      dragHint: { printer: "Drag to turn the printer", mug: "Drag to turn the mug" },
       stillAlt: [
         "Technical drawing of a desktop 3D printer turning into the real printer.",
         "A desktop 3D printer lit from the side in a studio.",
         "The printer taken apart: base, heated bed, frame, moving axis, print head, filament spool and screen.",
-        "The printer printing a mug handle layer by layer.",
-        "A hand holding a mug with the printed easy-grip handle.",
+        "The printer printing a two-handled mug layer by layer.",
+        "The printed two-handled mug, filled with steaming coffee, on the table next to the printer.",
       ],
     },
     deliversTitle: "What the project will deliver by 2028",

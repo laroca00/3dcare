@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, labelOpacity, nozzlePath, printProgress, handMotion } from "./storyMotion.ts";
+import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, labelOpacity, nozzlePath, printProgress, endingMotion } from "./storyMotion.ts";
 
 test("labels appear once the printer is more than half apart", () => {
   assert.equal(labelOpacity(0), 0);
@@ -34,11 +34,11 @@ test("the nozzle traces the mug wall and only rises", () => {
   }
 });
 
-test("in the last scene the mug lifts first, then the hand arrives and closes", () => {
-  const early = handMotion(0.1);
-  const mid = handMotion(0.45);
-  const end = handMotion(1);
-  assert.ok(early.lift > 0 && early.hand === 0 && early.grip === 0);
-  assert.ok(mid.lift === 1 && mid.hand > 0 && mid.grip === 0);
-  assert.deepEqual(end, { lift: 1, hand: 1, grip: 1 });
+test("in the last scene the mug reaches the table before coffee is poured and steam rises", () => {
+  const early = endingMotion(0.1);
+  const landed = endingMotion(0.56);
+  const end = endingMotion(1);
+  assert.ok(early.lift > 0 && early.travel > 0 && early.travel < 1 && early.pour === 0);
+  assert.ok(landed.travel === 1 && landed.pour > 0 && landed.steam === 0);
+  assert.deepEqual(end, { lift: 1, travel: 1, pour: 1, steam: 1 });
 });

@@ -1,4 +1,4 @@
-// Motion for the last three scenes: part labels, printing and the hand.
+// Motion for the last three scenes: part labels, printing and the mug on the table.
 import { clamp01, localProgress, smoothstep } from "./timeline.ts";
 
 /** The printed mug: layer count and size in centimetres (layers are drawn thicker than real ones). */
@@ -29,11 +29,12 @@ export function nozzlePath(t: number): { x: number; y: number; z: number; layer:
   };
 }
 
-/** Last scene, u = 0..1: the mug lifts off the bed, a hand comes in and closes around it. */
-export function handMotion(u: number): { lift: number; hand: number; grip: number } {
+/** Last scene, u = 0..1: the mug moves from the bed to the table, coffee is poured, then steam rises. */
+export function endingMotion(u: number): { lift: number; travel: number; pour: number; steam: number } {
   return {
     lift: smoothstep(u / 0.3),
-    hand: smoothstep((u - 0.3) / 0.35),
-    grip: smoothstep((u - 0.65) / 0.3),
+    travel: smoothstep(u / 0.55),
+    pour: smoothstep((u - 0.55) / 0.25),
+    steam: smoothstep((u - 0.75) / 0.15),
   };
 }

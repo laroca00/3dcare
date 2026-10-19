@@ -382,6 +382,46 @@ main:focus {
   opacity: 1;
 }
 
+/* While the printer is apart it can be dragged to turn; vertical swipes still scroll. */
+.story__canvas {
+  touch-action: pan-y;
+}
+
+.story[data-grab] .story__canvas {
+  cursor: grab;
+}
+
+.story__canvas[data-dragging] {
+  cursor: grabbing;
+}
+
+.story__hint {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+}
+
+.story[data-grab="printer"] .story__hint--printer,
+.story[data-grab="mug"] .story__hint--mug {
+  opacity: 1;
+  transform: none;
+}
+
+:root[data-story-still] .story__hint {
+  display: none;
+}
+
 .story__labels {
   position: absolute;
   inset: 0;
@@ -407,6 +447,12 @@ main:focus {
 .story__beats {
   position: relative;
   margin-top: -100svh;
+  /* Lets drags beside the text reach the 3D stage underneath. */
+  pointer-events: none;
+}
+
+.story__beat > * {
+  pointer-events: auto;
 }
 
 .story__beat {

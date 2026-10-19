@@ -101,7 +101,11 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         }),
         getProgress: () => progress,
         labels: t.story.labels,
-        ending: fixed !== null && params.get("ending") === "table" ? "table" : "hand",
+        isVisible: () => visible,
+        onGrabbable(target) {
+          if (target) section.dataset.grab = target;
+          else delete section.dataset.grab;
+        },
         onLabels(positions) {
           for (const { id, x, y, opacity } of positions) {
             const el = labelRefs.current[id];
@@ -185,6 +189,12 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             </span>
           ))}
         </div>
+        <p className="story__hint story__hint--printer" aria-hidden="true">
+          {t.story.dragHint.printer}
+        </p>
+        <p className="story__hint story__hint--mug" aria-hidden="true">
+          {t.story.dragHint.mug}
+        </p>
       </div>
 
       <div className="story__beats container">
