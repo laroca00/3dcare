@@ -30,10 +30,13 @@ export function nozzlePath(t: number): { x: number; y: number; z: number; layer:
 }
 
 /** Last scene, u = 0..1: the mug moves from the bed to the table, coffee is poured, then steam rises. */
-export function endingMotion(u: number): { lift: number; travel: number; pour: number; steam: number } {
+export function endingMotion(u: number): { lift: number; travel: number; bounce: number; pour: number; steam: number } {
+  // After landing the mug hops once, a little, and settles (in cm).
+  const landed = clamp01((u - 0.55) / 0.12);
   return {
     lift: smoothstep(u / 0.3),
     travel: smoothstep(u / 0.55),
+    bounce: landed > 0 && landed < 1 ? Math.sin(landed * Math.PI) * 0.8 * (1 - landed) : 0,
     pour: smoothstep((u - 0.55) / 0.25),
     steam: smoothstep((u - 0.75) / 0.15),
   };

@@ -37,7 +37,7 @@ export function createDrawing(printer: Printer, theme: Theme): Drawing {
   const positions: number[] = [];
   const v = new THREE.Vector3();
   printer.root.traverse((o) => {
-    if (!(o instanceof THREE.Mesh) || o === printer.filament) return;
+    if (!(o instanceof THREE.Mesh) || o === printer.filament || o.userData.noOutline) return;
     const edges = new THREE.EdgesGeometry(o.geometry, 30);
     const toRoot = rootInverse.clone().multiply(o.matrixWorld);
     const attr = edges.getAttribute("position");

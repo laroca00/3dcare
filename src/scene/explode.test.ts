@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Group, Vector3 } from "three";
-import { explodeAmount, setExplode, type ExplodablePart } from "./explode.ts";
+import { centerAmount, easeOutBack, explodeAmount, setExplode, spinTurn, type ExplodablePart } from "./explode.ts";
 
 function part(home: [number, number, number], dir: [number, number, number]): ExplodablePart {
   const object = new Group();
@@ -31,11 +31,40 @@ test("the movement is eased and clamped", () => {
   assert.equal(p.object.position.y, 10);
 });
 
-test("the printer comes apart during the explode scene and back together early in the print scene", () => {
+test("with a stagger the last part leaves first and every part ends at its full distance", () => {
+  const first = part([0, 0, 0], [0, 10, 0]);
+  const last = part([0, 0, 0], [0, 10, 0]);
+  setExplode([first, last], 0.3, 0.2);
+  assert.ok(last.object.position.y > first.object.position.y);
+  setExplode([first, last], 1, 0.2);
+  assert.ok(Math.abs(first.object.position.y - 10) < 1e-9 && Math.abs(last.object.position.y - 10) < 1e-9);
+  setExplode([first, last], 0, 0.2);
+  assert.equal(first.object.position.y, 0);
+});
+
+test("easeOutBack overshoots before settling at 1", () => {
+  assert.equal(easeOutBack(0), 0);
+  assert.ok(easeOutBack(0.8) > 1);
+  assert.ok(Math.abs(easeOutBack(1) - 1) < 1e-9);
+});
+
+test("the printer comes apart in the second half of the explode scene and back together early in the print scene", () => {
   assert.equal(explodeAmount(0.3), 0);
-  assert.ok(Math.abs(explodeAmount(0.47) - 0.5) < 1e-9);
+  assert.ok(explodeAmount(0.36 + 0.22 * 0.35) < 1e-9);
+  assert.ok(Math.abs(explodeAmount(0.36 + 0.22 * 0.6) - 0.5) < 1e-9);
   assert.equal(explodeAmount(0.58), 1);
   assert.ok(Math.abs(explodeAmount(0.604) - 0.5) < 1e-9);
   assert.equal(explodeAmount(0.7), 0);
   assert.equal(explodeAmount(1), 0);
+});
+
+test("the printer turns once on its axis while it moves to the middle, before it comes apart", () => {
+  assert.equal(centerAmount(0.3), 0);
+  assert.equal(spinTurn(0.3), 0);
+  const settled = 0.36 + 0.22 * 0.5;
+  assert.equal(centerAmount(settled), 1);
+  assert.ok(Math.abs(spinTurn(settled) - Math.PI * 2) < 1e-9);
+  assert.equal(explodeAmount(0.36 + 0.22 * 0.3), 0);
+  assert.equal(centerAmount(0.58), 1);
+  assert.equal(centerAmount(0.7), 0);
 });

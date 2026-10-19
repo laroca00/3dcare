@@ -9,6 +9,8 @@ export interface PrinterPart extends ExplodablePart {
   object: THREE.Group;
   /** Where the part's label points, in the part's local space. */
   labelAnchor: THREE.Vector3;
+  /** Middle of the part, in printer space; the part turns around it. */
+  center: THREE.Vector3;
 }
 
 export interface Printer {
@@ -18,39 +20,59 @@ export interface Printer {
   nozzle: THREE.Object3D;
   /** Top of the print sheet, where printed objects stand. */
   bedSurface: THREE.Object3D;
-  /** Filament from the spool to the print head; hidden while exploded. */
+  /** Filament tube from the spool to the print head; hidden while exploded. */
   filament: THREE.Object3D;
+  /** Cable bundle from the print head over the frame; hidden while exploded. */
+  headCable: THREE.Object3D;
   /** Moves the print head across the X axis and the bed along Y (in cm, relative). */
   setToolPosition(x: number, y: number, z: number): void;
+  /**
+   * Print job state: progress 0..1 turns the fan and the spool and fills the
+   * screen's progress bar; heat 0..1 makes the hotend glow.
+   */
+  setPrinting(progress: number, heat: number): void;
   dispose(): void;
 }
 
-// A classic "bedslinger" desktop printer, in centimetres. It follows the common
-// layout of open designs without copying any one brand.
-const BASE = { w: 44, h: 6, d: 36 };
+// An open-hardware "i3" desktop printer in centimetres: a moving bed on a Y
+// chassis, a Z frame of black aluminium extrusions and printed parts in the
+// project's teal. It follows the common layout of open designs without
+// copying any one brand.
 const UPRIGHT_X = 18.5;
 const FRAME_Z = -5;
 const FRAME_TOP = 50;
 const BED_Y = 9;
 const GANTRY_Y = 26;
+/** Z rod and lead screw positions, measured in from each upright. */
+const ROD_X = UPRIGHT_X - 2.4;
+const SCREW_X = UPRIGHT_X - 5.4;
+const AXIS_Z = FRAME_Z + 2.6;
 
 /** Top of the print sheet, and the nozzle tip with the tool at home, in printer space. */
 export const BED_SURFACE_Y = BED_Y + 0.44;
-export const NOZZLE_HOME = { y: GANTRY_Y - 8.4, z: FRAME_Z + 4.6 + 1.2 };
+export const NOZZLE_HOME = { y: GANTRY_Y - 8.4, z: FRAME_Z + 8 };
 
-/** Greyscale canvas texture: fine grain, or streaks along x for brushed metal. */
-function surfaceTexture(kind: "grain" | "brushed", repeat: number) {
-  const size = 256;
+/** Greyscale canvas texture for bump and roughness maps. */
+function surfaceTexture(kind: "grain" | "brushed" | "layers" | "weave" | "teeth", repeat: [number, number]) {
+  const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const c = canvas.getContext("2d")!;
   const image = c.createImageData(size, size);
-  let seed = kind === "grain" ? 7 : 13;
+  let seed = 7 + kind.length;
   const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const rows = Array.from({ length: size }, () => random());
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const v = kind === "grain" ? 110 + random() * 110 : 140 + rows[y] * 70 + random() * 25;
+      let v: number;
+      if (kind === "grain") v = 110 + random() * 110;
+      else if (kind === "brushed") v = 140 + rows[y] * 70 + random() * 25;
+      // Printed parts: rounded ridges, one per layer.
+      else if (kind === "layers") v = 150 + Math.sin(((y % 4) / 4) * Math.PI) * 80 + random() * 10;
+      // Braided cable sleeve.
+      else if (kind === "weave") v = 120 + (((x >> 2) + (y >> 2)) % 2) * 60 + Math.sin((x + y) * 0.8) * 30;
+      // Toothed belt: ridges across its length.
+      else v = x % 8 < 4 ? 220 : 60;
       const i = (y * size + x) * 4;
       image.data[i] = image.data[i + 1] = image.data[i + 2] = v;
       image.data[i + 3] = 255;
@@ -59,38 +81,53 @@ function surfaceTexture(kind: "grain" | "brushed", repeat: number) {
   c.putImageData(image, 0, 0);
   const t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(repeat, repeat);
+  t.repeat.set(...repeat);
   return t;
 }
 
 function materials(quality: QualityLevel) {
-  const pei = new THREE.MeshPhysicalMaterial({ color: 0x1c1c1e, roughness: 0.72, metalness: 0.05, clearcoat: 0.25 });
-  const frame = new THREE.MeshStandardMaterial({ color: 0x1d2024, metalness: 0.7, roughness: 0.38 });
-  const alu = new THREE.MeshStandardMaterial({ color: 0xa9aeb4, metalness: 1, roughness: 0.32 });
-  if (quality > 0) {
-    // Textured print sheet and powder-coated frame catch the light unevenly;
-    // aluminium gets fine brushing marks.
-    const grain = surfaceTexture("grain", 6);
-    Object.assign(pei, { roughnessMap: grain, bumpMap: grain, bumpScale: 0.6, clearcoatRoughness: 0.5 });
-    Object.assign(frame, { bumpMap: grain, bumpScale: 0.15 });
-    const brushed = surfaceTexture("brushed", 1);
-    Object.assign(alu, { roughnessMap: brushed, bumpMap: brushed, bumpScale: 0.2 });
-  }
+  const detail = quality > 0;
+  const map = (kind: Parameters<typeof surfaceTexture>[0], repeat: [number, number]) => (detail ? surfaceTexture(kind, repeat) : null);
+  const grain = map("grain", [6, 6]);
+  const brushed = map("brushed", [1, 1]);
+  const layers = map("layers", [1, 10]);
+  const weave = map("weave", [12, 1]);
+  const teeth = map("teeth", [40, 1]);
   return {
-    frame,
-    steel: new THREE.MeshStandardMaterial({ color: 0xc9cdd2, metalness: 1, roughness: 0.22 }),
-    alu,
-    bed: new THREE.MeshStandardMaterial({ color: 0xb48c42, metalness: 0.9, roughness: 0.33 }),
-    pei,
-    plastic: new THREE.MeshStandardMaterial({ color: 0x24272b, metalness: 0.1, roughness: 0.48 }),
-    accent: new THREE.MeshStandardMaterial({ color: 0xf5c400, metalness: 0.05, roughness: 0.45 }),
-    motor: new THREE.MeshStandardMaterial({ color: 0x141517, metalness: 0.35, roughness: 0.42 }),
-    belt: new THREE.MeshStandardMaterial({ color: 0x0c0c0d, metalness: 0, roughness: 0.92 }),
-    rubber: new THREE.MeshStandardMaterial({ color: 0x101010, metalness: 0, roughness: 0.85 }),
+    // Black anodised extrusions and plates.
+    frame: new THREE.MeshStandardMaterial({ color: 0x1b1e22, metalness: 0.65, roughness: 0.42, bumpMap: brushed, bumpScale: 0.25 }),
+    // PETG parts printed in the project's teal; the layer lines catch the light.
+    printed: new THREE.MeshPhysicalMaterial({
+      color: 0x0e7f72,
+      roughness: 0.55,
+      metalness: 0,
+      clearcoat: 0.15,
+      clearcoatRoughness: 0.4,
+      bumpMap: layers,
+      bumpScale: 0.6,
+    }),
+    steel: new THREE.MeshStandardMaterial({ color: 0xd4d8dc, metalness: 1, roughness: 0.16 }),
+    alu: new THREE.MeshStandardMaterial({ color: 0xaeb3b8, metalness: 1, roughness: 0.32, roughnessMap: brushed, bumpMap: brushed, bumpScale: 0.2 }),
+    brass: new THREE.MeshStandardMaterial({ color: 0xc8a046, metalness: 1, roughness: 0.26 }),
+    // Heated bed circuit board and the spring steel sheet with textured PEI.
+    pcb: new THREE.MeshStandardMaterial({ color: 0x15171a, metalness: 0.2, roughness: 0.55 }),
+    pei: new THREE.MeshStandardMaterial({ color: 0x262422, roughness: 0.82, metalness: 0.05, bumpMap: grain, bumpScale: 0.12 }),
+    gold: new THREE.MeshStandardMaterial({ color: 0xc09a52, metalness: 0.9, roughness: 0.3 }),
+    plastic: new THREE.MeshStandardMaterial({ color: 0x202326, metalness: 0.05, roughness: 0.5 }),
+    motor: new THREE.MeshStandardMaterial({ color: 0x141517, metalness: 0.4, roughness: 0.4 }),
+    belt: new THREE.MeshStandardMaterial({ color: 0x0d0d0e, metalness: 0, roughness: 0.85, bumpMap: teeth, bumpScale: 0.5 }),
+    rubber: new THREE.MeshStandardMaterial({ color: 0x0f0f10, metalness: 0, roughness: 0.9 }),
+    screw: new THREE.MeshStandardMaterial({ color: 0x2b2d30, metalness: 0.9, roughness: 0.35 }),
+    sock: new THREE.MeshStandardMaterial({ color: 0x8c9196, metalness: 0, roughness: 0.75 }),
+    cable: new THREE.MeshStandardMaterial({ color: 0x121314, metalness: 0, roughness: 0.85, bumpMap: weave, bumpScale: 0.6 }),
+    ptfe: new THREE.MeshPhysicalMaterial({ color: 0xf2f4f3, roughness: 0.35, transmission: 0.4, thickness: 0.2, metalness: 0 }),
     spool: new THREE.MeshStandardMaterial({ color: 0x1b1c1e, metalness: 0.05, roughness: 0.4 }),
-    filament: new THREE.MeshStandardMaterial({ color: 0x2aa898, metalness: 0, roughness: 0.36 }),
-    brass: new THREE.MeshStandardMaterial({ color: 0xc8a046, metalness: 1, roughness: 0.28 }),
-    screen: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1, roughness: 0.25 }),
+    filament: new THREE.MeshStandardMaterial({ color: 0x2aa898, metalness: 0, roughness: 0.32 }),
+    accent: new THREE.MeshStandardMaterial({ color: 0xf5c400, metalness: 0.05, roughness: 0.45 }),
+    screen: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.4, roughness: 0.25 }),
+    // Hotend parts that glow while printing.
+    hotBrass: new THREE.MeshStandardMaterial({ color: 0xc8a046, metalness: 1, roughness: 0.26, emissive: 0xff5a1f, emissiveIntensity: 0 }),
+    hotSock: new THREE.MeshStandardMaterial({ color: 0x8c9196, metalness: 0, roughness: 0.75, emissive: 0xff5a1f, emissiveIntensity: 0 }),
   };
 }
 
@@ -98,6 +135,7 @@ type Materials = ReturnType<typeof materials>;
 
 export function buildPrinter(quality: QualityLevel): Printer {
   const m = materials(quality);
+  const fine = quality === 2;
   const geometries: THREE.BufferGeometry[] = [];
   const textures: THREE.Texture[] = [];
   const root = new THREE.Group();
@@ -117,21 +155,36 @@ export function buildPrinter(quality: QualityLevel): Printer {
     return o;
   }
 
+  /** Small details stay out of the opening line drawing. */
+  const detail = <T extends THREE.Object3D>(o: T) => {
+    o.userData.noOutline = true;
+    return o;
+  };
+
   /** Boxes get softly rounded edges at full quality, so they catch highlights like real parts. */
-  function rounded(w: number, h: number, d: number) {
-    const radius = Math.min(w, h, d) * 0.2;
-    if (quality < 2 || radius < 0.05) return new THREE.BoxGeometry(w, h, d);
-    return new RoundedBoxGeometry(w, h, d, 2, Math.min(radius, 0.6));
+  function rounded(w: number, h: number, d: number, radius = Math.min(w, h, d) * 0.2) {
+    if (!fine || radius < 0.05) return new THREE.BoxGeometry(w, h, d);
+    return new RoundedBoxGeometry(w, h, d, 2, Math.min(radius, 0.8));
   }
 
-  const box = (p: THREE.Object3D, w: number, h: number, d: number, mat: THREE.Material, x = 0, y = 0, z = 0) =>
-    mesh(p, rounded(w, h, d), mat, x, y, z);
+  const box = (p: THREE.Object3D, w: number, h: number, d: number, mat: THREE.Material, x = 0, y = 0, z = 0, radius?: number) =>
+    mesh(p, rounded(w, h, d, radius), mat, x, y, z);
 
   function rod(p: THREE.Object3D, r: number, length: number, mat: THREE.Material, axis: "x" | "y" | "z", x = 0, y = 0, z = 0) {
-    const o = mesh(p, new THREE.CylinderGeometry(r, r, length, quality === 2 ? 24 : 12), mat, x, y, z);
+    const o = mesh(p, new THREE.CylinderGeometry(r, r, length, fine ? 24 : 12), mat, x, y, z);
     if (axis === "x") o.rotation.z = Math.PI / 2;
     if (axis === "z") o.rotation.x = Math.PI / 2;
     return o;
+  }
+
+  /** Socket head screws in a row; facing tells which way the heads point. */
+  function screws(p: THREE.Object3D, points: [number, number, number][], facing: "x" | "y" | "z", sign = 1) {
+    if (!fine) return;
+    for (const [x, y, z] of points) {
+      const head = detail(mesh(p, new THREE.CylinderGeometry(0.28, 0.28, 0.22, 14), m.screw, x, y, z));
+      if (facing === "x") head.rotation.z = (Math.PI / 2) * sign;
+      if (facing === "z") head.rotation.x = (Math.PI / 2) * sign;
+    }
   }
 
   function part(id: PartId, explodeDir: [number, number, number], labelAnchor: [number, number, number]) {
@@ -143,189 +196,288 @@ export function buildPrinter(quality: QualityLevel): Printer {
       home: new THREE.Vector3(),
       explodeDir: new THREE.Vector3(...explodeDir),
       labelAnchor: new THREE.Vector3(...labelAnchor),
+      center: new THREE.Vector3(),
     };
     parts.push(p);
     return object;
   }
 
-  /** 2020-style aluminium profile with slots on each face. */
-  function profile(p: THREE.Object3D, length: number, axis: "x" | "y", x: number, y: number, z: number) {
-    if (quality < 2) {
-      const o = box(p, axis === "x" ? length : 2.4, axis === "y" ? length : 2.4, 2.4, m.frame, x, y, z);
-      return o;
-    }
-    const s = 1.2;
-    const slot = 0.32;
+  /** Aluminium extrusion, 2 cm square (or 2 × 4 cm), with a slot in each face. */
+  function profile(p: THREE.Object3D, length: number, axis: "x" | "y" | "z", x: number, y: number, z: number, wide = false) {
+    const s = 1;
+    const depth = wide ? 2 : 1;
+    if (!fine) return box(p, axis === "x" ? length : wide ? 4 : 2, axis === "y" ? length : 2, axis === "z" ? length : 2, m.frame, x, y, z);
+    const slot = 0.3;
+    const cut = 0.45;
     const shape = new THREE.Shape();
-    // Square outline with a slot cut into the middle of each side.
-    const pts: [number, number][] = [
-      [-s, -s], [-slot, -s], [-slot, -s + 0.45], [slot, -s + 0.45], [slot, -s],
-      [s, -s], [s, -slot], [s - 0.45, -slot], [s - 0.45, slot], [s, slot],
-      [s, s], [slot, s], [slot, s - 0.45], [-slot, s - 0.45], [-slot, s],
-      [-s, s], [-s, slot], [-s + 0.45, slot], [-s + 0.45, -slot], [-s, -slot],
-    ];
+    // Outline with a slot in the middle of each 2 cm face.
+    const pts: [number, number][] = [[-s, -depth]];
+    const face = (cx: number) => pts.push([cx - slot, -depth], [cx - slot, -depth + cut], [cx + slot, -depth + cut], [cx + slot, -depth]);
+    face(0);
+    pts.push([s, -depth]);
+    for (const cy of wide ? [-1, 1] : [0]) pts.push([s, cy - slot], [s - cut, cy - slot], [s - cut, cy + slot], [s, cy + slot]);
+    pts.push([s, depth], [slot, depth], [slot, depth - cut], [-slot, depth - cut], [-slot, depth], [-s, depth]);
+    for (const cy of wide ? [1, -1] : [0]) pts.push([-s, cy + slot], [-s + cut, cy + slot], [-s + cut, cy - slot], [-s, cy - slot]);
     shape.moveTo(...pts[0]);
     pts.slice(1).forEach((pt) => shape.lineTo(...pt));
-    const geometry = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08, bevelSegments: 1 });
+    const geometry = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 1 });
     geometry.translate(0, 0, -length / 2);
     const o = mesh(p, geometry, m.frame, x, y, z);
-    if (axis === "y") o.rotation.x = Math.PI / 2;
-    if (axis === "x") o.rotation.y = Math.PI / 2;
+    // The profile's wide side faces forward, along z, for uprights and cross bars.
+    if (axis === "y") o.rotation.set(Math.PI / 2, 0, Math.PI / 2);
+    if (axis === "x") o.rotation.set(0, Math.PI / 2, Math.PI / 2);
     return o;
   }
 
-  /** NEMA 17 stepper motor. */
-  function motor(p: THREE.Object3D, x: number, y: number, z: number, facing: "x" | "y" | "z") {
+  /** NEMA 17 stepper motor with its label and connector. */
+  function motor(p: THREE.Object3D, x: number, y: number, z: number, facing: "x" | "y" | "z", flip = false) {
     const g = new THREE.Group();
     g.position.set(x, y, z);
-    if (facing === "x") g.rotation.z = Math.PI / 2;
-    if (facing === "z") g.rotation.x = Math.PI / 2;
+    if (facing === "x") g.rotation.z = (Math.PI / 2) * (flip ? -1 : 1);
+    if (facing === "z") g.rotation.x = (Math.PI / 2) * (flip ? -1 : 1);
+    if (facing === "y" && flip) g.rotation.x = Math.PI;
     p.add(g);
-    box(g, 4.2, 4, 4.2, m.motor);
-    box(g, 4.25, 0.5, 4.25, m.alu, 0, 2.1, 0);
-    box(g, 4.25, 0.5, 4.25, m.alu, 0, -2.1, 0);
-    if (quality === 2) for (let i = -1; i <= 1; i++) box(g, 4.3, 0.12, 4.3, m.alu, 0, i * 0.9, 0);
-    rod(g, 0.25, 1.6, m.steel, "y", 0, 3, 0);
+    box(g, 4.2, 3.4, 4.2, m.motor, 0, 0, 0, 0.3);
+    box(g, 4.25, 0.6, 4.25, m.alu, 0, 1.9, 0, 0.3);
+    box(g, 4.25, 0.6, 4.25, m.alu, 0, -1.9, 0, 0.3);
+    if (fine) {
+      detail(box(g, 2.2, 0.8, 0.9, m.plastic, 0, -1.4, 2.4, 0.1));
+      detail(mesh(g, new THREE.CylinderGeometry(1.1, 1.1, 0.25, 24), m.alu, 0, 2.3, 0));
+    }
+    rod(g, 0.25, 2.2, m.steel, "y", 0, 3.3, 0);
     return g;
   }
 
-  function belt(p: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3) {
+  /** A toothed belt between two points, with pulleys at both ends. */
+  function belt(p: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3, axis: "x" | "z") {
     const length = from.distanceTo(to);
-    const o = box(p, length, 0.15, 0.6, m.belt);
+    const o = detail(box(p, length, 0.14, 0.6, m.belt, 0, 0, 0, 0.02));
     o.position.copy(from).add(to).multiplyScalar(0.5);
-    o.lookAt(to);
-    o.rotateY(Math.PI / 2);
+    if (axis === "z") o.rotation.y = Math.PI / 2;
     return o;
   }
 
-  function screenTexture() {
-    const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 128;
-    const c = canvas.getContext("2d")!;
+  /** A square fan; returns the rotor that spins. */
+  function fan(p: THREE.Object3D, size: number, x: number, y: number, z: number, facing: "x" | "z") {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    if (facing === "x") g.rotation.y = -Math.PI / 2;
+    p.add(g);
+    box(g, size, size, 1, m.plastic, 0, 0, 0, 0.3);
+    const rotor = new THREE.Group();
+    g.add(rotor);
+    if (!fine) return rotor;
+    const r = size * 0.42;
+    detail(mesh(g, new THREE.TorusGeometry(r, 0.12, 8, 40), m.plastic, 0, 0, 0.55));
+    detail(mesh(rotor, new THREE.CylinderGeometry(r * 0.35, r * 0.35, 0.3, 24), m.accent, 0, 0, 0.45)).rotation.x = Math.PI / 2;
+    for (let i = 0; i < 5; i++) {
+      const blade = detail(box(rotor, 0.5, r * 0.9, 0.06, m.plastic, 0, 0, 0.5, 0.02));
+      blade.rotation.z = (i / 5) * Math.PI * 2;
+      blade.rotation.y = 0.5;
+      blade.translateY(r * 0.55);
+    }
+    return rotor;
+  }
+
+  function cable(p: THREE.Object3D, points: THREE.Vector3[], radius: number, material: THREE.Material) {
+    const o = detail(mesh(p, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 64, radius, fine ? 10 : 6), material));
+    o.castShadow = false;
+    return o;
+  }
+
+  // The control screen shows the print job and its progress.
+  const screenCanvas = document.createElement("canvas");
+  screenCanvas.width = 256;
+  screenCanvas.height = 128;
+  const screenTexture = new THREE.CanvasTexture(screenCanvas);
+  screenTexture.colorSpace = THREE.SRGBColorSpace;
+  textures.push(screenTexture);
+  let shownPercent = -1;
+  function drawScreen(percent: number) {
+    if (percent === shownPercent) return;
+    shownPercent = percent;
+    const c = screenCanvas.getContext("2d")!;
     c.fillStyle = "#06171b";
     c.fillRect(0, 0, 256, 128);
     c.fillStyle = "#3cc2b0";
     c.font = "600 22px Inter, sans-serif";
     c.fillText("3D Care", 18, 38);
+    c.fillStyle = "#f5c400";
+    c.textAlign = "right";
+    c.fillText(`${percent}%`, 238, 38);
+    c.textAlign = "left";
     c.fillStyle = "#9fb3ad";
     c.font = "15px Inter, sans-serif";
     c.fillText("two-handled-mug.gcode", 18, 66);
     c.fillStyle = "#1f3a3f";
     c.fillRect(18, 86, 220, 10);
     c.fillStyle = "#f5c400";
-    c.fillRect(18, 86, 132, 10);
-    const t = new THREE.CanvasTexture(canvas);
-    t.colorSpace = THREE.SRGBColorSpace;
-    textures.push(t);
-    return t;
+    c.fillRect(18, 86, 220 * (percent / 100), 10);
+    screenTexture.needsUpdate = true;
   }
+  drawScreen(0);
 
-  // Base with electronics, feet and the Y axis.
-  const base = part("base", [0, -4, 0], [-BASE.w / 2 + 4, BASE.h, BASE.d / 2]);
-  box(base, BASE.w, BASE.h, BASE.d, m.frame, 0, BASE.h / 2 + 1, 0);
-  for (const [fx, fz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
-    mesh(base, new THREE.CylinderGeometry(1.4, 1.6, 1, 16), m.rubber, fx * (BASE.w / 2 - 3), 0.5, fz * (BASE.d / 2 - 3));
+  // Y chassis: two extrusions along the depth, printed front and rear plates,
+  // the Y motor, belt and the rods the bed slides on.
+  const base = part("base", [0, -8, 4], [-11, 5, 19]);
+  for (const sx of [-1, 1]) {
+    profile(base, 38, "z", sx * 11, 2.6, 0);
+    detail(mesh(base, new THREE.CylinderGeometry(1.3, 1.5, 0.8, 20), m.rubber, sx * 11, 0.4, 17));
+    detail(mesh(base, new THREE.CylinderGeometry(1.3, 1.5, 0.8, 20), m.rubber, sx * 11, 0.4, -17));
   }
-  rod(base, 0.4, BASE.d - 2, m.steel, "z", -6, BASE.h + 1.6, 0);
-  rod(base, 0.4, BASE.d - 2, m.steel, "z", 6, BASE.h + 1.6, 0);
-  motor(base, 0, BASE.h - 0.5, -BASE.d / 2 + 2.6, "z");
-  if (quality > 0) belt(base, new THREE.Vector3(0, BASE.h + 1.2, -BASE.d / 2 + 4), new THREE.Vector3(0, BASE.h + 1.2, BASE.d / 2 - 2));
-  if (quality === 2) for (let i = 0; i < 9; i++) box(base, 0.3, 2.6, 6, m.alu, BASE.w / 2 - 0.1, 3.8, -8 + i * 1.6 - 4);
+  box(base, 26, 6.6, 2.4, m.printed, 0, 3.7, 19.6, 0.6);
+  box(base, 26, 6.6, 2.4, m.printed, 0, 3.7, -19.6, 0.6);
+  screws(base, [[-9, 5.6, 20.85], [9, 5.6, 20.85], [-9, 1.8, 20.85], [9, 1.8, 20.85]], "z");
+  for (const sx of [-1, 1]) rod(base, 0.4, 38, m.steel, "z", sx * 7, 7.4, 0);
+  motor(base, 0, 4.6, -22.2, "z");
+  belt(base, new THREE.Vector3(0, 6.2, -19), new THREE.Vector3(0, 6.2, 19), "z");
+  if (fine) detail(mesh(base, new THREE.CylinderGeometry(0.7, 0.7, 1.2, 20), m.alu, 0, 6.2, 18.6)).rotation.z = Math.PI / 2;
 
-  // Control screen on the front right.
-  const display = part("display", [8, -2, 18], [BASE.w / 2 - 7, 7, BASE.d / 2 + 2]);
-  const panel = box(display, 11, 6, 2.2, m.plastic, BASE.w / 2 - 7, 4.4, BASE.d / 2 + 0.6);
-  panel.rotation.x = -0.35;
-  const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(8.4, 4.2)), m.screen.clone());
-  (screen.material as THREE.MeshStandardMaterial).emissiveMap = screenTexture();
-  screen.position.set(0, 0.2, 1.12);
+  // Control screen with its knob, on the front left.
+  const display = part("display", [-22, 1, 10], [-10, 8, 24]);
+  const panel = box(display, 12, 6.6, 2.6, m.plastic, -9, 4.4, 22.4, 0.5);
+  panel.rotation.x = -0.3;
+  const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(7.6, 4.2)), m.screen.clone());
+  (screen.material as THREE.MeshStandardMaterial).emissiveMap = screenTexture;
+  screen.position.set(-1.4, 0.3, 1.32);
   panel.add(screen);
-  if (quality > 0) mesh(panel, new THREE.CylinderGeometry(0.7, 0.7, 0.8, 20), m.alu, 4.4, -1.6, 1.2).rotation.x = Math.PI / 2;
+  const knob = mesh(panel, new THREE.CylinderGeometry(0.9, 0.95, 1, fine ? 32 : 16), m.printed, 4.2, -0.2, 1.6);
+  knob.rotation.x = Math.PI / 2;
+  if (fine) detail(mesh(panel, new THREE.TorusGeometry(0.92, 0.08, 6, 32), m.accent, 4.2, -0.2, 2.1));
 
-  // Heated bed with its carriage, levelling knobs and print sheet.
-  const bed = part("bed", [0, 0, 16], [-12, BED_Y + 1.2, 12]);
-  box(bed, 20, 0.6, 20, m.alu, 0, BED_Y - 1.2, 0);
-  box(bed, 26, 0.5, 26, m.bed, 0, BED_Y, 0);
-  box(bed, 25, 0.18, 25, m.pei, 0, BED_Y + 0.34, 0);
-  for (const [kx, kz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
-    mesh(bed, new THREE.CylinderGeometry(1, 1, 1.2, quality === 2 ? 24 : 10), m.accent, kx * 11.5, BED_Y - 1.1, kz * 11.5);
-  }
+  // Heated bed: aluminium carriage, black circuit board and a removable
+  // spring steel sheet with a textured surface and a gold edge.
+  const bed = part("bed", [0, -4, 22], [-12, BED_Y + 1.2, 12]);
+  box(bed, 22, 0.5, 22, m.alu, 0, BED_Y - 1.4, 0, 0.15);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) detail(box(bed, 2.2, 1.6, 3.2, m.printed, sx * 7, BED_Y - 2.2, sz * 7, 0.3));
+  box(bed, 25.4, 0.32, 25.4, m.pcb, 0, BED_Y, 0, 0);
+  box(bed, 25, 0.1, 25, m.gold, 0, BED_Y + 0.22, 0, 0.04);
+  box(bed, 25, 0.14, 25, m.pei, 0, BED_Y + 0.36, 0, 0);
+  // Tabs for lifting the sheet off.
+  for (const sx of [-1, 1]) detail(box(bed, 4, 0.14, 1.4, m.pei, sx * 7, BED_Y + 0.36, 12.9, 0.3));
+  cable(bed, [new THREE.Vector3(0, BED_Y - 0.4, -12.6), new THREE.Vector3(0, BED_Y - 2, -16), new THREE.Vector3(0, BED_Y - 4, -18)], 0.35, m.cable);
   const bedSurface = new THREE.Object3D();
   bedSurface.position.set(0, BED_SURFACE_Y, 0);
   bed.add(bedSurface);
 
-  // Frame: two uprights, top bar, Z motors and lead screws.
-  const frame = part("frame", [0, 1, -16], [UPRIGHT_X, FRAME_TOP, FRAME_Z]);
-  const uprightH = FRAME_TOP - BASE.h;
-  profile(frame, uprightH, "y", -UPRIGHT_X, BASE.h + uprightH / 2, FRAME_Z);
-  profile(frame, uprightH, "y", UPRIGHT_X, BASE.h + uprightH / 2, FRAME_Z);
-  profile(frame, UPRIGHT_X * 2 + 2.4, "x", 0, FRAME_TOP + 1.2, FRAME_Z);
-  motor(frame, -UPRIGHT_X + 3.2, BASE.h + 3, FRAME_Z, "y");
-  motor(frame, UPRIGHT_X - 3.2, BASE.h + 3, FRAME_Z, "y");
-  rod(frame, 0.4, uprightH - 6, m.brass, "y", -UPRIGHT_X + 3.2, BASE.h + uprightH / 2 + 3, FRAME_Z);
-  rod(frame, 0.4, uprightH - 6, m.brass, "y", UPRIGHT_X - 3.2, BASE.h + uprightH / 2 + 3, FRAME_Z);
+  // Z frame: two 2 × 4 cm uprights joined top and bottom, printed corners,
+  // Z motors, lead screws and rods, the electronics box and power supply.
+  const frame = part("frame", [0, 4, -18], [UPRIGHT_X, FRAME_TOP, FRAME_Z]);
+  const uprightH = FRAME_TOP;
+  for (const sx of [-1, 1]) {
+    profile(frame, uprightH, "y", sx * UPRIGHT_X, uprightH / 2, FRAME_Z, true);
+    box(frame, 5.4, 4.6, 5.2, m.printed, sx * (UPRIGHT_X - 1.4), FRAME_TOP - 1.2, FRAME_Z + 0.6, 0.6);
+    box(frame, 7.4, 3.6, 5.6, m.printed, sx * (UPRIGHT_X - 2.4), 7.6, FRAME_Z + 0.8, 0.6);
+    motor(frame, sx * SCREW_X, 4.4, AXIS_Z, "y");
+    rod(frame, 0.4, FRAME_TOP - 9, m.steel, "y", sx * ROD_X, 5 + (FRAME_TOP - 9) / 2 + 3, AXIS_Z);
+    const screw = rod(frame, 0.4, FRAME_TOP - 10, m.brass, "y", sx * SCREW_X, 9.4 + (FRAME_TOP - 10) / 2, AXIS_Z);
+    screw.userData.noOutline = true;
+    screws(frame, [[sx * (UPRIGHT_X - 1.4), FRAME_TOP, FRAME_Z + 3.25], [sx * (UPRIGHT_X - 1.4), FRAME_TOP - 2.4, FRAME_Z + 3.25]], "z");
+  }
+  profile(frame, UPRIGHT_X * 2 + 2, "x", 0, FRAME_TOP + 1, FRAME_Z);
+  profile(frame, UPRIGHT_X * 2 - 2, "x", 0, 4.6, FRAME_Z);
+  // Electronics behind the left upright, power supply behind the right one.
+  const electronics = box(frame, 10, 12, 3.6, m.plastic, -UPRIGHT_X + 3, 15, FRAME_Z - 3.2, 0.5);
+  if (fine) for (let i = 0; i < 6; i++) detail(box(electronics, 6, 0.35, 0.2, m.frame, 0, -3.5 + i * 1.4, -1.85, 0.05));
+  const psu = box(frame, 7, 13, 4.4, m.frame, UPRIGHT_X - 2.6, 11, FRAME_Z - 3.6, 0.3);
+  if (fine) {
+    for (let i = 0; i < 7; i++) detail(box(psu, 0.25, 9, 0.2, m.motor, -2.4 + i * 0.8, 0.6, -2.25, 0.05));
+    detail(box(psu, 2.4, 1.2, 0.6, m.plastic, 0, -5.4, 2.3, 0.1));
+  }
+  cable(frame, [new THREE.Vector3(-UPRIGHT_X + 3, 9, FRAME_Z - 1.4), new THREE.Vector3(-UPRIGHT_X + 4, 5, FRAME_Z + 1), new THREE.Vector3(-SCREW_X, 6.4, AXIS_Z)], 0.25, m.cable);
 
-  // Gantry: X rods, X ends with the X motor and belt. Moves with the print head in Z.
-  const gantry = part("gantry", [-4, 5, 8], [-UPRIGHT_X + 3, GANTRY_Y + 3, FRAME_Z + 2]);
+  // Gantry: printed X ends (motor on the left, belt idler on the right), the
+  // X rods and belt. It moves up and down with the print head.
+  const gantry = part("gantry", [-8, 12, 12], [-UPRIGHT_X + 3, GANTRY_Y + 4, FRAME_Z + 2]);
   const gantryBody = new THREE.Group();
   gantry.add(gantryBody);
-  rod(gantryBody, 0.4, UPRIGHT_X * 2 - 4, m.steel, "x", 0, GANTRY_Y + 1.5, FRAME_Z + 2);
-  rod(gantryBody, 0.4, UPRIGHT_X * 2 - 4, m.steel, "x", 0, GANTRY_Y - 1.5, FRAME_Z + 2);
-  box(gantryBody, 5, 6.5, 4, m.plastic, -UPRIGHT_X + 3.2, GANTRY_Y, FRAME_Z + 1);
-  box(gantryBody, 5, 6.5, 4, m.plastic, UPRIGHT_X - 3.2, GANTRY_Y, FRAME_Z + 1);
-  motor(gantryBody, -UPRIGHT_X + 3.2, GANTRY_Y, FRAME_Z - 2.6, "z");
-  if (quality > 0) {
-    belt(gantryBody, new THREE.Vector3(-UPRIGHT_X + 4, GANTRY_Y + 0.6, FRAME_Z + 3.4), new THREE.Vector3(UPRIGHT_X - 4, GANTRY_Y + 0.6, FRAME_Z + 3.4));
-    belt(gantryBody, new THREE.Vector3(-UPRIGHT_X + 4, GANTRY_Y - 0.6, FRAME_Z + 3.4), new THREE.Vector3(UPRIGHT_X - 4, GANTRY_Y - 0.6, FRAME_Z + 3.4));
+  const xEndX = (ROD_X + SCREW_X) / 2;
+  for (const sx of [-1, 1]) {
+    box(gantryBody, 6.6, 7.6, 5, m.printed, sx * xEndX, GANTRY_Y, AXIS_Z + 0.4, 0.7);
+    // Lead screw nut.
+    detail(mesh(gantryBody, new THREE.CylinderGeometry(1, 1, 0.8, 20), m.brass, sx * SCREW_X, GANTRY_Y - 4.2, AXIS_Z));
+    screws(gantryBody, [[sx * xEndX - 1.8, GANTRY_Y + 2.6, AXIS_Z + 2.95], [sx * xEndX + 1.8, GANTRY_Y + 2.6, AXIS_Z + 2.95], [sx * xEndX, GANTRY_Y - 2.6, AXIS_Z + 2.95]], "z");
   }
+  for (const dy of [-1.6, 1.6]) rod(gantryBody, 0.4, xEndX * 2 - 2, m.steel, "x", 0, GANTRY_Y + dy, AXIS_Z + 2.4);
+  motor(gantryBody, -xEndX - 4, GANTRY_Y, AXIS_Z + 1.6, "x", true);
+  // Belt tensioner knob on the right.
+  mesh(gantryBody, new THREE.CylinderGeometry(0.8, 0.8, 1.2, 20), m.printed, xEndX + 3.9, GANTRY_Y, AXIS_Z + 1.6).rotation.z = Math.PI / 2;
+  for (const dy of [-0.5, 0.5]) belt(gantryBody, new THREE.Vector3(-xEndX, GANTRY_Y + dy, AXIS_Z + 2.4), new THREE.Vector3(xEndX, GANTRY_Y + dy, AXIS_Z + 2.4), "x");
 
-  // Print head: carriage, heat sink, heater block, nozzle, cooling fan and shroud.
-  const head = part("head", [9, 3, 22], [3.5, GANTRY_Y + 5, FRAME_Z + 7]);
+  // Print head: a tall printed extruder with its motor on top, a hotend fan on
+  // the side, the part cooling shroud and the hotend with heater sock and nozzle.
+  const head = part("head", [18, 10, 26], [3.5, GANTRY_Y + 7, FRAME_Z + 9]);
   const headBody = new THREE.Group();
   headBody.position.set(0, GANTRY_Y, FRAME_Z + 4.6);
   head.add(headBody);
-  box(headBody, 6.4, 7.6, 2.2, m.plastic, 0, 0, 0);
-  box(headBody, 6.6, 4.8, 3.2, m.accent, 0, -1.4, 2.6);
-  const fanRing = mesh(headBody, new THREE.TorusGeometry(1.75, 0.22, 10, quality === 2 ? 40 : 20), m.plastic, 0, -1.2, 4.3);
-  fanRing.rotation.set(0, 0, 0);
-  if (quality === 2) {
-    for (let i = 0; i < 7; i++) {
-      const blade = box(headBody, 0.3, 1.5, 0.08, m.plastic, 0, -1.2, 4.2);
-      blade.rotation.z = (i / 7) * Math.PI * 2;
-      blade.translateY(0.75);
-    }
-    for (let i = 0; i < 6; i++) mesh(headBody, new THREE.CylinderGeometry(1.1, 1.1, 0.12, 24), m.alu, 0, -4.4 - i * 0.32, 1.2);
-  } else {
-    mesh(headBody, new THREE.CylinderGeometry(1.1, 1.1, 1.8, 12), m.alu, 0, -5.2, 1.2);
+  box(headBody, 6.6, 6.4, 1.4, m.printed, 0, 0, 1.8, 0.4);
+  box(headBody, 5.8, 9.2, 4.6, m.printed, 0, 0.8, 4.4, 0.9);
+  // Extruder door with its idler window and lever.
+  box(headBody, 4.2, 5, 0.5, m.printed, 0, 1.8, 6.9, 0.25);
+  if (fine) {
+    const window = detail(mesh(headBody, new THREE.CylinderGeometry(0.9, 0.9, 0.2, 28), m.plastic, -0.6, 2.4, 7.2));
+    window.rotation.x = Math.PI / 2;
+    detail(box(headBody, 0.8, 2.6, 0.5, m.accent, 1.5, 3, 7.3, 0.2));
+    screws(headBody, [[-1.6, 0, 7.2], [1.6, 0, 7.2]], "z");
   }
-  box(headBody, 2, 1.2, 1.6, m.alu, 0, -6.9, 1.2);
-  mesh(headBody, new THREE.ConeGeometry(0.42, 0.9, 16), m.brass, 0, -7.95, 1.2).rotation.x = Math.PI;
+  // Pancake extruder motor on top.
+  mesh(headBody, new THREE.CylinderGeometry(2.1, 2.1, 1.8, fine ? 32 : 16), m.motor, 0, 6.2, 4.4);
+  mesh(headBody, new THREE.CylinderGeometry(2.15, 2.15, 0.25, fine ? 32 : 16), m.alu, 0, 5.3, 4.4);
+  const headFan = fan(headBody, 4, -3.4, 0.6, 4.4, "x");
+  // Part cooling shroud and the hotend below.
+  box(headBody, 5.4, 1.6, 1.6, m.plastic, 0, -4.4, 6.2, 0.4);
+  const hotendZ = NOZZLE_HOME.z - FRAME_Z - 4.6;
+  if (fine) for (let i = 0; i < 5; i++) detail(mesh(headBody, new THREE.CylinderGeometry(1.15, 1.15, 0.14, 24), m.alu, 0, -4 - i * 0.34, hotendZ));
+  else mesh(headBody, new THREE.CylinderGeometry(1.15, 1.15, 1.6, 12), m.alu, 0, -4.7, hotendZ);
+  box(headBody, 2.4, 1.3, 1.9, m.hotSock, 0, -6.8, hotendZ, 0.4);
+  mesh(headBody, new THREE.ConeGeometry(0.45, 0.95, 16), m.hotBrass, 0, -7.92, hotendZ).rotation.x = Math.PI;
   const nozzle = new THREE.Object3D();
-  nozzle.position.set(0, -8.4, 1.2);
+  nozzle.position.set(0, -8.4, hotendZ);
   headBody.add(nozzle);
+  // Braided cable bundle from the head, arching back over the frame.
+  const headCable = cable(headBody, [new THREE.Vector3(0, 7.2, 3.4), new THREE.Vector3(0, 12, 1.6), new THREE.Vector3(-5, 17, -2.6), new THREE.Vector3(-11, FRAME_TOP - GANTRY_Y - 1, -6)], 0.45, m.cable);
 
-  // Spool on a holder on top of the frame.
-  const spool = part("spool", [26, -10, -4], [7, FRAME_TOP + 13, FRAME_Z - 4]);
-  const spoolY = FRAME_TOP + 9;
-  const spoolZ = FRAME_Z - 3;
-  box(spool, 1.4, 7, 1.4, m.plastic, 0, FRAME_TOP + 5.5, FRAME_Z);
-  const flangeSegments = quality === 2 ? 56 : 28;
-  for (const dz of [-2.9, 2.9]) mesh(spool, new THREE.CylinderGeometry(7.2, 7.2, 0.4, flangeSegments), m.spool, 0, spoolY, spoolZ + dz).rotation.x = Math.PI / 2;
-  mesh(spool, new THREE.CylinderGeometry(6.3, 6.3, 5.4, flangeSegments), m.filament, 0, spoolY, spoolZ).rotation.x = Math.PI / 2;
-  if (quality === 2) for (let i = 0; i < 12; i++) mesh(spool, new THREE.TorusGeometry(6.32, 0.08, 6, 56), m.filament, 0, spoolY, spoolZ - 2.4 + i * 0.44);
+  // Spool on a printed holder on top of the frame.
+  const spool = part("spool", [32, -2, -10], [0, FRAME_TOP + 16, FRAME_Z - 4]);
+  const spoolY = FRAME_TOP + 10;
+  const spoolZ = FRAME_Z - 4.6;
+  box(spool, 2.4, 9, 2.2, m.printed, 0, FRAME_TOP + 6, FRAME_Z - 0.4, 0.5);
+  rod(spool, 0.9, 9, m.printed, "z", 0, spoolY, spoolZ);
+  // The reel turns on the rod as filament is pulled off it.
+  const reel = new THREE.Group();
+  reel.position.set(0, spoolY, spoolZ);
+  spool.add(reel);
+  const flangeSegments = fine ? 64 : 28;
+  for (const dz of [-2.6, 2.6]) {
+    const flange = mesh(reel, new THREE.CylinderGeometry(7.4, 7.4, 0.4, flangeSegments), m.spool, 0, 0, dz);
+    flange.rotation.x = Math.PI / 2;
+  }
+  // Spokes in the flange show the reel turning.
+  if (fine) {
+    for (let i = 0; i < 6; i++) {
+      const window = detail(box(reel, 1.4, 2.6, 0.5, m.plastic, 0, 0, 2.65, 0.3));
+      window.rotation.z = (i / 6) * Math.PI * 2;
+      window.translateY(4.6);
+    }
+  }
+  rod(reel, 6.4, 4.8, m.filament, "z");
+  if (fine) for (let i = 0; i < 14; i++) detail(mesh(reel, new THREE.TorusGeometry(6.42, 0.07, 6, 64), m.filament, 0, 0, -2.2 + i * 0.34));
 
-  // Filament path from the spool to the print head.
+  // PTFE tube carrying the filament from the spool down into the extruder.
   const path = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, spoolY - 6.4, spoolZ + 1),
-    new THREE.Vector3(2, FRAME_TOP + 2, FRAME_Z + 4),
-    new THREE.Vector3(1, GANTRY_Y + 12, FRAME_Z + 6),
-    new THREE.Vector3(0, GANTRY_Y + 3.8, FRAME_Z + 4.6),
+    new THREE.Vector3(0, spoolY - 6.6, spoolZ + 1.4),
+    new THREE.Vector3(1.6, FRAME_TOP + 1.6, FRAME_Z + 5),
+    new THREE.Vector3(1, GANTRY_Y + 13, FRAME_Z + 9.6),
+    new THREE.Vector3(0, GANTRY_Y + 7.2, FRAME_Z + 9),
   ]);
-  const filament = mesh(root, new THREE.TubeGeometry(path, 48, 0.09, 6), m.filament);
+  const filament = mesh(root, new THREE.TubeGeometry(path, 48, 0.2, 8), m.ptfe);
   filament.castShadow = false;
+  detail(filament);
 
   parts.forEach((p) => p.home.copy(p.object.position));
+  root.updateMatrixWorld(true);
+  const bounds = new THREE.Box3();
+  parts.forEach((p) => bounds.setFromObject(p.object).getCenter(p.center));
 
   return {
     root,
@@ -333,11 +485,19 @@ export function buildPrinter(quality: QualityLevel): Printer {
     nozzle,
     bedSurface,
     filament,
+    headCable,
     setToolPosition(x, y, z) {
       headBody.position.x = x;
       bed.children.forEach((c) => (c.position.z = (c.userData.z ??= c.position.z) + y));
       gantryBody.position.y = z;
       headBody.position.y = GANTRY_Y + z;
+    },
+    setPrinting(progress, heat) {
+      headFan.rotation.z = -progress * Math.PI * 160;
+      reel.rotation.z = progress * Math.PI * 1.2;
+      drawScreen(Math.round(progress * 100));
+      m.hotBrass.emissiveIntensity = heat * 2.2;
+      m.hotSock.emissiveIntensity = heat * 0.6;
     },
     dispose() {
       geometries.forEach((g) => g.dispose());

@@ -56,7 +56,39 @@ export const tr: typeof en = {
         display: "Kontrol ekranı",
       },
       partsListTitle: "Yazıcının parçaları",
-      dragHint: { printer: "Yazıcıyı döndürmek için sürükleyin", mug: "Kupayı döndürmek için sürükleyin" },
+      dragHint: { printer: "Parçayı ya da yazıcıyı sürükleyerek döndürün · bilgi için bir parçaya tıklayın", mug: "Kupayı döndürmek için sürükleyin" },
+      repairTip: "Onarım ipucu",
+      close: "Kapat",
+      parts: {
+        base: {
+          what: "Çerçeveyi ve tablayı taşır; kontrol kartı ile güç kaynağı da buradadır.",
+          repair: "Arızaların çoğu gevşek bir bağlantıdır: yazıcının fişini çekin ve her soketi sıkıca yerine bastırın. Havalandırma deliklerini tozdan uzak tutun.",
+        },
+        bed: {
+          what: "İlk katmanların yapışması için ısınır. Yaylı çelik plaka çıkarılıp esnetilerek biten baskı kolayca ayrılır.",
+          repair: "Plakayı bulaşık deterjanıyla yıkayın ya da izopropil alkolle silin. Yüzey aşınınca tablayı değil, yalnızca plakayı değiştirin.",
+        },
+        frame: {
+          what: "İki alüminyum kule her ekseni dik ve sağlam tutar; katmanlar düzgün üst üste biner.",
+          repair: "Baskılar eğri ya da dalgalı çıkıyorsa çerçeve vidalarının sıkı, kulelerin gövdeye dik olduğunu kontrol edin.",
+        },
+        gantry: {
+          what: "Baskı kafasını iki mil üzerinde sağa sola taşır ve vidalı millerle her katmanda bir adım yükselir.",
+          repair: "Milleri hafifçe yağlı tutun. Kayış gitar teli gibi gergin olmalı, ama aşırı sıkı değil.",
+        },
+        head: {
+          what: "Filamenti çeker, yaklaşık 200 °C'de eritir ve 0,4 mm'lik nozuldan katman katman serer.",
+          repair: "Tıkanan nozul ucuzdur ve değiştirilebilir. Önce ısıtın, sonra dikkatle sökün.",
+        },
+        spool: {
+          what: "1 kg'lık PLA, PETG ya da esnek TPU makarası: onlarca yardımcı araç için yeter.",
+          repair: "Açılmış makaraları silika jelli bir kutuda kuru saklayın. Nem çeken filament ipliklenir ve zayıf basar.",
+        },
+        display: {
+          what: "Baskıyı başlatır, yazıcıyı ısıtır ve ilerlemeyi gösterir. Dosyalar USB bellekten yüklenir.",
+          repair: "Yazılım güncellemeleri ücretsizdir ve hataları giderir. Düğme de yeniden basabileceğiniz bir parçadır.",
+        },
+      },
       stillAlt: [
         "Bir masaüstü 3D yazıcının teknik çizimi, gerçek yazıcıya dönüşüyor.",
         "Stüdyoda yandan aydınlatılmış bir masaüstü 3D yazıcı.",

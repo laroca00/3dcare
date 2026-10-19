@@ -9,6 +9,8 @@ export interface PrintJob {
   setProgress(t: number): void;
   /** 0..1: how full of coffee the mug is. */
   setCoffee(t: number): void;
+  /** Keeps the logo printed only up to the current layer; call after the mug has moved. */
+  syncClip(): void;
   dispose(): void;
 }
 
@@ -18,6 +20,41 @@ const BASE_LAYERS = 2;
 const ARM_LAYERS = new Set([5, 6, 7, 22, 23, 24]);
 const GRIP_FROM = 8;
 const GRIP_TO = 21;
+
+/**
+ * The 3D Care mark (three concentric arcs opening to the right and a dot),
+ * raised slightly off the mug wall and bent around it, facing +z.
+ */
+function logoGeometry(segments: number) {
+  const scale = 0.068;
+  const width = 5.5 * scale;
+  const shapes: THREE.Shape[] = [];
+  const a0 = Math.PI / 4;
+  const a1 = (Math.PI * 7) / 4;
+  for (const radius of [26, 18, 10]) {
+    const r = radius * scale;
+    const shape = new THREE.Shape();
+    shape.absarc(0, 0, r + width / 2, a0, a1, false);
+    // Round ends, like the logo's stroke caps.
+    shape.absarc(Math.cos(a1) * r, Math.sin(a1) * r, width / 2, a1, a1 + Math.PI, false);
+    shape.absarc(0, 0, r - width / 2, a1, a0, true);
+    shape.absarc(Math.cos(a0) * r, Math.sin(a0) * r, width / 2, a0 + Math.PI, a0 + Math.PI * 2, false);
+    shapes.push(shape);
+  }
+  shapes.push(new THREE.Shape().absarc(0, 0, 3.5 * scale, 0, Math.PI * 2, false));
+  const geometry = new THREE.ExtrudeGeometry(shapes, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 1, curveSegments: segments });
+  // Bend the flat logo around the wall.
+  const wall = MUG_RADIUS + 0.2;
+  const centerY = (LAYERS * LAYER_HEIGHT) / 2;
+  const position = geometry.getAttribute("position");
+  for (let i = 0; i < position.count; i++) {
+    const angle = position.getX(i) / wall;
+    const r = wall - 0.06 + position.getZ(i);
+    position.setXYZ(i, Math.sin(angle) * r, position.getY(i) + centerY, Math.cos(angle) * r);
+  }
+  geometry.computeVertexNormals();
+  return geometry;
+}
 
 export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel): PrintJob {
   const object = new THREE.Group();
@@ -61,6 +98,18 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   const currentLayer = new THREE.Mesh(ring, current);
   object.add(currentLayer);
 
+  // The raised logo appears layer by layer with the wall: everything above
+  // the current layer is clipped away.
+  const clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+  const logoMaterial = filament.clone();
+  logoMaterial.clippingPlanes = [clip];
+  const logoShape = logoGeometry(quality === 2 ? 40 : 16);
+  const logo = new THREE.Mesh(logoShape, logoMaterial);
+  logo.castShadow = logo.receiveShadow = true;
+  object.add(logo);
+  let printedHeight = 0;
+  const top = new THREE.Vector3();
+
   // Coffee fills the mug from the base up to just below the rim.
   const coffeeMaterial = new THREE.MeshStandardMaterial({ color: 0x2b170c, roughness: 0.12, metalness: 0 });
   const coffeeShape = new THREE.CylinderGeometry(MUG_RADIUS - 0.2, MUG_RADIUS - 0.2, 1, segments).translate(0, 0.5, 0);
@@ -81,14 +130,19 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
       handle.count = handleLayers.filter((l) => l < done).length * 2;
       currentLayer.visible = t > 0 && t < 1;
       currentLayer.position.y = Math.min(layer, LAYERS - 1) * LAYER_HEIGHT;
+      printedHeight = t >= 1 ? Infinity : done * LAYER_HEIGHT;
+      logo.visible = done > 0;
+    },
+    syncClip() {
+      clip.constant = printedHeight === Infinity ? 1e6 : object.localToWorld(top.set(0, printedHeight, 0)).y;
     },
     setCoffee(t) {
       coffee.visible = t > 0;
       coffee.scale.y = Math.max(t, 0.01) * (coffeeTop - coffeeBottom);
     },
     dispose() {
-      [ring, disc, block, coffeeShape].forEach((g) => g.dispose());
-      [filament, current, coffeeMaterial].forEach((mat) => mat.dispose());
+      [ring, disc, block, coffeeShape, logoShape].forEach((g) => g.dispose());
+      [filament, current, coffeeMaterial, logoMaterial].forEach((mat) => mat.dispose());
       [walls, bases, handle].forEach((mesh) => mesh.dispose());
     },
   };

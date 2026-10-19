@@ -5,6 +5,41 @@ Fikirler Derneği) under WP5, Activity 5.1 (Dissemination of Project Results
 and Stakeholder Outreach). Every change is also recorded in the commit history
 of this repository: https://github.com/laroca00/3dcare/commits/main
 
+## 2026-10-20
+
+### A real-looking open printer
+- The 3D printer in the home page story was rebuilt as an open-hardware "i3"
+  printer of the kind adult education centres use: black aluminium
+  extrusions, chrome rods, brass lead screws, a moving heated bed with a
+  textured sheet, a tall print head with its fan, cable bundle and filament
+  tube, and printed parts in the project's teal (with visible layer lines).
+- When the printer comes apart it first turns once on its own axis while
+  moving to the middle of the screen, then separates into its parts. Each
+  part can be dragged to turn it on its own (its label lights up under the
+  pointer), or the whole printer can be turned. The text for this step is
+  shown as a caption at the bottom of the screen.
+- The printed mug now carries the 3D Care logo, raised from its wall and
+  printed layer by layer with the rest of the mug.
+
+### A studio-quality home story
+- Studio light: soft contact shadows under the printer and its parts,
+  reflections from soft boxes on metal and plastic, and on capable devices a
+  satin floor that faintly mirrors the printer.
+- Lens: depth of field on the mug at the end and on the part under the
+  pointer while the printer is apart, a soft glow on the brightest
+  highlights, a light vignette and film grain, and a slight camera drift with
+  the mouse. Heavier effects switch off by themselves on slower devices.
+- Printing: the hotend glows while it prints, the fan and the spool turn, and
+  the printer's screen counts the progress up to 100%. The mug hops slightly
+  as it lands on the table.
+- Taking the printer apart: the parts come off one after another, and each
+  label sits at the end of a callout line, like a technical drawing.
+  Clicking a part or its label opens a card on what the part does and how to
+  look after it (English and Turkish). The labels and cards work with the
+  keyboard; Escape closes a card.
+- The 3D stage now reaches up under the floating navigation, so the scene
+  fills the whole first screen.
+
 ## 2026-10-19
 
 ### Interactive printer and a new story ending

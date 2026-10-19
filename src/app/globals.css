@@ -340,8 +340,11 @@ main:focus {
 
 /* Home story: sticky 3D stage with the story text scrolling over it */
 
+/* The story reaches up under the floating navigation (the header's 80px),
+   so the 3D stage fills the whole first screen. */
 .story {
   position: relative;
+  margin-top: -80px;
 }
 
 .story__stage {
@@ -395,10 +398,11 @@ main:focus {
   cursor: grabbing;
 }
 
+/* Top right, below the floating nav, clear of the caption at the bottom. */
 .story__hint {
   position: absolute;
-  right: 24px;
-  bottom: 24px;
+  right: 16px;
+  top: 84px;
   margin: 0;
   padding: 6px 14px;
   border-radius: 999px;
@@ -412,7 +416,6 @@ main:focus {
   pointer-events: none;
 }
 
-.story[data-grab="printer"] .story__hint--printer,
 .story[data-grab="mug"] .story__hint--mug {
   opacity: 1;
   transform: none;
@@ -428,11 +431,44 @@ main:focus {
   pointer-events: none;
 }
 
+/* Callout lines from each part to its label, like a technical drawing. */
+.story__leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.story__leaders g {
+  opacity: 0;
+}
+
+.story__leaders line {
+  stroke: var(--teal);
+  stroke-width: 1.25;
+}
+
+.story__leaders circle {
+  fill: var(--surface);
+  stroke: var(--teal);
+  stroke-width: 1.5;
+}
+
+:root[data-story-still] .story__leaders {
+  display: none;
+}
+
 .story__label {
   position: absolute;
   left: 0;
   top: 0;
   opacity: 0;
+  margin: 0;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
   padding: 4px 10px 4px 14px;
   border-left: 2px solid var(--layer);
   background: color-mix(in srgb, var(--surface) 82%, transparent);
@@ -442,6 +478,34 @@ main:focus {
   white-space: nowrap;
   border-radius: 0 999px 999px 0;
   will-change: transform, opacity;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Labels can be clicked once the parts are apart. */
+.story[data-grab="printer"] .story__label {
+  pointer-events: auto;
+}
+
+.story__label:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.story__label--flip {
+  padding: 4px 14px 4px 10px;
+  border-left: 0;
+  border-right: 2px solid var(--layer);
+  border-radius: 999px 0 0 999px;
+}
+
+/* The part under the pointer, or the one whose card is open. */
+.story__label--hot,
+.story__label--selected,
+.story__label:hover {
+  border-left-color: var(--teal);
+  border-right-color: var(--teal);
+  background: var(--teal);
+  color: var(--on-accent);
 }
 
 .story__beats {
@@ -470,6 +534,191 @@ main:focus {
   opacity: 1;
 }
 
+/* While the printer is apart in the middle of the stage, its text is shown as
+   a caption at the bottom of the stage; the beat keeps the same text for
+   screen readers and for the still frames. */
+.story__caption {
+  position: absolute;
+  left: 50%;
+  bottom: 3svh;
+  width: min(40rem, calc(100% - 32px));
+  margin: 0;
+  padding: 12px 20px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter: blur(10px);
+  text-align: center;
+  opacity: var(--caption, 0);
+  transform: translate(-50%, calc((1 - var(--caption, 0)) * 12px));
+  pointer-events: none;
+}
+
+.story__caption p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.story__caption .story__caption-title {
+  margin-bottom: 4px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* Shown once the parts can be dragged. */
+.story__caption .story__caption-hint {
+  max-height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  color: var(--teal);
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.4s ease, max-height 0.4s ease, margin-top 0.4s ease;
+}
+
+.story[data-grab="printer"] .story__caption-hint {
+  max-height: 2.6em;
+  margin-top: 6px;
+  opacity: 1;
+}
+
+/* The story text scrolls above the stage, so it steps aside while a card is open. */
+.story__beats {
+  transition: opacity 0.25s ease;
+}
+
+.story[data-card] .story__beats {
+  opacity: 0;
+}
+
+/* While a card is open it takes the caption's place on narrow screens. */
+@media (max-width: 899px) {
+  .story[data-card] .story__caption {
+    opacity: 0;
+  }
+}
+
+/* A part's card: what it does and how to look after it. */
+/* Wide screens: on the left, where the parts leave room. */
+.story__card {
+  position: absolute;
+  left: max(24px, calc((100% - 1200px) / 2));
+  top: 50%;
+  width: min(320px, calc(100% - 32px));
+  padding: 20px 22px 18px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.22);
+  border-left: 3px solid var(--teal);
+  transform: translateY(-50%);
+  animation: story-card-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.story__card h3 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+}
+
+.story__card h3:focus {
+  outline: none;
+}
+
+.story__card p {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.story__card .story__card-kicker {
+  margin-bottom: 4px;
+  color: var(--teal);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.story__card .story__card-tip {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.story__card-tip strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.8rem;
+}
+
+.story__card-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.story__card-close:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.story__card-close:focus-visible {
+  outline: 2px solid var(--teal);
+}
+
+@keyframes story-card-in {
+  from {
+    opacity: 0;
+    transform: translate(-16px, -50%);
+  }
+}
+
+@media (max-width: 899px) {
+  .story__card {
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 3svh;
+    width: auto;
+    transform: none;
+    animation-name: story-card-up;
+  }
+}
+
+@keyframes story-card-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story__card {
+    animation: none;
+  }
+}
+
+.story--stills .story__caption,
+:root[data-story-still] .story__caption {
+  display: none;
+}
+
+.story:not(.story--stills) .story__beat--caption .story__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .story h1 {
   max-width: 14ch;
 }
@@ -492,6 +741,11 @@ main:focus {
   max-width: none;
   padding-block: 40px;
   opacity: 1;
+}
+
+/* Without the stage, the first heading keeps clear of the navigation. */
+.story--stills .story__beat--intro {
+  padding-top: 120px;
 }
 
 .story__still {

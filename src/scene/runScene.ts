@@ -3,16 +3,20 @@ import type { Theme } from "../theme/theme";
 import { createDrawing } from "./drawing";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { explodeAmount, setExplode } from "./explode";
+import type { Pass } from "three/addons/postprocessing/Pass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { centerAmount, explodeAmount, setExplode, spinTurn } from "./explode";
 import type { PartId } from "./parts";
 import { createPrintJob } from "./printJob";
-import { BED_SURFACE_Y, NOZZLE_HOME, buildPrinter } from "./printer";
+import { BED_SURFACE_Y, NOZZLE_HOME, buildPrinter, type PrinterPart } from "./printer";
 import { QualityController, type QualityLevel } from "./quality";
 import { STEAM_LAYER, createSteam } from "./steam";
 import { LAYERS, LAYER_HEIGHT, endingMotion, labelOpacity, nozzlePath, printProgress } from "./storyMotion";
-import { createStudio } from "./studio";
+import { FLOOR_LAYER, createStudio } from "./studio";
 import { localProgress, smoothstep } from "./timeline";
 
 export interface LabelPosition {
@@ -34,12 +38,18 @@ export interface SceneOptions {
   isVisible?: () => boolean;
   /** Called when what the visitor can drag to turn changes: the printer while apart, the mug at the end. */
   onGrabbable?: (target: GrabTarget | null) => void;
+  /** Called when the pointer moves onto or off a part of the taken-apart printer. */
+  onHoverPart?: (id: PartId | null) => void;
+  /** Called when the visitor clicks or taps a part of the taken-apart printer (null: empty space). */
+  onSelectPart?: (id: PartId | null) => void;
 }
 
 export type GrabTarget = "printer" | "mug";
 
 export interface SceneHandle {
   setTheme(theme: Theme): void;
+  /** The part whose information card is open; the camera focuses on it. */
+  setSelected(id: PartId | null): void;
   /** Requests one frame. The scene draws only when asked or while a transition runs. */
   invalidate(): void;
   dispose(): void;
@@ -51,6 +61,52 @@ const yieldToMain = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 /** How much of the drawing shows at the very top of the page. */
 const DRAWING_START = 0.4;
 
+/** Lens finish per theme: darkened corners and a fine film grain. */
+const LENS: Record<Theme, { vignette: number; grain: number }> = {
+  dark: { vignette: 0.38, grain: 0.035 },
+  light: { vignette: 0.06, grain: 0.02 },
+};
+
+const LensShader = {
+  name: "LensShader",
+  uniforms: { tDiffuse: { value: null }, vignette: { value: 0.3 }, grain: { value: 0.03 }, time: { value: 0 } },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform float vignette;
+    uniform float grain;
+    uniform float time;
+    varying vec2 vUv;
+    float random(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      float edge = smoothstep(0.25, 0.85, length((vUv - 0.5) * vec2(1.0, 0.8)));
+      color.rgb *= 1.0 - vignette * edge;
+      color.rgb += (random(vUv * 1000.0 + time) - 0.5) * grain;
+      gl_FragColor = color;
+    }`,
+};
+
+/** Replaces invalid (NaN or infinite) pixels with black. */
+const FiniteShader = {
+  name: "FiniteShader",
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: LensShader.vertexShader,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      bool invalid = any(isnan(color)) || any(isinf(color));
+      gl_FragColor = invalid ? vec4(0.0, 0.0, 0.0, 1.0) : color;
+    }`,
+};
+
 /** Last scene: where the camera ends up relative to the mug, and where it looks. */
 const CLOSE_UP_WIDE = new THREE.Vector3(48, 26, 40);
 const CLOSE_UP_NARROW = new THREE.Vector3(60, 34, 66);
@@ -60,9 +116,12 @@ const FOCUS_NARROW = new THREE.Vector3(0, -3, 0);
 export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Promise<SceneHandle> {
   const quality = new QualityController(opts.quality);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 2, powerPreference: "high-performance" });
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  // Neutral tone mapping leaves the site colours (background, teal) as they are.
+  renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.shadowMap.enabled = opts.quality > 0;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // The mug's logo is clipped to the layers printed so far.
+  renderer.localClippingEnabled = true;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 1, 1000);
@@ -81,31 +140,50 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const steam = createSteam(opts.theme);
   scene.add(steam.object);
   camera.layers.enable(STEAM_LAYER);
-  // The blur's depth pass looks through this camera, which leaves the steam out.
+  camera.layers.enable(FLOOR_LAYER);
+  // The blur's depth pass looks through this camera, which leaves the steam and the floor out.
   const depthCamera = new THREE.PerspectiveCamera();
+  // The opening line drawing stays out of the floor's contact shadow.
+  const lineObjects: THREE.Object3D[] = [];
+  stage.traverse((o) => {
+    if ((o as THREE.Mesh).material instanceof LineMaterial) lineObjects.push(o);
+  });
 
-  // In the last scene the printer behind the mug goes out of focus. The extra
-  // passes are set up the first time they are needed, and skipped at the
-  // lowest quality.
-  let composer: EffectComposer | null = null;
-  let bokeh: BokehPass | null = null;
-  function blurPasses() {
-    if (!composer || !bokeh) {
-      const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: opts.quality === 2 ? 4 : 0 });
-      composer = new EffectComposer(renderer, target);
-      bokeh = new BokehPass(scene, depthCamera, { focus: 100, aperture: 0, maxblur: 0.012 });
-      composer.addPass(new RenderPass(scene, camera));
-      composer.addPass(bokeh);
-      composer.addPass(new OutputPass());
-      composer.setPixelRatio(renderer.getPixelRatio());
-      composer.setSize(canvas.clientWidth, canvas.clientHeight);
-    }
-    return { composer, uniforms: bokeh.uniforms as Record<"focus" | "aperture", THREE.IUniform<number>> };
+  // Lens: depth of field (the last scene, and the part in focus while the
+  // printer is apart), a soft glow on the brightest highlights at full
+  // quality, then vignette and grain. The lowest quality renders directly.
+  const composer = new EffectComposer(
+    renderer,
+    new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: opts.quality === 2 ? 4 : 0 }),
+  );
+  const bokeh = new BokehPass(scene, depthCamera, { focus: 100, aperture: 0, maxblur: 0.012 });
+  const focusUniforms = bokeh.uniforms as Record<"focus" | "aperture" | "maxblur", THREE.IUniform<number>>;
+  const lens = new ShaderPass(LensShader);
+  composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(bokeh);
+  const glowPasses: Pass[] = [];
+  if (opts.quality === 2) {
+    // A stray invalid pixel would otherwise spread through the glow as black blocks.
+    const finite = new ShaderPass(FiniteShader);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.45, 0.5, 1);
+    composer.addPass(finite);
+    composer.addPass(bloom);
+    glowPasses.push(finite, bloom);
   }
+  composer.addPass(new OutputPass());
+  composer.addPass(lens);
+  function applyLens(theme: Theme) {
+    lens.uniforms.vignette.value = LENS[theme].vignette;
+    lens.uniforms.grain.value = LENS[theme].grain;
+  }
+  applyLens(opts.theme);
 
   function applyPixelRatio(level: QualityLevel) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, level === 2 ? 2 : level === 1 ? 1.5 : 1));
-    composer?.setPixelRatio(renderer.getPixelRatio());
+    // The glow and the floor reflection are the first to go on a slow device.
+    for (const pass of glowPasses) pass.enabled = level === 2;
+    studio.setReflection(level === 2);
+    composer.setPixelRatio(renderer.getPixelRatio());
   }
   applyPixelRatio(quality.level);
 
@@ -114,12 +192,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const { clientWidth: w, clientHeight: h } = canvas;
     if (!w || !h) return;
     renderer.setSize(w, h, false);
-    composer?.setSize(w, h);
+    composer.setSize(w, h);
     drawing.setResolution(w, h);
     camera.aspect = w / h;
     // Wide screens keep the text on the left and the printer on the right.
     wide = camera.aspect > 1.1;
-    stage.position.x = wide ? 34 : 0;
     stage.position.y = wide ? 4 : 16;
     camera.updateProjectionMatrix();
     handle.invalidate();
@@ -134,19 +211,45 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const closeUp = new THREE.Vector3();
   const mugFocus = new THREE.Vector3();
   const mugTop = new THREE.Vector3();
+  const partFocus = new THREE.Vector3();
+  const viewSpace = new THREE.Vector3();
 
-  function placeCamera(use: number, apart: number, mug: THREE.Vector3) {
+  // Mouse position over the window, -1..1, eased towards.
+  const parallax = { x: 0, y: 0, toX: 0, toY: 0 };
+  function onWindowPointerMove(e: PointerEvent) {
+    if (e.pointerType !== "mouse") return;
+    parallax.toX = (e.clientX / window.innerWidth) * 2 - 1;
+    parallax.toY = -((e.clientY / window.innerHeight) * 2 - 1);
+    handle.invalidate();
+  }
+  window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+  /** Eases the parallax; returns true while it still needs frames. */
+  function updateParallax(dt: number) {
+    const ease = 1 - Math.exp(-4 * dt);
+    parallax.x += (parallax.toX - parallax.x) * ease;
+    parallax.y += (parallax.toY - parallax.y) * ease;
+    return Math.abs(parallax.toX - parallax.x) > 0.002 || Math.abs(parallax.toY - parallax.y) > 0.002;
+  }
+
+  // Depth of field on the hovered or selected part while the printer is apart.
+  let selected: PrinterPart | null = null;
+  let focusAmount = 0;
+
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
     const push = smoothstep(use);
     const near = smoothstep(apart);
-    camera.position.set(85 - near * 10, 46 - near * 12, (wide ? 140 : 190) - near * (wide ? 8 : 4));
-    home.set(wide ? 20 : 0, 2 - near * 3, 0);
+    camera.position.set(85 - near * 10, 46 - near * 6, (wide ? 140 : 190) + near * (wide ? 40 : 85));
+    home.set(wide ? 20 * (1 - center) + near * 4 : near * 3, 2 - near * (wide ? 13 : 18), 0);
     closeUp.copy(mug).add(wide ? CLOSE_UP_WIDE : CLOSE_UP_NARROW);
     camera.position.lerp(closeUp, push);
     mugFocus.copy(mug).add(wide ? FOCUS_WIDE : FOCUS_NARROW);
     lookAt.copy(home).lerp(mugFocus, push);
+    // The camera drifts a little with the mouse, keeping its aim.
+    camera.position.x += parallax.x * 3;
+    camera.position.y += parallax.y * 2;
     camera.lookAt(lookAt);
   }
 
@@ -162,72 +265,125 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     );
   }
 
-  // While the printer is apart, and once the mug is on the table, the visitor
-  // can drag it to turn it. Touch screens keep vertical swipes for scrolling
-  // (touch-action: pan-y).
-  const turn = { yaw: 0, pitch: 0, spin: 0, dragging: false, x: 0, y: 0, at: 0, target: "printer" as GrabTarget };
+  // While the printer is apart the visitor can drag a part to turn it on its
+  // own, or the space around the parts to turn the whole printer. Once the mug
+  // is on the table it can be turned too. Touch screens keep vertical swipes
+  // for scrolling (touch-action: pan-y).
+  interface Spin {
+    yaw: number;
+    pitch: number;
+    /** Radians per second the turn keeps going at after the visitor lets go. */
+    spin: number;
+  }
+  const newSpin = (): Spin => ({ yaw: 0, pitch: 0, spin: 0 });
+  const printerSpin = newSpin();
+  const mugSpin = newSpin();
+  const partSpins = new Map(printer.parts.map((part) => [part, newSpin()] as const));
+  const drag = { spin: null as Spin | null, maxPitch: 0, x: 0, y: 0, at: 0, startX: 0, startY: 0, part: null as PrinterPart | null };
+  const offset = new THREE.Vector3();
   let grabbable: GrabTarget | null = null;
+  let hovered: PrinterPart | null = null;
+
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  const partObjects = printer.parts.map((part) => part.object);
+  function partAt(e: PointerEvent): PrinterPart | null {
+    const rect = canvas.getBoundingClientRect();
+    pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObjects(partObjects, true)[0];
+    if (!hit) return null;
+    return printer.parts.find((part) => hit.object === part.object || part.object.getObjectById(hit.object.id)) ?? null;
+  }
+  function setHovered(part: PrinterPart | null) {
+    if (part === hovered) return;
+    hovered = part;
+    canvas.dataset.part = part ? "1" : "";
+    opts.onHoverPart?.(part?.id ?? null);
+  }
 
   function onPointerDown(e: PointerEvent) {
     if (!grabbable || e.button !== 0) return;
-    turn.dragging = true;
-    turn.spin = 0;
-    turn.x = e.clientX;
-    turn.y = e.clientY;
-    turn.at = e.timeStamp;
+    const part = grabbable === "printer" ? partAt(e) : null;
+    if (part) setHovered(part);
+    drag.spin = grabbable === "mug" ? mugSpin : part ? partSpins.get(part)! : printerSpin;
+    // Tilting is for mice; on touch screens vertical swipes scroll the page.
+    drag.maxPitch = e.pointerType !== "mouse" || grabbable === "mug" ? 0 : part ? 1.2 : 0.4;
+    drag.spin.spin = 0;
+    drag.part = part;
+    drag.x = drag.startX = e.clientX;
+    drag.y = drag.startY = e.clientY;
+    drag.at = e.timeStamp;
     canvas.setPointerCapture(e.pointerId);
     canvas.dataset.dragging = "1";
   }
   function onPointerMove(e: PointerEvent) {
-    if (!turn.dragging) return;
-    const dx = e.clientX - turn.x;
-    const dyaw = dx * 0.008;
-    turn.yaw += dyaw;
-    if (e.pointerType === "mouse" && turn.target === "printer") turn.pitch = Math.min(Math.max(turn.pitch + (e.clientY - turn.y) * 0.004, -0.25), 0.4);
-    turn.spin = dyaw / Math.max((e.timeStamp - turn.at) / 1000, 1 / 120);
-    turn.x = e.clientX;
-    turn.y = e.clientY;
-    turn.at = e.timeStamp;
+    const turned = drag.spin;
+    if (!turned) {
+      if (grabbable === "printer" && e.pointerType === "mouse") setHovered(partAt(e));
+      return;
+    }
+    const dyaw = (e.clientX - drag.x) * 0.008;
+    turned.yaw += dyaw;
+    turned.pitch = Math.min(Math.max(turned.pitch + (e.clientY - drag.y) * 0.006, -drag.maxPitch), drag.maxPitch);
+    turned.spin = dyaw / Math.max((e.timeStamp - drag.at) / 1000, 1 / 120);
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    drag.at = e.timeStamp;
     handle.invalidate();
   }
-  function onPointerUp() {
-    if (!turn.dragging) return;
-    turn.dragging = false;
+  function onPointerUp(e: PointerEvent) {
+    if (!drag.spin) return;
+    // A press without a drag is a click: it opens the part's card, or closes it on empty space.
+    if (grabbable === "printer" && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 6) {
+      drag.spin.spin = 0;
+      opts.onSelectPart?.(drag.part?.id ?? null);
+    }
+    drag.spin = null;
     delete canvas.dataset.dragging;
+    if (e.pointerType !== "mouse") setHovered(null);
     handle.invalidate();
+  }
+  function onPointerLeave() {
+    if (!drag.spin) setHovered(null);
   }
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("pointercancel", onPointerUp);
+  canvas.addEventListener("pointerleave", onPointerLeave);
 
-  /** Advances the visitor's turn; returns true while it still needs frames. */
+  /** Advances one turn; returns true while it still needs frames. */
+  function step(turned: Spin, active: boolean, dt: number) {
+    if (drag.spin === turned) return true;
+    if (active) {
+      turned.yaw += turned.spin * dt;
+      turned.spin *= Math.exp(-3 * dt);
+      if (Math.abs(turned.spin) < 0.01) turned.spin = 0;
+      return turned.spin !== 0;
+    }
+    // Once the printer goes back together, or the mug leaves the table, it
+    // eases back to the story's angle, the short way round.
+    turned.spin = 0;
+    if (!turned.yaw && !turned.pitch) return false;
+    turned.yaw = Math.atan2(Math.sin(turned.yaw), Math.cos(turned.yaw));
+    const ease = 1 - Math.exp(-5 * dt);
+    turned.yaw -= turned.yaw * ease;
+    turned.pitch -= turned.pitch * ease;
+    if (Math.abs(turned.yaw) < 1e-3 && Math.abs(turned.pitch) < 1e-3) turned.yaw = turned.pitch = 0;
+    return true;
+  }
+
+  /** Advances every turn; returns true while any of them still needs frames. */
   function updateTurn(dt: number, canGrab: GrabTarget | null) {
     if (canGrab !== grabbable) {
       grabbable = canGrab;
       opts.onGrabbable?.(grabbable);
-      if (grabbable && grabbable !== turn.target) {
-        turn.target = grabbable;
-        turn.yaw = turn.pitch = turn.spin = 0;
-      }
-      // Coming back the short way round.
-      if (!grabbable) turn.yaw = Math.atan2(Math.sin(turn.yaw), Math.cos(turn.yaw));
+      if (grabbable !== "printer") setHovered(null);
     }
-    if (turn.dragging) return true;
-    if (grabbable) {
-      turn.yaw += turn.spin * dt;
-      turn.spin *= Math.exp(-3 * dt);
-      if (Math.abs(turn.spin) < 0.01) turn.spin = 0;
-      return turn.spin !== 0;
-    }
-    // Once the printer goes back together, or the mug leaves the table, it
-    // eases back to the story's angle.
-    turn.spin = 0;
-    const ease = 1 - Math.exp(-5 * dt);
-    turn.yaw -= turn.yaw * ease;
-    turn.pitch -= turn.pitch * ease;
-    if (Math.abs(turn.yaw) < 1e-3 && Math.abs(turn.pitch) < 1e-3) turn.yaw = turn.pitch = 0;
-    return turn.yaw !== 0 || turn.pitch !== 0;
+    let moving = step(printerSpin, grabbable === "printer", dt);
+    for (const turned of partSpins.values()) moving = step(turned, grabbable === "printer", dt) || moving;
+    return step(mugSpin, grabbable === "mug", dt) || moving;
   }
 
   let raf = 0;
@@ -256,11 +412,22 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const u = localProgress(p, "use");
     const end = endingMotion(u);
     const turning = updateTurn(dt, apart > 0.6 ? "printer" : end.travel === 1 ? "mug" : null);
-    const printerTurn = turn.target === "printer" ? turn : null;
-    stage.rotation.y = -0.7 + localProgress(p, "meet") * 1.4 + localProgress(p, "explode") * 0.5 - localProgress(p, "print") * 0.5 + (printerTurn?.yaw ?? 0);
-    stage.rotation.x = printerTurn?.pitch ?? 0;
-    setExplode(printer.parts, apart);
-    printer.filament.visible = apart < 0.02;
+    // The printer turns once on its own axis while it moves to the middle of
+    // the stage, then comes apart there.
+    const center = centerAmount(p);
+    stage.position.x = (wide ? 34 : 0) * (1 - center);
+    stage.rotation.y =
+      -0.7 + localProgress(p, "meet") * 1.4 + spinTurn(p) + localProgress(p, "explode") * 0.3 - localProgress(p, "print") * 0.3 + printerSpin.yaw;
+    stage.rotation.x = printerSpin.pitch;
+    setExplode(printer.parts, apart, 0.07);
+    // Parts the visitor has turned, each around its own middle.
+    for (const [part, turned] of partSpins) {
+      part.object.rotation.set(turned.pitch, turned.yaw, 0);
+      if (!turned.yaw && !turned.pitch) continue;
+      offset.copy(part.center).applyQuaternion(part.object.quaternion);
+      part.object.position.add(part.center).sub(offset);
+    }
+    printer.filament.visible = printer.headCable.visible = apart < 0.02;
 
     // 4. Print the mug while the tool follows the nozzle path.
     const printed = printProgress(p);
@@ -272,33 +439,54 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       (NOZZLE_HOME.z - target.z) * toolOn,
       (BED_SURFACE_Y + target.y + 0.1 - NOZZLE_HOME.y) * toolOn + end.lift * 8,
     );
+    // The hotend glows while it prints and cools as the head lifts away.
+    printer.setPrinting(printed, printed > 0 ? smoothstep(printed / 0.04) * (1 - end.lift) : 0);
 
     // 5. The mug leaves the printer for the table beside it, is filled with
     //    coffee and starts to steam, while the printer behind it blurs.
-    job.object.position.set(end.travel * 34, Math.sin(Math.PI * end.travel) * 14 - end.travel * BED_SURFACE_Y, end.travel * 18);
+    job.object.position.set(end.travel * 34, Math.sin(Math.PI * end.travel) * 14 - end.travel * BED_SURFACE_Y + end.bounce, end.travel * 18);
     // Ends with a handle on each side, as seen from the camera.
-    job.object.rotation.y = smoothstep(u / 0.5) * 0.2 + (turn.target === "mug" ? turn.yaw : 0);
+    job.object.rotation.y = smoothstep(u / 0.5) * 0.2 + mugSpin.yaw;
     job.setCoffee(end.pour);
     stage.updateMatrixWorld(true);
+    job.syncClip();
     job.object.getWorldPosition(mugWorld);
-    placeCamera(u, apart, mugWorld);
+    placeCamera(u, apart, center, mugWorld);
     mugTop.copy(mugWorld).y += LAYERS * LAYER_HEIGHT;
     steam.update(mugTop, end.steam, now / 1000);
     const steaming = end.steam > 0 && (opts.isVisible?.() ?? true);
+    const drifting = updateParallax(dt);
 
-    const blur = quality.level > 0 ? smoothstep(u / 0.6) : 0;
-    if (blur > 0.01) {
-      const passes = blurPasses();
-      depthCamera.copy(camera);
-      depthCamera.layers.set(0);
-      passes.uniforms.focus.value = camera.position.distanceTo(mugWorld);
-      passes.uniforms.aperture.value = blur * 0.0004;
-      passes.composer.render();
+    // Focus: on the mug in the last scene, on the selected or hovered part while apart.
+    const inFocus = grabbable === "printer" ? (selected ?? hovered) : null;
+    const focusTarget = inFocus ? 1 : 0;
+    focusAmount += (focusTarget - focusAmount) * (1 - Math.exp(-6 * dt));
+    if (Math.abs(focusTarget - focusAmount) < 0.01) focusAmount = focusTarget;
+    const focusing = focusAmount !== focusTarget;
+    const mugBlur = smoothstep(u / 0.6);
+    if (inFocus) inFocus.object.localToWorld(partFocus.copy(inFocus.center));
+    const aperture = Math.max(mugBlur * 0.0004, focusAmount * 0.00022);
+
+    studio.renderShadow(lineObjects);
+    if (quality.level > 0) {
+      bokeh.enabled = aperture > 0.000004;
+      if (bokeh.enabled) {
+        depthCamera.copy(camera);
+        depthCamera.layers.set(0);
+        // The blur measures depth along the view, not straight-line distance.
+        camera.updateMatrixWorld();
+        focusUniforms.focus.value = -viewSpace.copy(mugBlur > focusAmount ? mugWorld : partFocus).applyMatrix4(camera.matrixWorldInverse).z;
+        focusUniforms.aperture.value = aperture;
+        // A part in focus keeps the rest only softly blurred, without halos round its edges.
+        focusUniforms.maxblur.value = mugBlur > focusAmount ? 0.012 : 0.004;
+      }
+      lens.uniforms.time.value = (now / 1000) % 100;
+      composer.render();
     } else {
       renderer.render(scene, camera);
     }
     updateLabels(apart);
-    if (transitioning || turning || steaming) handle.invalidate();
+    if (transitioning || turning || steaming || drifting || focusing) handle.invalidate();
   }
 
   const handle: SceneHandle = {
@@ -306,6 +494,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       studio.setTheme(theme);
       drawing.setTheme(theme);
       steam.setTheme(theme);
+      applyLens(theme);
+      handle.invalidate();
+    },
+    setSelected(id) {
+      selected = printer.parts.find((part) => part.id === id) ?? null;
       handle.invalidate();
     },
     invalidate() {
@@ -318,12 +511,14 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("pointercancel", onPointerUp);
+      canvas.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("pointermove", onWindowPointerMove);
       printer.dispose();
       drawing.dispose();
       job.dispose();
       steam.dispose();
-      composer?.dispose();
-      bokeh?.dispose();
+      composer.dispose();
+      bokeh.dispose();
       studio.dispose();
       renderer.dispose();
     },

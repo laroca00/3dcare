@@ -40,5 +40,6 @@ test("in the last scene the mug reaches the table before coffee is poured and st
   const end = endingMotion(1);
   assert.ok(early.lift > 0 && early.travel > 0 && early.travel < 1 && early.pour === 0);
   assert.ok(landed.travel === 1 && landed.pour > 0 && landed.steam === 0);
-  assert.deepEqual(end, { lift: 1, travel: 1, pour: 1, steam: 1 });
+  assert.deepEqual(end, { lift: 1, travel: 1, bounce: 0, pour: 1, steam: 1 });
+  assert.ok(endingMotion(0.6).bounce > 0);
 });

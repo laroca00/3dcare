@@ -54,7 +54,39 @@ export const en = {
         display: "Control screen",
       },
       partsListTitle: "Parts of the printer",
-      dragHint: { printer: "Drag to turn the printer", mug: "Drag to turn the mug" },
+      dragHint: { printer: "Drag to turn a part or the printer · click a part to learn more", mug: "Drag to turn the mug" },
+      repairTip: "Repair tip",
+      close: "Close",
+      parts: {
+        base: {
+          what: "Holds the frame and the bed, and houses the control board and power supply.",
+          repair: "Most faults are a loose connector: unplug the printer and press each plug firmly back in. Keep the vents free of dust.",
+        },
+        bed: {
+          what: "Heats up so the first layers stick. The spring steel sheet lifts off and flexes to release finished prints.",
+          repair: "Wash the sheet with dish soap or wipe it with isopropyl alcohol. When the surface wears out, replace the sheet, not the bed.",
+        },
+        frame: {
+          what: "Two aluminium uprights keep every axis square and stiff, so layers stack straight.",
+          repair: "If prints lean or wobble, check that the frame screws are tight and the uprights stand square to the base.",
+        },
+        gantry: {
+          what: "Carries the print head left and right on two rods, and rises one layer at a time on the lead screws.",
+          repair: "Keep the rods lightly oiled. The belt should feel firm, like a guitar string, but not tight.",
+        },
+        head: {
+          what: "Pulls in the filament, melts it at around 200 °C and lays it down through a 0.4 mm nozzle.",
+          repair: "A blocked nozzle is cheap to replace. Heat the hotend first, then unscrew it with care.",
+        },
+        spool: {
+          what: "A 1 kg roll of PLA, PETG or flexible TPU: enough for dozens of assistive tools.",
+          repair: "Keep opened spools dry in a box with silica gel. Damp filament prints stringy and weak.",
+        },
+        display: {
+          what: "Starts a print, heats up the printer and shows progress. Files load from a USB stick.",
+          repair: "Firmware updates are free and bring fixes. The knob is a printed part you can print again.",
+        },
+      },
       stillAlt: [
         "Technical drawing of a desktop 3D printer turning into the real printer.",
         "A desktop 3D printer lit from the side in a studio.",
