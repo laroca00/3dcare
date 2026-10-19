@@ -40,6 +40,18 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 - The 3D stage now reaches up under the floating navigation, so the scene
   fills the whole first screen.
 
+### Slice, choose a colour, print
+- Before printing, the camera moves in to the printer's own screen, which
+  becomes a slicer: a preview of the mug drawn layer by layer, its layers
+  and material, five filament colours (the project's teal, violet and
+  yellow, plus white and coral) and a "Print" button. It works with mouse,
+  touch and keyboard.
+- The chosen colour goes to the spool, the preview and the printed mug.
+- "Print" pulls the camera back while the sliced toolpaths appear on the bed,
+  then plays the rest of the story by itself: the print, the mug landing on
+  the table and the coffee. Any scroll, tap or key press takes over.
+  Visitors who simply keep scrolling get the teal mug as before.
+
 ## 2026-10-19
 
 ### Interactive printer and a new story ending

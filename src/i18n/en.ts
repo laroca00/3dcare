@@ -55,6 +55,14 @@ export const en = {
       },
       partsListTitle: "Parts of the printer",
       dragHint: { printer: "Drag to turn a part or the printer · click a part to learn more", mug: "Drag to turn the mug" },
+      slicer: {
+        kicker: "Slicer",
+        model: "Two-handled mug",
+        details: "30 layers · 0.3 mm · PETG",
+        color: "Filament colour",
+        colors: { teal: "Teal", violet: "Violet", yellow: "Yellow", white: "White", coral: "Coral" },
+        print: "Print",
+      },
       repairTip: "Repair tip",
       close: "Close",
       parts: {

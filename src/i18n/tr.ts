@@ -57,6 +57,14 @@ export const tr: typeof en = {
       },
       partsListTitle: "Yazıcının parçaları",
       dragHint: { printer: "Parçayı ya da yazıcıyı sürükleyerek döndürün · bilgi için bir parçaya tıklayın", mug: "Kupayı döndürmek için sürükleyin" },
+      slicer: {
+        kicker: "Dilimleyici",
+        model: "İki kulplu kupa",
+        details: "30 katman · 0,3 mm · PETG",
+        color: "Filament rengi",
+        colors: { teal: "Turkuaz", violet: "Mor", yellow: "Sarı", white: "Beyaz", coral: "Mercan" },
+        print: "Bas",
+      },
       repairTip: "Onarım ipucu",
       close: "Kapat",
       parts: {

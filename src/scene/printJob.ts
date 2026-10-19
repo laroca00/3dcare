@@ -1,6 +1,10 @@
 import * as THREE from "three";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import type { QualityLevel } from "./quality";
 import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, nozzlePath } from "./storyMotion";
+import { smoothstep } from "./timeline";
 
 export interface PrintJob {
   /** The printed mug; stands on the bed surface. */
@@ -11,6 +15,15 @@ export interface PrintJob {
   setCoffee(t: number): void;
   /** Keeps the logo printed only up to the current layer; call after the mug has moved. */
   syncClip(): void;
+  /**
+   * Slicer preview: the mug's toolpaths as lines, drawn layer by layer
+   * (reveal 0..1); they fade back while the mug prints (printed 0..1).
+   */
+  setPreview(reveal: number, printed: number): void;
+  /** Filament colour for the mug and its preview. */
+  setColor(color: number): void;
+  /** Line widths are in pixels, so the preview needs the canvas size. */
+  setResolution(width: number, height: number): void;
   dispose(): void;
 }
 
@@ -98,6 +111,46 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   const currentLayer = new THREE.Mesh(ring, current);
   object.add(currentLayer);
 
+  // Slicer preview: one loop per layer along the middle of the wall, the
+  // handles' outlines, and infill lines across the base, bottom layer first.
+  const lines: number[] = [];
+  const segment = (a: [number, number, number], b: [number, number, number]) => lines.push(...a, ...b);
+  const loop = 48;
+  for (let layer = 0; layer < LAYERS; layer++) {
+    const y = (layer + 0.5) * LAYER_HEIGHT;
+    if (layer < BASE_LAYERS) {
+      // Infill: parallel lines, crossing direction every layer.
+      for (let k = -MUG_RADIUS + 0.6; k < MUG_RADIUS; k += 0.8) {
+        const half = Math.sqrt(MUG_RADIUS * MUG_RADIUS - k * k);
+        if (layer % 2) segment([k, y, -half], [k, y, half]);
+        else segment([-half, y, k], [half, y, k]);
+      }
+    }
+    for (let i = 0; i < loop; i++) {
+      const a = (i / loop) * Math.PI * 2;
+      const b = ((i + 1) / loop) * Math.PI * 2;
+      segment([Math.cos(a) * MUG_RADIUS, y, Math.sin(a) * MUG_RADIUS], [Math.cos(b) * MUG_RADIUS, y, Math.sin(b) * MUG_RADIUS]);
+    }
+    if (ARM_LAYERS.has(layer) || (layer >= GRIP_FROM && layer <= GRIP_TO)) {
+      const [x, width, depth] = ARM_LAYERS.has(layer) ? [MUG_RADIUS + 1.9, 3.8, 1.6] : [MUG_RADIUS + 3.3, 1, 2.2];
+      for (const side of [1, -1]) {
+        const x0 = side * (x - width / 2);
+        const x1 = side * (x + width / 2);
+        const z = depth / 2;
+        segment([x0, y, -z], [x1, y, -z]);
+        segment([x1, y, -z], [x1, y, z]);
+        segment([x1, y, z], [x0, y, z]);
+        segment([x0, y, z], [x0, y, -z]);
+      }
+    }
+  }
+  const previewGeometry = new LineSegmentsGeometry().setPositions(lines);
+  const previewSegments = lines.length / 6;
+  const previewMaterial = new LineMaterial({ color: 0x2aa898, linewidth: 1.3, transparent: true, depthWrite: false });
+  const preview = new LineSegments2(previewGeometry, previewMaterial);
+  preview.visible = false;
+  object.add(preview);
+
   // The raised logo appears layer by layer with the wall: everything above
   // the current layer is clipped away.
   const clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
@@ -133,6 +186,21 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
       printedHeight = t >= 1 ? Infinity : done * LAYER_HEIGHT;
       logo.visible = done > 0;
     },
+    setPreview(reveal, printed) {
+      preview.visible = reveal > 0 && printed < 1;
+      previewGeometry.instanceCount = Math.floor(previewSegments * reveal);
+      previewMaterial.opacity = 1 - smoothstep(printed / 0.08) * 0.7;
+    },
+    setColor(color) {
+      filament.color.setHex(color);
+      logoMaterial.color.setHex(color);
+      previewMaterial.color.setHex(color);
+      // The layer being printed stands out in yellow, or in white on a yellow mug.
+      current.color.setHex(color === 0xf5c400 ? 0xffffff : 0xf5c400);
+    },
+    setResolution(width, height) {
+      previewMaterial.resolution.set(width, height);
+    },
     syncClip() {
       clip.constant = printedHeight === Infinity ? 1e6 : object.localToWorld(top.set(0, printedHeight, 0)).y;
     },
@@ -141,8 +209,8 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
       coffee.scale.y = Math.max(t, 0.01) * (coffeeTop - coffeeBottom);
     },
     dispose() {
-      [ring, disc, block, coffeeShape, logoShape].forEach((g) => g.dispose());
-      [filament, current, coffeeMaterial, logoMaterial].forEach((mat) => mat.dispose());
+      [ring, disc, block, coffeeShape, logoShape, previewGeometry].forEach((g) => g.dispose());
+      [filament, current, coffeeMaterial, logoMaterial, previewMaterial].forEach((mat) => mat.dispose());
       [walls, bases, handle].forEach((mesh) => mesh.dispose());
     },
   };

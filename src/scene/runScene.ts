@@ -12,10 +12,11 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { centerAmount, explodeAmount, setExplode, spinTurn } from "./explode";
 import type { PartId } from "./parts";
 import { createPrintJob } from "./printJob";
-import { BED_SURFACE_Y, NOZZLE_HOME, buildPrinter, type PrinterPart } from "./printer";
+import { BED_SURFACE_Y, NOZZLE_HOME, SCREEN_SIZE, buildPrinter, type PrinterPart } from "./printer";
+import type { Point } from "./quadTransform";
 import { QualityController, type QualityLevel } from "./quality";
 import { STEAM_LAYER, createSteam } from "./steam";
-import { LAYERS, LAYER_HEIGHT, endingMotion, labelOpacity, nozzlePath, printProgress } from "./storyMotion";
+import { LAYERS, LAYER_HEIGHT, endingMotion, labelOpacity, nozzlePath, printProgress, screenZoom, slicerProgress } from "./storyMotion";
 import { FLOOR_LAYER, createStudio } from "./studio";
 import { localProgress, smoothstep } from "./timeline";
 
@@ -42,6 +43,11 @@ export interface SceneOptions {
   onHoverPart?: (id: PartId | null) => void;
   /** Called when the visitor clicks or taps a part of the taken-apart printer (null: empty space). */
   onSelectPart?: (id: PartId | null) => void;
+  /**
+   * Called after each frame with the printer screen's corners on the canvas
+   * (top left, top right, bottom left, bottom right), while the camera is up close to it.
+   */
+  onScreen?: (corners: [Point, Point, Point, Point] | null) => void;
 }
 
 export type GrabTarget = "printer" | "mug";
@@ -50,6 +56,8 @@ export interface SceneHandle {
   setTheme(theme: Theme): void;
   /** The part whose information card is open; the camera focuses on it. */
   setSelected(id: PartId | null): void;
+  /** Filament colour chosen in the slicer: the spool, the preview and the printed mug. */
+  setFilament(color: number): void;
   /** Requests one frame. The scene draws only when asked or while a transition runs. */
   invalidate(): void;
   dispose(): void;
@@ -194,6 +202,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
     drawing.setResolution(w, h);
+    job.setResolution(w, h);
     camera.aspect = w / h;
     // Wide screens keep the text on the left and the printer on the right.
     wide = camera.aspect > 1.1;
@@ -235,7 +244,21 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   let selected: PrinterPart | null = null;
   let focusAmount = 0;
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3) {
+  const screenCenter = new THREE.Vector3();
+  const screenNormal = new THREE.Vector3();
+  const screenView = new THREE.Vector3();
+
+  /** Where the camera sees the printer's screen filling most of the view. */
+  function screenCloseUp() {
+    printer.screen.getWorldPosition(screenCenter);
+    printer.screen.getWorldDirection(screenNormal);
+    const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const tanH = tanV * camera.aspect;
+    const distance = Math.max(SCREEN_SIZE.width / 2 / (tanH * (wide ? 0.55 : 0.92)), SCREEN_SIZE.height / 2 / (tanV * 0.6));
+    return screenView.copy(screenCenter).addScaledVector(screenNormal, distance);
+  }
+
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -247,10 +270,37 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     camera.position.lerp(closeUp, push);
     mugFocus.copy(mug).add(wide ? FOCUS_WIDE : FOCUS_NARROW);
     lookAt.copy(home).lerp(mugFocus, push);
-    // The camera drifts a little with the mouse, keeping its aim.
-    camera.position.x += parallax.x * 3;
-    camera.position.y += parallax.y * 2;
+    // Before printing, the camera moves in to the printer's screen.
+    if (zoom > 0) {
+      const ease = smoothstep(zoom);
+      camera.position.lerp(screenCloseUp(), ease);
+      lookAt.lerp(screenCenter, ease);
+    }
+    // The camera drifts a little with the mouse, keeping its aim (less when up close).
+    camera.position.x += parallax.x * 3 * (1 - zoom);
+    camera.position.y += parallax.y * 2 * (1 - zoom);
     camera.lookAt(lookAt);
+  }
+
+  const corner = new THREE.Vector3();
+  const SCREEN_CORNERS: [number, number][] = [
+    [-1, 1],
+    [1, 1],
+    [-1, -1],
+    [1, -1],
+  ];
+  /** Reports where the screen's corners are on the canvas, for the slicer laid over it. */
+  function updateScreen(zoom: number) {
+    if (!opts.onScreen) return;
+    if (zoom < 0.5) return opts.onScreen(null);
+    camera.updateMatrixWorld();
+    const { clientWidth: w, clientHeight: h } = canvas;
+    const corners = SCREEN_CORNERS.map(([sx, sy]) => {
+      corner.set((sx * SCREEN_SIZE.width) / 2, (sy * SCREEN_SIZE.height) / 2, 0.01);
+      printer.screen.localToWorld(corner).project(camera);
+      return [((corner.x + 1) / 2) * w, ((1 - corner.y) / 2) * h] as Point;
+    });
+    opts.onScreen(corners as [Point, Point, Point, Point]);
   }
 
   function updateLabels(apart: number) {
@@ -431,13 +481,17 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
 
     // 4. Print the mug while the tool follows the nozzle path.
     const printed = printProgress(p);
+    const slicer = slicerProgress(p);
     job.setProgress(printed);
+    // Before printing, the slicer draws the mug as toolpaths on the bed.
+    job.setPreview(slicer, printed);
     const target = nozzlePath(printed);
     const toolOn = printed > 0 ? 1 - end.lift : 0;
     printer.setToolPosition(
       target.x * toolOn,
       (NOZZLE_HOME.z - target.z) * toolOn,
-      (BED_SURFACE_Y + target.y + 0.1 - NOZZLE_HOME.y) * toolOn + end.lift * 8,
+      // The head waits above the preview until the print starts.
+      (BED_SURFACE_Y + target.y + 0.1 - NOZZLE_HOME.y) * toolOn + end.lift * 8 + (printed > 0 ? 0 : smoothstep(slicer) * 5),
     );
     // The hotend glows while it prints and cools as the head lifts away.
     printer.setPrinting(printed, printed > 0 ? smoothstep(printed / 0.04) * (1 - end.lift) : 0);
@@ -451,7 +505,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     stage.updateMatrixWorld(true);
     job.syncClip();
     job.object.getWorldPosition(mugWorld);
-    placeCamera(u, apart, center, mugWorld);
+    const zoom = screenZoom(p);
+    placeCamera(u, apart, center, mugWorld, zoom);
     mugTop.copy(mugWorld).y += LAYERS * LAYER_HEIGHT;
     steam.update(mugTop, end.steam, now / 1000);
     const steaming = end.steam > 0 && (opts.isVisible?.() ?? true);
@@ -486,6 +541,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       renderer.render(scene, camera);
     }
     updateLabels(apart);
+    updateScreen(zoom);
     if (transitioning || turning || steaming || drifting || focusing) handle.invalidate();
   }
 
@@ -495,6 +551,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       drawing.setTheme(theme);
       steam.setTheme(theme);
       applyLens(theme);
+      handle.invalidate();
+    },
+    setFilament(color) {
+      printer.setFilament(color);
+      job.setColor(color);
       handle.invalidate();
     },
     setSelected(id) {

@@ -7,6 +7,8 @@ import { PART_IDS, type PartId } from "@/scene/parts";
 import { initialQuality } from "@/scene/quality";
 import type { SceneHandle } from "@/scene/runScene";
 import { progressFor } from "@/scene/scrollProgress";
+import { quadTransform } from "@/scene/quadTransform";
+import { LAYERS, slicerPanel } from "@/scene/storyMotion";
 import { SCENES, localProgress, smoothstep } from "@/scene/timeline";
 import { readTheme, useTheme } from "@/theme/useTheme";
 import { POSTERS, STILLS } from "./storyStills";
@@ -15,6 +17,40 @@ type Mode = "pending" | "live" | "stills";
 
 /** Length of the line from a part to its label, in pixels. */
 const LEADER = 44;
+
+/** Filament colours offered in the slicer: the project's own three, then white and coral. */
+const FILAMENTS = [
+  { id: "teal", color: 0x2aa898 },
+  { id: "violet", color: 0x6f52c9 },
+  { id: "yellow", color: 0xf5c400 },
+  { id: "white", color: 0xeef1ef },
+  { id: "coral", color: 0xff7a59 },
+] as const;
+type FilamentId = (typeof FILAMENTS)[number]["id"];
+
+/** How long the rest of the story takes to play when the visitor presses "Print", in milliseconds. */
+const PRINT_MS = 14000;
+/** The slicer is laid out at this size, then fitted onto the printer's screen. */
+const SCREEN_W = 760;
+const SCREEN_H = 420;
+
+/** The mug as the slicer draws it: one line per layer, with both handles. */
+function MugLayers({ color }: { color: string }) {
+  const lines = [];
+  for (let layer = 0; layer < LAYERS; layer++) {
+    const y = 176 - layer * 5;
+    lines.push(<line key={`w${layer}`} x1={70} x2={150} y1={y} y2={y} />);
+    const arm = [5, 6, 7, 22, 23, 24].includes(layer);
+    const grip = layer >= 8 && layer <= 21;
+    if (arm) lines.push(<line key={`a${layer}`} x1={36} x2={70} y1={y} y2={y} />, <line key={`b${layer}`} x1={150} x2={184} y1={y} y2={y} />);
+    if (grip) lines.push(<line key={`g${layer}`} x1={34} x2={44} y1={y} y2={y} />, <line key={`h${layer}`} x1={176} x2={186} y1={y} y2={y} />);
+  }
+  return (
+    <svg className="story__screen-mug" viewBox="0 0 220 200" aria-hidden="true" stroke={color} strokeWidth="2.4" strokeLinecap="round">
+      {lines}
+    </svg>
+  );
+}
 
 function canRenderWebGL() {
   try {
@@ -38,6 +74,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const leaderRefs = useRef<Partial<Record<PartId, SVGGElement | null>>>({});
   const sceneRef = useRef<SceneHandle | null>(null);
   const cardTitleRef = useRef<HTMLHeadingElement>(null);
+  const slicerRef = useRef<HTMLDivElement>(null);
+  const screenRef = useRef<HTMLDivElement>(null);
+  const [filament, setFilament] = useState<FilamentId>("teal");
+  const filamentRef = useRef<FilamentId>("teal");
   const [mode, setMode] = useState<Mode>("pending");
   const [ready, setReady] = useState(false);
   const [still, setStill] = useState(false);
@@ -48,6 +88,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     const section = sectionRef.current!;
     const canvas = canvasRef.current!;
     const labelLayer = labelsRef.current!;
+    const slicer = slicerRef.current!;
     const params = new URLSearchParams(location.search);
     // ?story=0.5 freezes the story at one moment (used to render still frames).
     const fixed = params.has("story") ? Number(params.get("story")) : null;
@@ -65,6 +106,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     let cancelled = false;
     // Part labels can be reached by keyboard only while the printer is apart.
     labelLayer.inert = true;
+    slicer.inert = true;
 
     function measure() {
       if (fixed === null) {
@@ -76,16 +118,24 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       const apart = localProgress(progress, "explode");
       const caption = Math.min(smoothstep(apart / 0.12), 1 - smoothstep((apart - 0.88) / 0.12));
       section.style.setProperty("--caption", String(caption));
+      // The slicer panel opens before printing; it can be used only while it shows.
+      const panel = slicerPanel(progress);
+      section.style.setProperty("--slicer", String(panel));
+      const open = live && panel > 0.5;
+      slicer.inert = !open;
+      if (open) section.dataset.slicer = "1";
+      else delete section.dataset.slicer;
       if (visible) handle?.invalidate();
     }
 
-    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const live = !reducedMotion && canRenderWebGL();
     // Deciding after mount keeps server and client markup identical.
     queueMicrotask(() => {
       if (!cancelled) setMode(live ? "live" : "stills");
       if (!cancelled && fixed !== null) setStill(true);
     });
+
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const live = !reducedMotion && canRenderWebGL();
 
     measure();
     window.addEventListener("scroll", measure, { passive: true });
@@ -128,6 +178,13 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           for (const part of PART_IDS) labelRefs.current[part]?.classList.toggle("story__label--hot", part === id);
         },
         onSelectPart: setSelected,
+        onScreen(corners) {
+          // The slicer sits on the printer's screen, in perspective.
+          const screen = screenRef.current;
+          if (!screen) return;
+          screen.style.visibility = corners ? "visible" : "hidden";
+          if (corners) screen.style.transform = quadTransform(SCREEN_W, SCREEN_H, corners);
+        },
         onLabels(positions) {
           // Labels sit at the end of a short line drawn outwards from the
           // middle of the parts, like callouts on a technical drawing.
@@ -170,6 +227,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       }
       handle = started;
       sceneRef.current = started;
+      started.setFilament(FILAMENTS.find((f) => f.id === filamentRef.current)!.color);
       handle.invalidate();
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
@@ -220,6 +278,37 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [selected]);
+
+  // The chosen filament colour goes to the spool, the slicer preview and the mug.
+  useEffect(() => {
+    filamentRef.current = filament;
+    sceneRef.current?.setFilament(FILAMENTS.find((f) => f.id === filament)!.color);
+  }, [filament]);
+
+  /**
+   * "Print": the page scrolls on by itself to the end of the story, as if the
+   * printer had started. Any scroll, touch, click or key press takes over.
+   */
+  function startPrint() {
+    const section = sectionRef.current!;
+    const from = window.scrollY;
+    const to = section.getBoundingClientRect().top + window.scrollY + section.offsetHeight - window.innerHeight;
+    const start = performance.now();
+    let raf = 0;
+    const takeOver = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
+    const stop = () => {
+      cancelAnimationFrame(raf);
+      takeOver.forEach((type) => window.removeEventListener(type, stop));
+    };
+    const step = (now: number) => {
+      const t = Math.min((now - start) / PRINT_MS, 1);
+      window.scrollTo(0, from + (to - from) * smoothstep(t));
+      if (t < 1) raf = requestAnimationFrame(step);
+      else stop();
+    };
+    raf = requestAnimationFrame(step);
+    takeOver.forEach((type) => window.addEventListener(type, stop, { passive: true }));
+  }
 
   /** Closes the card and hands focus back to the part's label. */
   function closeCard() {
@@ -291,6 +380,34 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           <p className="story__caption-title">{rest[1].title}</p>
           <p>{rest[1].text}</p>
           <p className="story__caption-hint">{t.story.dragHint.printer}</p>
+        </div>
+        {/* The slicer, on the printer's own screen: preview the mug, pick a filament colour, press Print. */}
+        <div className="story__screen" ref={screenRef}>
+          <div className="story__slicer" ref={slicerRef} role="group" aria-labelledby="slicer-title">
+            <p className="story__screen-bar">
+              <span>3D Care</span>
+              <span>{t.story.slicer.kicker}</span>
+            </p>
+            <div className="story__screen-body">
+              <MugLayers color={`#${FILAMENTS.find((f) => f.id === filament)!.color.toString(16).padStart(6, "0")}`} />
+              <div>
+                <h3 id="slicer-title">{t.story.slicer.model}</h3>
+                <p className="story__slicer-details">{t.story.slicer.details}</p>
+                <fieldset className="story__swatches">
+                  <legend>{t.story.slicer.color}</legend>
+                  {FILAMENTS.map((f) => (
+                    <label key={f.id} className="story__swatch" style={{ "--swatch": `#${f.color.toString(16).padStart(6, "0")}` } as CSSProperties}>
+                      <input type="radio" name="filament" value={f.id} checked={filament === f.id} onChange={() => setFilament(f.id)} />
+                      <span className="visually-hidden">{t.story.slicer.colors[f.id]}</span>
+                    </label>
+                  ))}
+                </fieldset>
+                <button type="button" className="story__slicer-print" onClick={startPrint}>
+                  <span aria-hidden="true">▶</span> {t.story.slicer.print}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         {selected && (
           <div className="story__card" role="region" aria-labelledby="part-card-title">

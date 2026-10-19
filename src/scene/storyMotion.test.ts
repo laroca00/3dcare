@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, labelOpacity, nozzlePath, printProgress, endingMotion } from "./storyMotion.ts";
+import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, labelOpacity, nozzlePath, printProgress, endingMotion, slicerProgress, slicerPanel, screenZoom } from "./storyMotion.ts";
 
 test("labels appear once the printer is more than half apart", () => {
   assert.equal(labelOpacity(0), 0);
@@ -13,6 +13,19 @@ test("printing starts after the printer is back together and finishes before the
   assert.equal(printProgress(0.6), 0);
   assert.equal(printProgress(0.81), 1);
   assert.ok(printProgress(0.7) > 0 && printProgress(0.7) < 1);
+});
+
+test("the camera moves in to the screen for slicing, then pulls back as the toolpaths and the print begin", () => {
+  const at = (t: number) => 0.58 + 0.24 * t;
+  assert.equal(screenZoom(at(0.1)), 0);
+  assert.equal(screenZoom(at(0.3)), 1);
+  assert.equal(slicerPanel(at(0.3)), 1);
+  assert.equal(slicerPanel(at(0.45)), 0);
+  assert.equal(slicerProgress(at(0.39)), 0);
+  assert.equal(slicerProgress(at(0.49)), 1);
+  assert.equal(screenZoom(at(0.5)), 0);
+  assert.equal(printProgress(at(0.47)), 0);
+  assert.ok(printProgress(at(0.6)) > 0);
 });
 
 test("the nozzle starts on the first layer and ends on the last", () => {

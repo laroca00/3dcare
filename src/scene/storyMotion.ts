@@ -11,9 +11,30 @@ export function labelOpacity(explode: number): number {
   return smoothstep((explode - 0.5) / 0.3);
 }
 
-/** 0..1 progress of the print job: after reassembly, finished just before the scene ends. */
+// The print scene: the printer comes back together (0–0.2), the camera moves
+// in to its screen where the visitor slices the mug and picks a colour
+// (0.24–0.4), pulls back while the toolpaths appear on the bed, then it prints.
+
+/** 0..1: how far the camera has moved in to the printer's screen. */
+export function screenZoom(progress: number): number {
+  const t = localProgress(progress, "print");
+  return Math.min(smoothstep((t - 0.12) / 0.12), 1 - smoothstep((t - 0.4) / 0.1));
+}
+
+/** 0..1: how much the slicer on the printer's screen shows; usable while it is up close. */
+export function slicerPanel(progress: number): number {
+  const t = localProgress(progress, "print");
+  return Math.min(smoothstep((t - 0.22) / 0.04), 1 - smoothstep((t - 0.38) / 0.04));
+}
+
+/** 0..1: the sliced toolpaths appearing on the bed, layer by layer, as the camera pulls back. */
+export function slicerProgress(progress: number): number {
+  return clamp01((localProgress(progress, "print") - 0.4) / 0.08);
+}
+
+/** 0..1 progress of the print job: after the toolpaths are on the bed, finished just before the scene ends. */
 export function printProgress(progress: number): number {
-  return clamp01((localProgress(progress, "print") - 0.2) / 0.75);
+  return clamp01((localProgress(progress, "print") - 0.48) / 0.47);
 }
 
 /** Where the nozzle is at print progress t: tracing the mug wall, one loop per layer. */

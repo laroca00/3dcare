@@ -24,6 +24,8 @@ export interface Printer {
   filament: THREE.Object3D;
   /** Cable bundle from the print head over the frame; hidden while exploded. */
   headCable: THREE.Object3D;
+  /** The control screen, facing +z in its own space. */
+  screen: THREE.Object3D;
   /** Moves the print head across the X axis and the bed along Y (in cm, relative). */
   setToolPosition(x: number, y: number, z: number): void;
   /**
@@ -31,6 +33,8 @@ export interface Printer {
    * screen's progress bar; heat 0..1 makes the hotend glow.
    */
   setPrinting(progress: number, heat: number): void;
+  /** Colour of the filament on the spool. */
+  setFilament(color: number): void;
   dispose(): void;
 }
 
@@ -51,6 +55,8 @@ const AXIS_Z = FRAME_Z + 2.6;
 /** Top of the print sheet, and the nozzle tip with the tool at home, in printer space. */
 export const BED_SURFACE_Y = BED_Y + 0.44;
 export const NOZZLE_HOME = { y: GANTRY_Y - 8.4, z: FRAME_Z + 8 };
+/** The control screen's size in centimetres; the slicer is laid over it. */
+export const SCREEN_SIZE = { width: 7.6, height: 4.2 };
 
 /** Greyscale canvas texture for bump and roughness maps. */
 function surfaceTexture(kind: "grain" | "brushed" | "layers" | "weave" | "teeth", repeat: [number, number]) {
@@ -337,7 +343,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
   const display = part("display", [-22, 1, 10], [-10, 8, 24]);
   const panel = box(display, 12, 6.6, 2.6, m.plastic, -9, 4.4, 22.4, 0.5);
   panel.rotation.x = -0.3;
-  const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(7.6, 4.2)), m.screen.clone());
+  const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(SCREEN_SIZE.width, SCREEN_SIZE.height)), m.screen.clone());
   (screen.material as THREE.MeshStandardMaterial).emissiveMap = screenTexture;
   screen.position.set(-1.4, 0.3, 1.32);
   panel.add(screen);
@@ -486,11 +492,15 @@ export function buildPrinter(quality: QualityLevel): Printer {
     bedSurface,
     filament,
     headCable,
+    screen,
     setToolPosition(x, y, z) {
       headBody.position.x = x;
       bed.children.forEach((c) => (c.position.z = (c.userData.z ??= c.position.z) + y));
       gantryBody.position.y = z;
       headBody.position.y = GANTRY_Y + z;
+    },
+    setFilament(color) {
+      m.filament.color.setHex(color);
     },
     setPrinting(progress, heat) {
       headFan.rotation.z = -progress * Math.PI * 160;
