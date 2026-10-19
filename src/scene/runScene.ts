@@ -54,6 +54,8 @@ export type GrabTarget = "printer" | "mug";
 
 export interface SceneHandle {
   setTheme(theme: Theme): void;
+  /** Draws a frame now and returns a square picture of the mug, for the souvenir card. */
+  snapshot(): HTMLCanvasElement;
   /** The part whose information card is open; the camera focuses on it. */
   setSelected(id: PartId | null): void;
   /** Filament colour chosen in the slicer: the spool, the preview and the printed mug. */
@@ -258,7 +260,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     return screenView.copy(screenCenter).addScaledVector(screenNormal, distance);
   }
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number) {
+  const orbitOffset = new THREE.Vector3();
+  const UP = new THREE.Vector3(0, 1, 0);
+
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -266,6 +271,13 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const near = smoothstep(apart);
     camera.position.set(85 - near * 10, 46 - near * 6, (wide ? 140 : 190) + near * (wide ? 40 : 85));
     home.set(wide ? 20 * (1 - center) + near * 4 : near * 3, 2 - near * (wide ? 13 : 18), 0);
+    // While printing, the camera swings slowly round the printer and back,
+    // like a print time-lapse, coming a little closer on the way.
+    const swing = Math.sin(Math.PI * printed);
+    if (swing > 0) {
+      orbitOffset.copy(camera.position).sub(home).applyAxisAngle(UP, swing * 0.7).multiplyScalar(1 - swing * 0.14);
+      camera.position.copy(home).add(orbitOffset);
+    }
     closeUp.copy(mug).add(wide ? CLOSE_UP_WIDE : CLOSE_UP_NARROW);
     camera.position.lerp(closeUp, push);
     mugFocus.copy(mug).add(wide ? FOCUS_WIDE : FOCUS_NARROW);
@@ -506,7 +518,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     job.syncClip();
     job.object.getWorldPosition(mugWorld);
     const zoom = screenZoom(p);
-    placeCamera(u, apart, center, mugWorld, zoom);
+    placeCamera(u, apart, center, mugWorld, zoom, printed);
+    // The morning comes as the mug lands on the table.
+    studio.setMorning(smoothstep((u - 0.3) / 0.4), mugWorld);
     mugTop.copy(mugWorld).y += LAYERS * LAYER_HEIGHT;
     steam.update(mugTop, end.steam, now / 1000);
     const steaming = end.steam > 0 && (opts.isVisible?.() ?? true);
@@ -557,6 +571,22 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       printer.setFilament(color);
       job.setColor(color);
       handle.invalidate();
+    },
+    snapshot() {
+      // The WebGL canvas keeps its picture only until the next frame, so it is copied straight after drawing.
+      cancelAnimationFrame(raf);
+      raf = 0;
+      frame(performance.now());
+      camera.updateMatrixWorld();
+      const point = mugTop.clone().setY(mugTop.y - (LAYERS * LAYER_HEIGHT) / 2).project(camera);
+      const { width, height } = renderer.domElement;
+      const size = Math.round(Math.min(width, height) * 0.62);
+      const cx = Math.min(Math.max(((point.x + 1) / 2) * width, size / 2), width - size / 2);
+      const cy = Math.min(Math.max(((1 - point.y) / 2) * height - size * 0.08, size / 2), height - size / 2);
+      const picture = document.createElement("canvas");
+      picture.width = picture.height = size;
+      picture.getContext("2d")!.drawImage(renderer.domElement, cx - size / 2, cy - size / 2, size, size, 0, 0, size, size);
+      return picture;
     },
     setSelected(id) {
       selected = printer.parts.find((part) => part.id === id) ?? null;

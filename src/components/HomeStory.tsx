@@ -11,6 +11,9 @@ import { quadTransform } from "@/scene/quadTransform";
 import { LAYERS, slicerPanel } from "@/scene/storyMotion";
 import { SCENES, localProgress, smoothstep } from "@/scene/timeline";
 import { readTheme, useTheme } from "@/theme/useTheme";
+import emblemEn from "@/assets/eu/co-funded-en-neg.png";
+import emblemTr from "@/assets/eu/co-funded-tr-neg.png";
+import { makeSouvenirCard } from "./souvenirCard";
 import { POSTERS, STILLS } from "./storyStills";
 
 type Mode = "pending" | "live" | "stills";
@@ -77,6 +80,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const slicerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const [filament, setFilament] = useState<FilamentId>("teal");
+  // The souvenir card, once made: its picture and an address to show and download it.
+  const [souvenir, setSouvenir] = useState<{ blob: Blob; url: string } | null>(null);
+  const souvenirTitleRef = useRef<HTMLHeadingElement>(null);
+  const souvenirButtonRef = useRef<HTMLButtonElement>(null);
   const filamentRef = useRef<FilamentId>("teal");
   const [mode, setMode] = useState<Mode>("pending");
   const [ready, setReady] = useState(false);
@@ -121,6 +128,9 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       // The slicer panel opens before printing; it can be used only while it shows.
       const panel = slicerPanel(progress);
       section.style.setProperty("--slicer", String(panel));
+      // At the end of the story the souvenir card can be made.
+      if (live && localProgress(progress, "use") > 0.75) section.dataset.end = "1";
+      else delete section.dataset.end;
       const open = live && panel > 0.5;
       slicer.inert = !open;
       if (open) section.dataset.slicer = "1";
@@ -310,6 +320,54 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     takeOver.forEach((type) => window.addEventListener(type, stop, { passive: true }));
   }
 
+  /** Makes the souvenir card from a picture of the mug as it is on the table now. */
+  async function openSouvenir() {
+    const picture = sceneRef.current?.snapshot();
+    if (!picture) return;
+    const colour = t.story.slicer.colors[filament];
+    const blob = await makeSouvenirCard(
+      picture,
+      {
+        title: t.story.souvenir.title,
+        details: t.story.souvenir.details.replace("{colour}", colour),
+        tagline: t.title,
+        url: location.origin + location.pathname,
+      },
+      (lang === "tr" ? emblemTr : emblemEn).src,
+    );
+    setSouvenir({ blob, url: URL.createObjectURL(blob) });
+  }
+
+  function closeSouvenir() {
+    if (souvenir) URL.revokeObjectURL(souvenir.url);
+    setSouvenir(null);
+    souvenirButtonRef.current?.focus({ preventScroll: true });
+  }
+
+  async function shareSouvenir() {
+    if (!souvenir) return;
+    const file = new File([souvenir.blob], t.story.souvenir.fileName, { type: "image/png" });
+    try {
+      await navigator.share({ files: [file], title: t.story.souvenir.title, text: t.title });
+    } catch {
+      // Cancelled by the visitor, or not allowed: the download link is still there.
+    }
+  }
+
+  // The souvenir dialog: focus goes to its heading, Escape closes it.
+  useEffect(() => {
+    if (!souvenir) return;
+    souvenirTitleRef.current?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      URL.revokeObjectURL(souvenir.url);
+      setSouvenir(null);
+      souvenirButtonRef.current?.focus({ preventScroll: true });
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [souvenir]);
+
   /** Closes the card and hands focus back to the part's label. */
   function closeCard() {
     if (selected) labelRefs.current[selected]?.focus({ preventScroll: true });
@@ -409,6 +467,9 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             </div>
           </div>
         </div>
+        <button type="button" className="story__souvenir-cta" ref={souvenirButtonRef} onClick={openSouvenir}>
+          {t.story.souvenir.cta}
+        </button>
         {selected && (
           <div className="story__card" role="region" aria-labelledby="part-card-title">
             <button type="button" className="story__card-close" onClick={closeCard}>
@@ -472,6 +533,32 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           </div>
         ))}
       </div>
+      {/* Outside the sticky stage, so the dialog sits above the story text and the navigation. */}
+      {souvenir && (
+        <div className="story__souvenir" role="dialog" aria-modal="true" aria-labelledby="souvenir-title">
+          <div className="story__souvenir-box">
+            <h3 id="souvenir-title" ref={souvenirTitleRef} tabIndex={-1}>
+              {t.story.souvenir.heading}
+            </h3>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a card made in the browser, shown from a blob URL */}
+            <img src={souvenir.url} width={1080} height={1350} alt={t.story.souvenir.alt} />
+            <p className="story__souvenir-actions">
+              <a className="btn btn--primary" href={souvenir.url} download={t.story.souvenir.fileName}>
+                {t.story.souvenir.download}
+              </a>
+              {typeof navigator !== "undefined" &&
+                navigator.canShare?.({ files: [new File([souvenir.blob], t.story.souvenir.fileName, { type: "image/png" })] }) && (
+                  <button type="button" className="btn btn--secondary" onClick={shareSouvenir}>
+                    {t.story.souvenir.share}
+                  </button>
+                )}
+              <button type="button" className="btn btn--secondary" onClick={closeSouvenir}>
+                {t.story.souvenir.close}
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

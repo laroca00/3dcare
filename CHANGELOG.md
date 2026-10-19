@@ -52,6 +52,19 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
   the table and the coffee. Any scroll, tap or key press takes over.
   Visitors who simply keep scrolling get the teal mug as before.
 
+### Time-lapse, a morning ending and a souvenir card
+- While it prints, the camera swings slowly round the printer like a print
+  time-lapse, and the printer's screen counts the layers (n / 30) and the
+  time left. Filament visibly feeds through the tube from the spool, which
+  turns with a slight wobble.
+- The ending is a morning: as the mug lands, the floor becomes a wooden
+  table, warm sunlight falls through a window across it and the room warms
+  up, in both themes.
+- At the end, "Get your mug card" makes a 1080 × 1350 card from the mug as it
+  stands on the table, in the visitor's colour, with the 3D Care mark, the
+  site address and the EU funding emblem. It can be downloaded, or shared
+  directly from phones that support it.
+
 ## 2026-10-19
 
 ### Interactive printer and a new story ending

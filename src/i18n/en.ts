@@ -55,6 +55,17 @@ export const en = {
       },
       partsListTitle: "Parts of the printer",
       dragHint: { printer: "Drag to turn a part or the printer · click a part to learn more", mug: "Drag to turn the mug" },
+      souvenir: {
+        cta: "Get your mug card",
+        heading: "Your mug card",
+        title: "I printed this mug",
+        details: "{colour} filament · 30 layers",
+        download: "Download card",
+        share: "Share",
+        close: "Close",
+        alt: "A card showing the mug you printed, with the 3D Care logo and the EU funding emblem.",
+        fileName: "3dcare-my-mug.png",
+      },
       slicer: {
         kicker: "Slicer",
         model: "Two-handled mug",

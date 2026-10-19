@@ -57,6 +57,17 @@ export const tr: typeof en = {
       },
       partsListTitle: "Yazıcının parçaları",
       dragHint: { printer: "Parçayı ya da yazıcıyı sürükleyerek döndürün · bilgi için bir parçaya tıklayın", mug: "Kupayı döndürmek için sürükleyin" },
+      souvenir: {
+        cta: "Kupa kartını al",
+        heading: "Kupa kartın",
+        title: "Bu kupayı ben bastım",
+        details: "{colour} filament · 30 katman",
+        download: "Kartı indir",
+        share: "Paylaş",
+        close: "Kapat",
+        alt: "Bastığın kupanın kartı; 3D Care logosu ve AB fon amblemiyle.",
+        fileName: "3dcare-kupam.png",
+      },
       slicer: {
         kicker: "Dilimleyici",
         model: "İki kulplu kupa",

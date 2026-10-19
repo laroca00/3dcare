@@ -4,7 +4,7 @@ import { HorizontalBlurShader } from "three/addons/shaders/HorizontalBlurShader.
 import { VerticalBlurShader } from "three/addons/shaders/VerticalBlurShader.js";
 import type { Theme } from "../theme/theme";
 import type { QualityLevel } from "./quality";
-import { StudioTransition, type StudioValues } from "./studioMix";
+import { StudioTransition, mixStudio, type StudioValues } from "./studioMix";
 
 // Dark: a low-key studio on the site's dark ink, with a teal glow and rim.
 // Light: a soft, bright studio on the site's paper colour.
@@ -35,6 +35,13 @@ const LOOKS: Record<Theme, StudioValues> = {
   },
 };
 
+/** The morning at the end of the story: warm sunlight and a warmer room, per theme. */
+const MORNING: Record<Theme, Pick<StudioValues, "background" | "glow" | "key" | "keyIntensity" | "fill">> = {
+  // The studio lights dim so the sunbeam through the window reads on the table.
+  dark: { background: 0x17120e, glow: 0x4a2a12, key: 0xffcf9a, keyIntensity: 1.1, fill: 0.16 },
+  light: { background: 0xf6ebdd, glow: 0xf1cf9f, key: 0xffe2bd, keyIntensity: 0.9, fill: 0.55 },
+};
+
 /** How strongly the glossy floor reflects the printer, per theme. */
 const REFLECTION: Record<Theme, number> = { dark: 0.3, light: 0.16 };
 
@@ -49,6 +56,11 @@ export interface Studio {
   renderShadow(hidden: readonly THREE.Object3D[]): void;
   /** Turns the floor reflection off when the device turns out to be too slow for it. */
   setReflection(enabled: boolean): void;
+  /**
+   * The morning at the end (0..1): a wooden table fades in under everything,
+   * sunlight through a window falls across it onto `target`, and the room warms up.
+   */
+  setMorning(amount: number, target: THREE.Vector3): void;
   dispose(): void;
 }
 
@@ -241,8 +253,59 @@ export function createStudio(
     floorParent.add(reflector);
   }
 
+  // Wooden table for the morning: grain painted on a canvas.
+  const woodCanvas = document.createElement("canvas");
+  woodCanvas.width = 512;
+  woodCanvas.height = 256;
+  const wood = woodCanvas.getContext("2d")!;
+  wood.fillStyle = "#b68859";
+  wood.fillRect(0, 0, 512, 256);
+  let seed = 3;
+  const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 160; i++) {
+    const y = random() * 256;
+    wood.strokeStyle = `rgba(${random() < 0.5 ? "92,58,30" : "214,170,120"}, ${0.12 + random() * 0.18})`;
+    wood.lineWidth = 0.6 + random() * 2.2;
+    wood.beginPath();
+    wood.moveTo(0, y);
+    for (let x = 0; x <= 512; x += 32) wood.lineTo(x, y + Math.sin(x * 0.012 + i) * 4 + (random() - 0.5) * 2);
+    wood.stroke();
+  }
+  const woodTexture = new THREE.CanvasTexture(woodCanvas);
+  woodTexture.colorSpace = THREE.SRGBColorSpace;
+  woodTexture.wrapS = woodTexture.wrapT = THREE.RepeatWrapping;
+  woodTexture.repeat.set(2, 1);
+  const tableGeometry = new THREE.BoxGeometry(260, 3, 150);
+  const tableMaterial = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.55, metalness: 0, transparent: true, opacity: 0 });
+  const table = new THREE.Mesh(tableGeometry, tableMaterial);
+  table.position.set(24, floorY - 1.52, 8);
+  table.receiveShadow = true;
+  table.visible = false;
+  floorParent.add(table);
+
+  // Sunlight through a window: a warm spot light whose cookie is a window frame.
+  const windowCanvas = document.createElement("canvas");
+  windowCanvas.width = windowCanvas.height = 256;
+  const pane = windowCanvas.getContext("2d")!;
+  pane.fillStyle = "#000000";
+  pane.fillRect(0, 0, 256, 256);
+  pane.filter = "blur(4px)";
+  pane.fillStyle = "#ffffff";
+  for (const [x, y] of [[40, 40], [134, 40], [40, 134], [134, 134]]) pane.fillRect(x, y, 82, 82);
+  const windowTexture = new THREE.CanvasTexture(windowCanvas);
+  const sun = new THREE.SpotLight(0xffd29a, 0, 0, 0.42, 0.35, 2);
+  sun.map = windowTexture;
+  sun.castShadow = quality > 0;
+  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.bias = -0.0005;
+  sun.visible = false;
+  floorParent.add(sun, sun.target);
+
   let currentTheme = theme;
-  function apply(v: StudioValues) {
+  let morning = 0;
+  function apply(base: StudioValues) {
+    // In the morning the room warms up towards sunrise colours.
+    const v = morning > 0 ? mixStudio(base, { ...base, ...MORNING[currentTheme] }, morning * 0.85) : base;
     const c = canvas.getContext("2d")!;
     c.fillStyle = hex(v.background);
     c.fillRect(0, 0, 256, 256);
@@ -285,6 +348,23 @@ export function createStudio(
       apply(transition.current);
       return changing;
     },
+    setMorning(amount, target) {
+      table.visible = sun.visible = amount > 0;
+      tableMaterial.opacity = amount;
+      const opaque = amount >= 1;
+      if (tableMaterial.transparent === opaque) {
+        tableMaterial.transparent = !opaque;
+        tableMaterial.depthWrite = opaque;
+        tableMaterial.needsUpdate = true;
+      }
+      sun.intensity = amount * 70000;
+      floorParent.worldToLocal(sun.target.position.copy(target));
+      sun.position.set(sun.target.position.x - 55, sun.target.position.y + 70, sun.target.position.z - 45);
+      if (Math.abs(amount - morning) > 0.01 || (amount === 0) !== (morning === 0)) {
+        morning = amount;
+        apply(transition.current);
+      }
+    },
     setReflection(enabled) {
       if (reflector) reflector.visible = enabled;
     },
@@ -325,6 +405,11 @@ export function createStudio(
         reflector.geometry.dispose();
         reflector.dispose();
       }
+      woodTexture.dispose();
+      tableGeometry.dispose();
+      tableMaterial.dispose();
+      windowTexture.dispose();
+      sun.shadow.map?.dispose();
     },
   };
 }

@@ -298,30 +298,65 @@ export function buildPrinter(quality: QualityLevel): Printer {
   const screenTexture = new THREE.CanvasTexture(screenCanvas);
   screenTexture.colorSpace = THREE.SRGBColorSpace;
   textures.push(screenTexture);
-  let shownPercent = -1;
-  function drawScreen(percent: number) {
-    if (percent === shownPercent) return;
-    shownPercent = percent;
+  let shown = "";
+  /** The print job on screen: percentage, layer count and time left (the mug takes about two hours). */
+  function drawScreen(progress: number) {
+    const percent = Math.round(progress * 100);
+    const layer = Math.min(Math.ceil(progress * 30), 30);
+    const minutesLeft = Math.round((1 - progress) * 120);
+    const key = `${percent}|${layer}|${minutesLeft}`;
+    if (key === shown) return;
+    shown = key;
     const c = screenCanvas.getContext("2d")!;
     c.fillStyle = "#06171b";
     c.fillRect(0, 0, 256, 128);
     c.fillStyle = "#3cc2b0";
     c.font = "600 22px Inter, sans-serif";
-    c.fillText("3D Care", 18, 38);
+    c.fillText("3D Care", 18, 34);
     c.fillStyle = "#f5c400";
     c.textAlign = "right";
-    c.fillText(`${percent}%`, 238, 38);
+    c.fillText(`${percent}%`, 238, 34);
     c.textAlign = "left";
     c.fillStyle = "#9fb3ad";
-    c.font = "15px Inter, sans-serif";
-    c.fillText("two-handled-mug.gcode", 18, 66);
+    c.font = "14px Inter, sans-serif";
+    c.fillText("two-handled-mug.gcode", 18, 58);
+    // Layer stack icon and count, clock icon and time left.
+    c.fillStyle = "#e3efec";
+    c.font = "600 15px Inter, sans-serif";
+    for (let i = 0; i < 3; i++) c.fillRect(18, 70 + i * 4, 12, 2);
+    c.fillText(`${layer} / 30`, 36, 80);
+    c.strokeStyle = "#e3efec";
+    c.lineWidth = 1.6;
+    c.beginPath();
+    c.arc(150, 75, 6, 0, Math.PI * 2);
+    c.moveTo(150, 75);
+    c.lineTo(150, 71);
+    c.moveTo(150, 75);
+    c.lineTo(153, 75);
+    c.stroke();
+    c.fillText(`${Math.floor(minutesLeft / 60)}:${String(minutesLeft % 60).padStart(2, "0")}`, 162, 80);
     c.fillStyle = "#1f3a3f";
-    c.fillRect(18, 86, 220, 10);
+    c.fillRect(18, 96, 220, 10);
     c.fillStyle = "#f5c400";
-    c.fillRect(18, 86, 220 * (percent / 100), 10);
+    c.fillRect(18, 96, 220 * progress, 10);
     screenTexture.needsUpdate = true;
   }
   drawScreen(0);
+
+  // Filament inside the PTFE tube, with bands that slide along as it feeds.
+  const flowCanvas = document.createElement("canvas");
+  flowCanvas.width = 64;
+  flowCanvas.height = 4;
+  const flowContext = flowCanvas.getContext("2d")!;
+  flowContext.fillStyle = "#ffffff";
+  flowContext.fillRect(0, 0, 64, 4);
+  flowContext.fillStyle = "#9a9a9a";
+  flowContext.fillRect(0, 0, 18, 4);
+  const flowTexture = new THREE.CanvasTexture(flowCanvas);
+  flowTexture.wrapS = flowTexture.wrapT = THREE.RepeatWrapping;
+  flowTexture.repeat.set(36, 1);
+  textures.push(flowTexture);
+  const flowMaterial = new THREE.MeshStandardMaterial({ color: 0x2aa898, map: flowTexture, roughness: 0.35 });
 
   // Y chassis: two extrusions along the depth, printed front and rear plates,
   // the Y motor, belt and the rods the bed slides on.
@@ -476,9 +511,15 @@ export function buildPrinter(quality: QualityLevel): Printer {
     new THREE.Vector3(1, GANTRY_Y + 13, FRAME_Z + 9.6),
     new THREE.Vector3(0, GANTRY_Y + 7.2, FRAME_Z + 9),
   ]);
-  const filament = mesh(root, new THREE.TubeGeometry(path, 48, 0.2, 8), m.ptfe);
-  filament.castShadow = false;
-  detail(filament);
+  const filament = new THREE.Group();
+  root.add(filament);
+  for (const tube of [
+    mesh(filament, new THREE.TubeGeometry(path, 48, 0.2, 8), m.ptfe),
+    mesh(filament, new THREE.TubeGeometry(path, 96, 0.08, 6), flowMaterial),
+  ]) {
+    tube.castShadow = false;
+    detail(tube);
+  }
 
   parts.forEach((p) => p.home.copy(p.object.position));
   root.updateMatrixWorld(true);
@@ -501,11 +542,15 @@ export function buildPrinter(quality: QualityLevel): Printer {
     },
     setFilament(color) {
       m.filament.color.setHex(color);
+      flowMaterial.color.setHex(color);
     },
     setPrinting(progress, heat) {
       headFan.rotation.z = -progress * Math.PI * 160;
       reel.rotation.z = progress * Math.PI * 1.2;
-      drawScreen(Math.round(progress * 100));
+      // The reel wobbles a little on its rod as it is pulled round.
+      reel.rotation.x = Math.sin(progress * 70) * 0.025 * Math.min(progress * 20, 1);
+      flowTexture.offset.x = -progress * 40;
+      drawScreen(progress);
       m.hotBrass.emissiveIntensity = heat * 2.2;
       m.hotSock.emissiveIntensity = heat * 0.6;
     },
@@ -517,6 +562,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
         mat.dispose();
       });
       (screen.material as THREE.Material).dispose();
+      flowMaterial.dispose();
     },
   };
 }
