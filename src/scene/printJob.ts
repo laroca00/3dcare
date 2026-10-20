@@ -20,6 +20,11 @@ export interface PrintJob {
    * (reveal 0..1); they fade back while the mug prints (printed 0..1).
    */
   setPreview(reveal: number, printed: number): void;
+  /**
+   * The looks after the print, each 0..1: the thermal camera's colours (and
+   * how far the mug has cooled), and the real 0.3 mm layer ridges for the close-up.
+   */
+  setLooks(thermal: number, cool: number, ridges: number): void;
   /** Filament colour for the mug and its preview. */
   setColor(color: number): void;
   /** Line widths are in pixels, so the preview needs the canvas size. */
@@ -69,11 +74,105 @@ function logoGeometry(segments: number) {
   return geometry;
 }
 
+/** Real layer height in cm; the drawn layers are ten times thicker. */
+const REAL_LAYER = 0.03;
+
+/**
+ * Adds the thermal view and the real layer ridges to a mug material. Heights
+ * are measured on the mug (instances only move up), so the base is hot and
+ * the ridges run round the wall. While the ridges show, each drawn layer
+ * grows to close the small gap above it, so the wall reads as one surface.
+ */
+function addLooks(material: THREE.MeshStandardMaterial, uniforms: Record<"uThermal" | "uCool" | "uRidges" | "uSeal", THREE.IUniform<number>>) {
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+        uniform float uSeal;
+        varying float vMugHeight;
+        varying float vMugRadius;
+        varying vec3 vMugUp;`,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+        transformed.y += step(0.1, position.y) * ${(LAYER_HEIGHT * 0.1).toFixed(3)} * uSeal;
+        vec4 onMug = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          onMug = instanceMatrix * onMug;
+        #endif
+        vMugHeight = onMug.y;
+        vMugRadius = length(onMug.xz);
+        vMugUp = normalize(normalMatrix * vec3(0.0, 1.0, 0.0));`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+        uniform float uThermal;
+        uniform float uCool;
+        uniform float uRidges;
+        varying float vMugHeight;
+        varying float vMugRadius;
+        varying vec3 vMugUp;
+        // A thermal camera's palette, from cold violet to white hot.
+        vec3 ironbow(float t) {
+          vec3 c = mix(vec3(0.02, 0.0, 0.1), vec3(0.32, 0.0, 0.55), smoothstep(0.0, 0.3, t));
+          c = mix(c, vec3(0.86, 0.08, 0.32), smoothstep(0.25, 0.5, t));
+          c = mix(c, vec3(1.0, 0.45, 0.0), smoothstep(0.45, 0.7, t));
+          c = mix(c, vec3(1.0, 0.86, 0.12), smoothstep(0.65, 0.88, t));
+          c = mix(c, vec3(1.0, 1.0, 0.85), smoothstep(0.85, 1.0, t));
+          return pow(c, vec3(2.2));
+        }
+        // Ridge strength fades out where one ridge is smaller than a pixel or two.
+        float ridgeAmount() {
+          float phase = vMugHeight / ${REAL_LAYER.toFixed(2)};
+          return uRidges * (1.0 - smoothstep(0.12, 0.3, fwidth(phase)));
+        }`,
+      )
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+        if (uRidges > 0.0) {
+          // The groove between two layers is a little darker.
+          float groove = pow(0.5 + 0.5 * cos(vMugHeight / ${REAL_LAYER.toFixed(2)} * 6.2831853), 3.0);
+          diffuseColor.rgb *= 1.0 - 0.3 * groove * ridgeAmount();
+        }`,
+      )
+      .replace(
+        "#include <normal_fragment_maps>",
+        `#include <normal_fragment_maps>
+        if (uRidges > 0.0) {
+          // Each layer is a rounded bead: its surface tilts up, then down, across its height.
+          float slope = sin(vMugHeight / ${REAL_LAYER.toFixed(2)} * 6.2831853);
+          normal = normalize(normal + vMugUp * slope * 0.7 * ridgeAmount());
+        }`,
+      )
+      .replace(
+        "#include <tonemapping_fragment>",
+        `if (uThermal > 0.0) {
+          // Hot at the base, which has just left the bed; the thin handles cool first.
+          float heat = 1.0 - vMugHeight / ${(LAYERS * LAYER_HEIGHT).toFixed(1)} * (0.55 + 0.3 * uCool);
+          heat -= smoothstep(${(MUG_RADIUS + 0.5).toFixed(1)}, ${(MUG_RADIUS + 1.5).toFixed(1)}, vMugRadius) * (0.25 + 0.2 * uCool);
+          heat -= 0.15 * uCool;
+          // Edges turned away from the camera read a little cooler, which keeps the shape.
+          heat -= (1.0 - abs(dot(normal, normalize(vViewPosition)))) * 0.18;
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, ironbow(clamp(heat, 0.0, 1.0)), uThermal);
+        }
+        #include <tonemapping_fragment>`,
+      );
+  };
+}
+
 export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel): PrintJob {
   const object = new THREE.Group();
   bedSurface.add(object);
 
   const filament = new THREE.MeshStandardMaterial({ color: 0x2aa898, roughness: 0.42, metalness: 0 });
+  const looks = { uThermal: { value: 0 }, uCool: { value: 0 }, uRidges: { value: 0 }, uSeal: { value: 0 } };
+  addLooks(filament, looks);
   const current = new THREE.MeshStandardMaterial({ color: 0xf5c400, emissive: 0x6b4e00, roughness: 0.4 });
   const segments = quality === 2 ? 64 : 32;
   const thickness = LAYER_HEIGHT * 0.9;
@@ -156,6 +255,8 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   const clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
   const logoMaterial = filament.clone();
   logoMaterial.clippingPlanes = [clip];
+  // The logo shares the thermal colours but is not a printed layer: no ridges, no growing.
+  addLooks(logoMaterial, { ...looks, uRidges: { value: 0 }, uSeal: { value: 0 } });
   const logoShape = logoGeometry(quality === 2 ? 40 : 16);
   const logo = new THREE.Mesh(logoShape, logoMaterial);
   logo.castShadow = logo.receiveShadow = true;
@@ -190,6 +291,13 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
       preview.visible = reveal > 0 && printed < 1;
       previewGeometry.instanceCount = Math.floor(previewSegments * reveal);
       previewMaterial.opacity = 1 - smoothstep(printed / 0.08) * 0.7;
+    },
+    setLooks(thermal, cool, ridges) {
+      looks.uThermal.value = thermal;
+      looks.uCool.value = cool;
+      // Only up close: further away the ridges would shimmer.
+      looks.uRidges.value = smoothstep((ridges - 0.5) / 0.5);
+      looks.uSeal.value = smoothstep(ridges / 0.3);
     },
     setColor(color) {
       filament.color.setHex(color);

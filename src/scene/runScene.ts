@@ -18,7 +18,7 @@ import { BED_SURFACE_Y, NOZZLE_HOME, SCREEN_SIZE, buildPrinter, type PrinterPart
 import type { Point } from "./quadTransform";
 import { QualityController, type QualityLevel } from "./quality";
 import { STEAM_LAYER, createSteam } from "./steam";
-import { LAYERS, LAYER_HEIGHT, endingMotion, labelOpacity, nozzlePath, printProgress, revealMotion, screenZoom, slicerProgress } from "./storyMotion";
+import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, endingMotion, heroLooks, labelOpacity, nozzlePath, printProgress, revealMotion, screenZoom, slicerProgress } from "./storyMotion";
 import { createLineup } from "./lineup";
 import { FLOOR_LAYER, createStudio } from "./studio";
 import { localProgress, smoothstep } from "./timeline";
@@ -65,6 +65,22 @@ export interface SceneOptions {
   onSelection?: (box: { x: number; y: number; width: number; height: number; opacity: number } | null, size: [number, number, number]) => void;
   /** Called when the pointer moves onto or off the freshly printed mug (or a finger presses it), while it stands in front of the giant line. */
   onTouchMug?: (touching: boolean) => void;
+  /** Called after each frame with where the mug is on the canvas, while its plan or its layers are shown (null otherwise). */
+  onMug?: (frame: MugFrame | null) => void;
+}
+
+/**
+ * The mug's side as seen from the camera, for drawings laid over it: canvas
+ * pixels of the base's centre, and pixels per cm to the right and upwards.
+ * In the close-up, `scale` spans one real layer on the wall.
+ */
+export interface MugFrame {
+  origin: Point;
+  right: Point;
+  up: Point;
+  plan: number;
+  gather: number;
+  scale: { x: number; top: number; bottom: number; opacity: number } | null;
 }
 
 export type GrabTarget = "printer" | "mug";
@@ -149,6 +165,13 @@ const REVEAL_ASIDE = 105;
 /** How far the camera is from the mug then; narrow screens need more room for the handles. */
 const REVEAL_DISTANCE_WIDE = 54;
 const REVEAL_DISTANCE_NARROW = 82;
+/** How far the mug moves aside, beside the text, while it is looked at on wide screens (cm). */
+const HERO_ASIDE = 8;
+/** In the close-up the camera is this far from the wall (cm), looking at this height on it. */
+const MACRO_DISTANCE = 2.6;
+const MACRO_HEIGHT = 4.5;
+/** Real layer height (cm), for the close-up's scale. */
+const REAL_LAYER = 0.03;
 /** At the very top the camera looks down on the desk from here (relative to where it aims). */
 const DESK_WIDE = new THREE.Vector3(18, 205, 92);
 const DESK_NARROW = new THREE.Vector3(6, 420, 150);
@@ -280,6 +303,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const slide = new THREE.Vector3();
   const aside = new THREE.Vector3();
   const stageTurn = new THREE.Quaternion();
+  const mugTurn = new THREE.Quaternion();
+  const mugFront = new THREE.Vector3();
   const anchor = new THREE.Vector3();
 
   const home = new THREE.Vector3();
@@ -350,8 +375,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const outroView = new THREE.Vector3();
 
   const deskEye = new THREE.Vector3();
+  const sideways = new THREE.Vector3();
+  const wallPoint = new THREE.Vector3();
+  const macroView = new THREE.Vector3();
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number) {
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number, looks: ReturnType<typeof heroLooks>) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -377,6 +405,19 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     lookAt.copy(home).lerp(mugMiddle, hero);
     // On narrow screens the text fills the top, so the desk sits lower in the view.
     if (!wide && above > 0) lookAt.z -= smoothstep(above) * 85;
+    // While the mug is looked at, it stands beside the text on wide screens.
+    if (wide && looks.hero > 0) {
+      sideways.crossVectors(revealDir, UP).multiplyScalar(HERO_ASIDE * smoothstep(looks.hero));
+      camera.position.add(sideways);
+      lookAt.add(sideways);
+    }
+    // Up close on its wall, where the real layers show.
+    if (looks.macro > 0) {
+      const ease = smoothstep(looks.macro);
+      wallPoint.copy(mug).addScaledVector(revealDir, MUG_RADIUS + 0.2).y += MACRO_HEIGHT;
+      camera.position.lerp(macroView.copy(wallPoint).addScaledVector(revealDir, MACRO_DISTANCE), ease);
+      lookAt.lerp(wallPoint, ease);
+    }
     closeUp.copy(mug).add(wide ? CLOSE_UP_WIDE : CLOSE_UP_NARROW);
     camera.position.lerp(closeUp, push);
     mugFocus.copy(mug).add(wide ? FOCUS_WIDE : FOCUS_NARROW);
@@ -399,9 +440,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     }
     // The camera drifts a little with the mouse, keeping its aim (less when up close),
     // and floats gently while the visitor pauses.
-    const float = breath.amount * (1 - zoom);
-    camera.position.x += parallax.x * 3 * (1 - zoom) + Math.sin(breath.clock * 0.55) * 0.9 * float;
-    camera.position.y += parallax.y * 2 * (1 - zoom) + Math.sin(breath.clock * 0.41 + 1) * 0.6 * float;
+    const still = Math.max(zoom, smoothstep(looks.macro));
+    const float = breath.amount * (1 - still);
+    camera.position.x += parallax.x * 3 * (1 - still) + Math.sin(breath.clock * 0.55) * 0.9 * float;
+    camera.position.y += parallax.y * 2 * (1 - still) + Math.sin(breath.clock * 0.41 + 1) * 0.6 * float;
     camera.lookAt(lookAt);
   }
 
@@ -444,6 +486,41 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       maxY = Math.max(maxY, y);
     }
     opts.onSelection({ x: minX, y: minY, width: maxX - minX, height: maxY - minY, opacity }, sizeCm);
+  }
+
+  const onScreen = (v: THREE.Vector3): Point => {
+    const { clientWidth: w, clientHeight: h } = canvas;
+    v.project(camera);
+    return [((v.x + 1) / 2) * w, ((1 - v.y) / 2) * h];
+  };
+  const mugPoint = new THREE.Vector3();
+  const mugAcross = new THREE.Vector3();
+  /** Reports the mug's side on the canvas while its plan or its close-up shows. */
+  function updateMug(looks: ReturnType<typeof heroLooks>) {
+    if (!opts.onMug) return;
+    if (looks.plan <= 0 && looks.macro <= 0) return opts.onMug(null);
+    camera.updateMatrixWorld();
+    mugAcross.crossVectors(revealDir, UP).negate();
+    const origin = onScreen(mugPoint.copy(mugWorld));
+    const right = onScreen(mugPoint.copy(mugWorld).add(mugAcross));
+    const up = onScreen(mugPoint.copy(mugWorld).add(UP));
+    let scale: MugFrame["scale"] = null;
+    if (looks.macro > 0) {
+      // One real layer on the wall facing the camera, from one ridge to the next.
+      const bottom = Math.round(MACRO_HEIGHT / REAL_LAYER) * REAL_LAYER;
+      wallPoint.copy(mugWorld).addScaledVector(revealDir, MUG_RADIUS + 0.2).addScaledVector(mugAcross, 0.25);
+      const [x, low] = onScreen(mugPoint.copy(wallPoint).setY(mugWorld.y + bottom));
+      const [, high] = onScreen(mugPoint.copy(wallPoint).setY(mugWorld.y + bottom + REAL_LAYER));
+      scale = { x, top: high, bottom: low, opacity: smoothstep((looks.macro - 0.6) / 0.4) };
+    }
+    opts.onMug({
+      origin,
+      right: [right[0] - origin[0], right[1] - origin[1]],
+      up: [up[0] - origin[0], up[1] - origin[1]],
+      plan: looks.plan,
+      gather: looks.gather,
+      scale,
+    });
   }
 
   function updateLabels(apart: number) {
@@ -700,6 +777,18 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     );
     // Ends with a handle on each side, as seen from the camera.
     job.object.rotation.y = reveal.turn + smoothstep(u / 0.5) * 0.2 + mugSpin.yaw;
+    // While it is looked at, the mug turns its logo to the camera, so its
+    // plan shows a handle on each side; up close it turns a little further,
+    // so the camera finds plain wall between the logo and a handle.
+    const looks = heroLooks(p);
+    if (looks.hero > 0) {
+      stage.updateMatrixWorld(true);
+      job.object.getWorldQuaternion(mugTurn);
+      mugFront.set(0, 0, 1).applyQuaternion(mugTurn);
+      const facing = Math.atan2(revealDir.x, revealDir.z) - Math.atan2(mugFront.x, mugFront.z) + Math.PI * 0.28 * smoothstep(looks.macro);
+      job.object.rotation.y += Math.atan2(Math.sin(facing), Math.cos(facing)) * smoothstep(looks.hero);
+    }
+    job.setLooks(looks.thermal, looks.cool, looks.macro);
     job.setCoffee(end.pour);
     stage.updateMatrixWorld(true);
     job.syncClip();
@@ -711,7 +800,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     lineup.object.rotation.y = -stage.rotation.y + 0.15;
     lineup.object.updateMatrixWorld();
     lineup.setReveal((outro - 0.08) / 0.5);
-    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8);
+    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8, looks);
     heroMug = reveal.type > 0.6 && !opts.frozen;
     if (!heroMug) setTouchingMug(false);
     // The line sits a little above the mug's middle, so the mug covers the lower half of the letters.
@@ -759,6 +848,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     updateLabels(apart);
     updateSelection(1 - smoothstep(draw / 0.3));
     updateScreen(zoom);
+    updateMug(looks);
     if (transitioning || turning || steaming || drifting || focusing || breathing) handle.invalidate();
   }
 

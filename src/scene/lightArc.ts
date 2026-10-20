@@ -1,12 +1,13 @@
 // The story told in light: a cool blueprint at the start, a neutral studio when
 // the printer appears, a focused workshop while it is apart, a slightly warmer
-// room while it prints, darkness round the freshly printed mug, and a sunny
-// morning at the end.
+// room while it prints, darkness round the freshly printed mug, a thermal
+// camera's cold violet, the blueprint again for its plan, a warm cream room
+// for its material, and a sunny morning at the end.
 import type { Theme } from "../theme/theme";
 import { mixStudio, type StudioValues } from "./studioMix.ts";
-import { smoothstep } from "./timeline.ts";
+import { at, smoothstep } from "./timeline.ts";
 
-export type Mood = "blueprint" | "studio" | "workshop" | "printing" | "hero" | "morning";
+export type Mood = "blueprint" | "studio" | "workshop" | "printing" | "hero" | "thermal" | "material" | "morning";
 
 const DARK_STUDIO: StudioValues = {
   background: 0x101416,
@@ -43,6 +44,10 @@ export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
     printing: { ...DARK_STUDIO, background: 0x121514, glow: 0x183530, key: 0xfff0dd, fill: 0.28 },
     // The printer goes into the dark; one light and a strong rim on the mug.
     hero: { ...DARK_STUDIO, background: 0x060809, glow: 0x0b2826, glowStrength: 0.6, keyIntensity: 3.2, rimIntensity: 5.5, fill: 0.1, env: 0.4 },
+    // Seen through a thermal camera, everything round the warm mug is cold.
+    thermal: { ...DARK_STUDIO, background: 0x08051a, glow: 0x2a0e4a, glowStrength: 0.8, keyIntensity: 1.2, rimIntensity: 1.5, fill: 0.1, env: 0.2 },
+    // Warm and dim, with sunlight filtering through leaves.
+    material: { ...DARK_STUDIO, background: 0x16120d, glow: 0x3b2c15, glowStrength: 0.8, key: 0xffe2b8, keyIntensity: 2.6, rim: 0xffd9a0, rimIntensity: 2.5, fill: 0.22 },
     // Studio lights dim so the sunbeam through the window reads on the table.
     morning: { ...DARK_STUDIO, background: 0x17120e, glow: 0x4a2a12, key: 0xffcf9a, keyIntensity: 1.1, fill: 0.16 },
   },
@@ -52,6 +57,9 @@ export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
     workshop: { ...LIGHT_STUDIO, background: 0xeceeed, glow: 0xd5dbd8, keyIntensity: 3.3, fill: 0.75 },
     printing: { ...LIGHT_STUDIO, background: 0xf6f5f1, glow: 0xe6e0d5, key: 0xfff6ea },
     hero: { ...LIGHT_STUDIO, background: 0xd9dfdc, glow: 0xf7f9f8, glowStrength: 1, keyIntensity: 2.9, fill: 0.55, env: 0.75 },
+    thermal: { ...LIGHT_STUDIO, background: 0xe6e1f0, glow: 0xd4c8ea, keyIntensity: 1.6, fill: 0.6, env: 0.5 },
+    // A cream room in daylight.
+    material: { ...LIGHT_STUDIO, background: 0xf3ead8, glow: 0xfff7e6, key: 0xfff1dc, keyIntensity: 2.8, fill: 0.95 },
     morning: { ...LIGHT_STUDIO, background: 0xf6ebdd, glow: 0xf1cf9f, key: 0xffe2bd, keyIntensity: 0.9, fill: 0.55 },
   },
 };
@@ -59,16 +67,24 @@ export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
 /** Story progress at which each mood holds; between them the light blends. */
 const KEYS: readonly [number, Mood][] = [
   [0, "blueprint"],
-  [0.105, "blueprint"],
-  [0.19, "studio"],
-  [0.31, "studio"],
-  [0.39, "workshop"],
-  [0.49, "workshop"],
-  [0.54, "printing"],
-  [0.69, "printing"],
-  [0.72, "hero"],
-  [0.88, "hero"],
-  [0.95, "morning"],
+  [at("draw", 0.75), "blueprint"],
+  [at("meet", 0.3), "studio"],
+  [at("explode", 0), "studio"],
+  [at("explode", 0.45), "workshop"],
+  [at("print", 0), "workshop"],
+  [at("print", 0.25), "printing"],
+  [at("reveal", 0), "printing"],
+  [at("reveal", 0.2), "hero"],
+  [at("reveal", 0.9), "hero"],
+  [at("heat", 0.2), "thermal"],
+  [at("heat", 0.85), "thermal"],
+  [at("plan", 0.2), "blueprint"],
+  [at("plan", 0.85), "blueprint"],
+  [at("layers", 0.2), "hero"],
+  [at("layers", 0.85), "hero"],
+  [at("material", 0.2), "material"],
+  [at("material", 0.85), "material"],
+  [at("use", 0.7), "morning"],
 ];
 
 /** The studio's light at a point in the story. */

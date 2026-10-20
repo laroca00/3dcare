@@ -9,14 +9,28 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import sharp from "sharp";
+import { at } from "../src/scene/timeline.ts";
 
 const OUT = "out";
 const BASE = process.env.BASE_PATH ?? "";
 const TARGET = "src/assets/story";
 const EDGE = process.env.EDGE_PATH ?? "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 // The poster (top of the page, frame 0), then one representative moment per
-// scene: drawing, studio, exploded with labels, printing, the mug taking over, in use.
-const MOMENTS = [0, 0.06, 0.225, 0.465, 0.607, 0.79, 0.975];
+// scene: drawing, studio, exploded with labels, printing, the mug taking over,
+// its heat, its plan, its layers, its material, in use.
+const MOMENTS = [
+  0,
+  at("draw", 0.43),
+  at("meet", 0.5),
+  at("explode", 0.86),
+  at("print", 0.585),
+  at("reveal", 0.71),
+  at("heat", 0.5),
+  at("plan", 0.8),
+  at("layers", 0.55),
+  at("material", 0.55),
+  at("use", 0.85),
+];
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".woff2": "font/woff2" };
 
 const server = createServer((req, res) => {

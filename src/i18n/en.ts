@@ -41,7 +41,23 @@ export const en = {
         },
         {
           title: "Just printed",
-          text: "Two handles, a wide grip, thirty layers. A file a moment ago, now something you can hold.",
+          text: "Two handles, a wide grip, about 300 thin layers. A file a moment ago, now something you can hold.",
+        },
+        {
+          title: "Still warm",
+          text: "Through a thermal camera: the base has just left the hot bed and is still the warmest part. The thin handles cool first. As the mug cools, it sets into its final shape.",
+        },
+        {
+          title: "Measurements open to all",
+          text: "8.4 cm across, 9 cm tall, 15.6 cm with the handles. Every model's file and measurements are open, so a centre can adapt it to the hands of the person who will use it.",
+        },
+        {
+          title: "Layers of 0.3 millimetres",
+          text: "Up close, the mug is about 300 thin layers. The thinner the layers, the smoother the surface, and the longer the print takes.",
+        },
+        {
+          title: "Material matters too",
+          text: "This mug is printed in PETG, which takes heat better than PLA. The schools in Ludbreg and Gölcük are trying biodegradable and recycled filaments, and ways to reuse old prototypes are being explored.",
         },
         {
           title: "From the printer to everyday life",
@@ -62,12 +78,15 @@ export const en = {
       scrollHint: "Scroll to continue",
       glowHint: { pointer: "Point at the mug", touch: "Press and hold the mug" },
       selectionFile: "printer.stl",
+      plan: { diameter: "Ø 8.4 cm", height: "9 cm", width: "15.6 cm" },
+      thermal: { hot: "Warm", cold: "Cool" },
+      layerScale: "0.3 mm",
       dragHint: { printer: "Drag to turn a part or the printer · click a part to learn more", mug: "Drag to turn the mug" },
       souvenir: {
         cta: "Get your mug card",
         heading: "Your mug card",
         title: "I printed this mug",
-        details: "{colour} filament · 30 layers",
+        details: "{colour} filament · 0.3 mm layers",
         download: "Download card",
         share: "Share",
         close: "Close",
@@ -77,7 +96,7 @@ export const en = {
       slicer: {
         kicker: "Slicer",
         model: "Two-handled mug",
-        details: "30 layers · 0.3 mm · PETG",
+        details: "~300 layers · 0.3 mm · PETG",
         color: "Filament colour",
         colors: { teal: "Teal", violet: "Violet", yellow: "Yellow", white: "White", coral: "Coral" },
         print: "Print",
@@ -102,7 +121,7 @@ export const en = {
           repair: "Keep the rods lightly oiled. The belt should feel firm, like a guitar string, but not tight.",
         },
         head: {
-          what: "Pulls in the filament, melts it at around 200 °C and lays it down through a 0.4 mm nozzle.",
+          what: "Pulls in the filament, melts it at 200–250 °C and lays it down through a 0.4 mm nozzle.",
           repair: "A blocked nozzle is cheap to replace. Heat the hotend first, then unscrew it with care.",
         },
         spool: {
@@ -120,6 +139,10 @@ export const en = {
         "The printer taken apart: base, heated bed, frame, moving axis, print head, filament spool and screen.",
         "The printer printing a two-handled mug layer by layer.",
         "The freshly printed two-handled mug floating in front of the dark printer, with the words “Just printed” glowing behind it.",
+        "Thermal view of the mug: the base glows hot, the handles are cooler.",
+        "Technical drawing of the mug with its measurements; the drawing's construction circles form the words 3D CARE above it.",
+        "Close-up of the mug's wall: fine 0.3 mm layer lines.",
+        "The mug in a cream room with leaf shadows falling across it.",
         "The printed two-handled mug, filled with steaming coffee, on the table next to the printer.",
       ],
     },

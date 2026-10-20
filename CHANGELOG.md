@@ -7,6 +7,31 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-20
 
+### Four looks at the fresh mug
+- Between "Just printed" and the morning table, the home story now looks at
+  the mug four ways, keeping it in the middle of the picture (beside the
+  text on wide screens):
+  - **Still warm:** through a thermal camera, the base that has just left
+    the hot bed glows, the thin handles are cooler, and the mug cools as
+    the visitor scrolls. A small scale shows warm and cool.
+  - **Measurements open to all:** a technical drawing is traced over the
+    mug with its real size (8.4 cm across, 9 cm tall, 15.6 cm with the
+    handles), and the drawing's construction circles gather into the words
+    "3D CARE" above it.
+  - **Layers of 0.3 millimetres:** the camera moves up to the mug's wall,
+    where its real layers show as fine ridges, with a mark the height of
+    one layer.
+  - **Material matters too:** the mug stands in a cream room with leaf
+    shadows (warm dappled light in the dark theme). The text says what the
+    project application says: the mug is PETG, which takes heat better
+    than PLA; the schools in Ludbreg and Gölcük are trying biodegradable
+    and recycled filaments; ways to reuse old prototypes are being explored.
+- Each new scene has its own still frame for reduced motion or no WebGL.
+- The layer count is now right everywhere: a 9 cm mug printed in 0.3 mm
+  layers has about 300 layers, not 30 (the "Just printed" text, the slicer
+  and the mug card). The print head card now gives 200–250 °C, which
+  covers both PLA and PETG.
+
 ### An opening desk
 - The home story now opens from above, on a designer's desk: the printer's
   drawing lies on a cutting mat with a measuring grid, a pencil and a steel

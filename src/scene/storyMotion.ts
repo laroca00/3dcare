@@ -74,3 +74,35 @@ export function endingMotion(u: number): { travel: number; bounce: number; pour:
     steam: smoothstep((u - 0.75) / 0.15),
   };
 }
+
+/**
+ * The four looks at the fresh mug, each 0..1: through a thermal camera (with
+ * how far it has cooled), as a plan whose construction circles gather into the
+ * wordmark, up close on its layers, and in the material's cream room. `hero`
+ * holds the mug facing the camera (and beside the text on wide screens)
+ * through all four.
+ */
+export function heroLooks(progress: number): {
+  hero: number;
+  thermal: number;
+  cool: number;
+  plan: number;
+  gather: number;
+  macro: number;
+  material: number;
+} {
+  const h = localProgress(progress, "heat");
+  const pl = localProgress(progress, "plan");
+  const l = localProgress(progress, "layers");
+  const m = localProgress(progress, "material");
+  const out = 1 - smoothstep((m - 0.8) / 0.2);
+  return {
+    hero: Math.min(smoothstep(h / 0.3), out),
+    thermal: Math.min(smoothstep(h / 0.25), 1 - smoothstep((h - 0.8) / 0.2)),
+    cool: h,
+    plan: Math.min(smoothstep(pl / 0.2), 1 - smoothstep((pl - 0.85) / 0.15)),
+    gather: smoothstep((pl - 0.3) / 0.45),
+    macro: Math.min(smoothstep(l / 0.35), 1 - smoothstep((l - 0.75) / 0.25)),
+    material: Math.min(smoothstep(m / 0.25), out),
+  };
+}

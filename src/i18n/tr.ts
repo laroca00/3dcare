@@ -43,7 +43,23 @@ export const tr: typeof en = {
         },
         {
           title: "Az önce basıldı",
-          text: "İki kulp, geniş bir tutma yeri, otuz katman. Az önce bir dosyaydı, şimdi elinde tutabileceğin bir şey.",
+          text: "İki kulp, geniş bir tutma yeri, yaklaşık 300 ince katman. Az önce bir dosyaydı, şimdi elinde tutabileceğin bir şey.",
+        },
+        {
+          title: "Hâlâ sıcak",
+          text: "Termal kamerayla bakınca: taban sıcak tabladan yeni ayrıldı, hâlâ en sıcak yer orası. İnce kulplar ilk soğuyan. Kupa soğudukça son biçimini alıyor.",
+        },
+        {
+          title: "Ölçüleri herkese açık",
+          text: "8,4 cm çap, 9 cm yükseklik, kulplarla 15,6 cm. Her modelin dosyası ve ölçüleri açık; bir merkez, modeli kullanacak kişinin eline göre uyarlayabilir.",
+        },
+        {
+          title: "0,3 milimetrelik katmanlar",
+          text: "Yakından bakınca kupanın yaklaşık 300 ince katmandan oluştuğu görülüyor. Katman ne kadar inceyse yüzey o kadar pürüzsüz olur, ama baskı o kadar uzun sürer.",
+        },
+        {
+          title: "Malzeme de önemli",
+          text: "Bu kupa, PLA'dan daha ısıya dayanıklı olan PETG'den basıldı. Ludbreg ve Gölcük'teki okullar biyobozunur ve geri dönüştürülmüş filamentleri deniyor; eski prototipler için de yeniden kullanım yolları aranıyor.",
         },
         {
           title: "Yazıcıdan günlük hayata",
@@ -64,12 +80,15 @@ export const tr: typeof en = {
       scrollHint: "Devam etmek için kaydırın",
       glowHint: { pointer: "İmleci kupanın üzerine getirin", touch: "Kupaya basılı tutun" },
       selectionFile: "yazici.stl",
+      plan: { diameter: "Ø 8,4 cm", height: "9 cm", width: "15,6 cm" },
+      thermal: { hot: "Sıcak", cold: "Serin" },
+      layerScale: "0,3 mm",
       dragHint: { printer: "Parçayı ya da yazıcıyı sürükleyerek döndürün · bilgi için bir parçaya tıklayın", mug: "Kupayı döndürmek için sürükleyin" },
       souvenir: {
         cta: "Kupa kartını al",
         heading: "Kupa kartın",
         title: "Bu kupayı ben bastım",
-        details: "{colour} filament · 30 katman",
+        details: "{colour} filament · 0,3 mm katmanlar",
         download: "Kartı indir",
         share: "Paylaş",
         close: "Kapat",
@@ -79,7 +98,7 @@ export const tr: typeof en = {
       slicer: {
         kicker: "Dilimleyici",
         model: "İki kulplu kupa",
-        details: "30 katman · 0,3 mm · PETG",
+        details: "~300 katman · 0,3 mm · PETG",
         color: "Filament rengi",
         colors: { teal: "Turkuaz", violet: "Mor", yellow: "Sarı", white: "Beyaz", coral: "Mercan" },
         print: "Bas",
@@ -104,7 +123,7 @@ export const tr: typeof en = {
           repair: "Milleri hafifçe yağlı tutun. Kayış gitar teli gibi gergin olmalı, ama aşırı sıkı değil.",
         },
         head: {
-          what: "Filamenti çeker, yaklaşık 200 °C'de eritir ve 0,4 mm'lik nozuldan katman katman serer.",
+          what: "Filamenti çeker, 200–250 °C'de eritir ve 0,4 mm'lik nozuldan katman katman serer.",
           repair: "Tıkanan nozul ucuzdur ve değiştirilebilir. Önce ısıtın, sonra dikkatle sökün.",
         },
         spool: {
@@ -122,6 +141,10 @@ export const tr: typeof en = {
         "Parçalarına ayrılmış yazıcı: gövde, ısıtmalı tabla, çerçeve, hareketli eksen, baskı kafası, filament makarası ve ekran.",
         "Yazıcı çift kulplu bir kupayı katman katman basıyor.",
         "Yeni basılmış çift kulplu kupa karanlıktaki yazıcının önünde duruyor; arkasında “Az önce basıldı” yazısı parlıyor.",
+        "Kupanın termal görüntüsü: taban sıcak parlıyor, kulplar daha serin.",
+        "Kupanın ölçülü teknik çizimi; çizimdeki yardımcı çemberler üstte 3D CARE yazısını oluşturuyor.",
+        "Kupa duvarının yakın çekimi: 0,3 mm'lik ince katman çizgileri.",
+        "Yaprak gölgeleri düşen krem renkli bir odada kupa.",
         "Basılan çift kulplu kupa, içinde dumanı tüten kahveyle yazıcının yanındaki masada.",
       ],
     },

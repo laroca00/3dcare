@@ -8,12 +8,13 @@ import { initialQuality } from "@/scene/quality";
 import type { SceneHandle } from "@/scene/runScene";
 import { progressFor, splitProgress } from "@/scene/scrollProgress";
 import { quadTransform } from "@/scene/quadTransform";
-import { LAYERS, revealMotion, slicerPanel } from "@/scene/storyMotion";
-import { SCENES, localProgress, smoothstep } from "@/scene/timeline";
+import { LAYERS, heroLooks, revealMotion, slicerPanel } from "@/scene/storyMotion";
+import { SCENES, at, localProgress, smoothstep } from "@/scene/timeline";
 import { readTheme, useTheme } from "@/theme/useTheme";
 import emblemEn from "@/assets/eu/co-funded-en-neg.png";
 import emblemTr from "@/assets/eu/co-funded-tr-neg.png";
 import { RevealText } from "./RevealText";
+import { WORDMARK, drawPlan, drawScale } from "./mugPlan";
 import { makeSouvenirCard } from "./souvenirCard";
 import { smoothWheel } from "./smoothWheel";
 import { POSTERS, STILLS } from "./storyStills";
@@ -46,7 +47,7 @@ const DELIVER_ICONS = [
 ];
 
 /** Story progress at which steps 2 and 3 of making a model begin; step 4 is the closing part. */
-const STEP_STARTS = [0.14, 0.845];
+const STEP_STARTS = [at("meet", 0), at("use", 0.09)];
 /** Closing-part progress at which step 4 begins. */
 const OUTRO_STEP = 0.04;
 
@@ -57,6 +58,14 @@ function stepAt(story: number, outro: number) {
   if (story < STEP_STARTS[1]) return 2;
   return 3;
 }
+
+/** Leaves along three twigs for the material's room: x, y, angle, size (in a 100 × 100 box). */
+const LEAVES: [number, number, number, number][] = [
+  [8, 12, 30, 3], [16, 20, -20, 3.4], [24, 18, 50, 2.8], [33, 28, -35, 3.6], [41, 26, 40, 3], [50, 36, -15, 3.4],
+  [57, 42, 55, 3], [65, 52, -30, 3.6], [72, 60, 35, 3.2], [80, 70, -40, 3.4], [88, 78, 25, 3], [36, 12, -60, 2.8],
+  [47, 9, 20, 3], [58, 6, -40, 3.2], [68, 4, 10, 2.8], [44, 40, 70, 3], [38, 50, -50, 3.4], [32, 60, 30, 3],
+  [62, 22, -25, 3.2], [74, 30, 45, 2.8], [84, 40, -30, 3.2], [92, 52, 20, 3],
+];
 
 /** How long the rest of the story takes to play when the visitor presses "Print", in milliseconds. */
 const PRINT_MS = 14000;
@@ -108,6 +117,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const screenRef = useRef<HTMLDivElement>(null);
   const revealCaptionRef = useRef<HTMLDivElement>(null);
   const selectionRef = useRef<HTMLDivElement>(null);
+  const planRef = useRef<SVGSVGElement>(null);
+  const scaleRef = useRef<HTMLDivElement>(null);
   const [filament, setFilament] = useState<FilamentId>("teal");
   const [step, setStep] = useState(1);
   // Share of the section's scroll that the story takes; the closing part has the rest.
@@ -180,6 +191,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       // While the mug stands in front of the line, it invites a touch.
       if (live && hero > 0.6) section.dataset.hero = "1";
       else delete section.dataset.hero;
+      // The thermal camera's colour scale, and the leaf shadows in the material's room.
+      const looks = heroLooks(progress);
+      section.style.setProperty("--thermal", String(looks.thermal));
+      section.style.setProperty("--leaves", String(looks.material));
       // The slicer panel opens before printing; it can be used only while it shows.
       const panel = slicerPanel(progress);
       section.style.setProperty("--slicer", String(panel));
@@ -263,6 +278,11 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           selection.style.height = `${box.height}px`;
           selection.style.opacity = String(box.opacity);
           selection.dataset.size = `${width} × ${depth} × ${height} cm`;
+        },
+        onMug(frame) {
+          // The mug's plan and the close-up's scale, drawn over the mug.
+          if (planRef.current) drawPlan(planRef.current, frame);
+          if (scaleRef.current) drawScale(scaleRef.current, frame);
         },
         onScreen(corners) {
           // The slicer sits on the printer's screen, in perspective.
@@ -494,6 +514,38 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           {["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
             <span key={handle} className={`story__handle story__handle--${handle}`} />
           ))}
+        </div>
+        {/* The mug's plan: outline, dimensions, and construction circles that gather into the wordmark. */}
+        <svg className="story__plan" ref={planRef} aria-hidden="true">
+          <path className="story__plan-axis" />
+          <path className="story__plan-dims" />
+          <path className="story__plan-outline" />
+          <text data-dim="diameter">{t.story.plan.diameter}</text>
+          <text data-dim="width">{t.story.plan.width}</text>
+          <text data-dim="height">{t.story.plan.height}</text>
+          <g className="story__plan-circles">
+            {WORDMARK.map((_, i) => (
+              <circle key={i} />
+            ))}
+          </g>
+        </svg>
+        {/* Up close, a mark the height of one real layer. */}
+        <div className="story__scale" ref={scaleRef} aria-hidden="true">
+          <span>{t.story.layerScale}</span>
+        </div>
+        {/* The thermal camera's colour scale. */}
+        <p className="story__thermal" aria-hidden="true">
+          <span>{t.story.thermal.hot}</span>
+          <span>{t.story.thermal.cold}</span>
+        </p>
+        {/* Leaf shadows drift across the material's room. */}
+        <div className="story__leaves" aria-hidden="true">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+            {LEAVES.map(([x, y, angle, size], i) => (
+              <ellipse key={i} cx={x} cy={y} rx={size} ry={size * 0.42} transform={`rotate(${angle} ${x} ${y})`} />
+            ))}
+            <path d="M0 6 C 30 20, 55 40, 95 85 M30 22 C 45 12, 58 8, 72 2 M50 36 C 42 46, 36 56, 28 66 M58 22 C 70 28, 82 36, 96 54" />
+          </svg>
         </div>
         <div className="story__fade" aria-hidden="true" />
         {/* The story is also how a model is made: its four steps, the current one underlined. */}

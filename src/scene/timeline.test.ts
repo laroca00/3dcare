@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { SCENES, localProgress, sceneAt, smoothstep } from "./timeline.ts";
+import { SCENES, at, localProgress, sceneAt, smoothstep } from "./timeline.ts";
 
 test("scenes cover 0 to 1 without gaps", () => {
   assert.equal(SCENES[0].start, 0);
@@ -8,7 +8,7 @@ test("scenes cover 0 to 1 without gaps", () => {
   for (let i = 1; i < SCENES.length; i++) assert.equal(SCENES[i].start, SCENES[i - 1].end);
   assert.deepEqual(
     SCENES.map((s) => s.id),
-    ["draw", "meet", "explode", "print", "reveal", "use"],
+    ["draw", "meet", "explode", "print", "reveal", "heat", "plan", "layers", "material", "use"],
   );
 });
 
@@ -16,14 +16,21 @@ test("sceneAt clamps progress outside 0..1", () => {
   assert.equal(sceneAt(-0.5), "draw");
   assert.equal(sceneAt(1.7), "use");
   assert.equal(sceneAt(1), "use");
-  assert.equal(sceneAt(0.4), "explode");
-  assert.equal(sceneAt(0.75), "reveal");
+  assert.equal(sceneAt(0.25), "explode");
+  assert.equal(sceneAt(0.5), "reveal");
+  assert.equal(sceneAt(0.75), "layers");
 });
 
 test("localProgress is 0 before a scene, 1 after it and linear inside", () => {
-  assert.ok(Math.abs(localProgress(0.225, "meet") - 0.5) < 1e-9);
+  assert.ok(Math.abs(localProgress(at("meet", 0.5), "meet") - 0.5) < 1e-9);
   assert.equal(localProgress(0.1, "print"), 0);
   assert.equal(localProgress(0.9, "meet"), 1);
+});
+
+test("at is where a scene is part way through", () => {
+  assert.equal(at("meet", 0), SCENES[1].start);
+  assert.equal(at("use", 1), 1);
+  assert.ok(Math.abs(localProgress(at("plan", 0.3), "plan") - 0.3) < 1e-9);
 });
 
 test("smoothstep eases and clamps", () => {

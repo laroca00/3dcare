@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Group, Vector3 } from "three";
 import { centerAmount, easeOutBack, explodeAmount, setExplode, spinTurn, type ExplodablePart } from "./explode.ts";
+import { at } from "./timeline.ts";
 
 function part(home: [number, number, number], dir: [number, number, number]): ExplodablePart {
   const object = new Group();
@@ -49,11 +50,11 @@ test("easeOutBack overshoots before settling at 1", () => {
 });
 
 /** Story progress at a point inside the explode and print scenes. */
-const apart = (t: number) => 0.31 + 0.18 * t;
-const printing = (t: number) => 0.49 + 0.2 * t;
+const apart = (t: number) => at("explode", t);
+const printing = (t: number) => at("print", t);
 
 test("the printer comes apart in the second half of the explode scene and back together early in the print scene", () => {
-  assert.equal(explodeAmount(0.25), 0);
+  assert.equal(explodeAmount(at("meet", 0.5)), 0);
   assert.ok(explodeAmount(apart(0.35)) < 1e-9);
   assert.ok(Math.abs(explodeAmount(apart(0.6)) - 0.5) < 1e-9);
   assert.equal(explodeAmount(apart(1)), 1);
@@ -63,8 +64,8 @@ test("the printer comes apart in the second half of the explode scene and back t
 });
 
 test("the printer turns once on its axis while it moves to the middle, before it comes apart", () => {
-  assert.equal(centerAmount(0.25), 0);
-  assert.equal(spinTurn(0.25), 0);
+  assert.equal(centerAmount(at("meet", 0.5)), 0);
+  assert.equal(spinTurn(at("meet", 0.5)), 0);
   const settled = apart(0.5);
   assert.equal(centerAmount(settled), 1);
   assert.ok(Math.abs(spinTurn(settled) - Math.PI * 2) < 1e-9);

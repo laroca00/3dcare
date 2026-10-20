@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, labelOpacity, nozzlePath, printProgress, endingMotion, revealMotion, slicerProgress, slicerPanel, screenZoom } from "./storyMotion.ts";
+import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, heroLooks, labelOpacity, nozzlePath, printProgress, endingMotion, revealMotion, slicerProgress, slicerPanel, screenZoom } from "./storyMotion.ts";
+import { at } from "./timeline.ts";
 
 test("labels appear once the printer is more than half apart", () => {
   assert.equal(labelOpacity(0), 0);
@@ -10,22 +11,22 @@ test("labels appear once the printer is more than half apart", () => {
 });
 
 test("printing starts after the printer is back together and finishes before the scene ends", () => {
-  assert.equal(printProgress(0.5), 0);
-  assert.equal(printProgress(0.685), 1);
-  assert.ok(printProgress(0.62) > 0 && printProgress(0.62) < 1);
+  assert.equal(printProgress(at("print", 0.1)), 0);
+  assert.equal(printProgress(at("print", 0.97)), 1);
+  assert.ok(printProgress(at("print", 0.65)) > 0 && printProgress(at("print", 0.65)) < 1);
 });
 
 test("the camera moves in to the screen for slicing, then pulls back as the toolpaths and the print begin", () => {
-  const at = (t: number) => 0.49 + 0.2 * t;
-  assert.equal(screenZoom(at(0.1)), 0);
-  assert.equal(screenZoom(at(0.3)), 1);
-  assert.equal(slicerPanel(at(0.3)), 1);
-  assert.equal(slicerPanel(at(0.45)), 0);
-  assert.equal(slicerProgress(at(0.39)), 0);
-  assert.equal(slicerProgress(at(0.49)), 1);
-  assert.equal(screenZoom(at(0.5)), 0);
-  assert.equal(printProgress(at(0.47)), 0);
-  assert.ok(printProgress(at(0.6)) > 0);
+  const inPrint = (t: number) => at("print", t);
+  assert.equal(screenZoom(inPrint(0.1)), 0);
+  assert.equal(screenZoom(inPrint(0.3)), 1);
+  assert.equal(slicerPanel(inPrint(0.3)), 1);
+  assert.equal(slicerPanel(inPrint(0.45)), 0);
+  assert.equal(slicerProgress(inPrint(0.39)), 0);
+  assert.equal(slicerProgress(inPrint(0.49)), 1);
+  assert.equal(screenZoom(inPrint(0.5)), 0);
+  assert.equal(printProgress(inPrint(0.47)), 0);
+  assert.ok(printProgress(inPrint(0.6)) > 0);
 });
 
 test("the nozzle starts on the first layer and ends on the last", () => {
@@ -66,4 +67,20 @@ test("in the last scene the mug reaches the table before coffee is poured and st
   assert.ok(landed.travel === 1 && landed.pour > 0 && landed.steam === 0);
   assert.deepEqual(end, { travel: 1, bounce: 0, pour: 1, steam: 1 });
   assert.ok(endingMotion(0.6).bounce > 0);
+});
+
+test("the four looks at the mug each show inside their own scene", () => {
+  const before = heroLooks(at("reveal", 0.9));
+  const after = heroLooks(at("use", 0.2));
+  for (const looks of [before, after]) {
+    assert.equal(looks.thermal + looks.plan + looks.macro + looks.material + looks.hero, 0);
+  }
+  assert.equal(heroLooks(at("heat", 0.5)).thermal, 1);
+  assert.equal(heroLooks(at("plan", 0)).gather, 0);
+  assert.equal(heroLooks(at("plan", 0.8)).gather, 1);
+  assert.equal(heroLooks(at("layers", 0)).macro, 0);
+  assert.equal(heroLooks(at("layers", 0.5)).macro, 1);
+  assert.equal(heroLooks(at("layers", 1)).macro, 0);
+  assert.equal(heroLooks(at("material", 0.5)).material, 1);
+  assert.equal(heroLooks(at("plan", 0.5)).hero, 1);
 });
