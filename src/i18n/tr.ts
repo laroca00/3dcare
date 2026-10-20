@@ -62,6 +62,7 @@ export const tr: typeof en = {
       partsListTitle: "Yazıcının parçaları",
       chapters: "Hikâyenin adımları",
       scrollHint: "Devam etmek için kaydırın",
+      glowHint: { pointer: "İmleci kupanın üzerine getirin", touch: "Kupaya basılı tutun" },
       dragHint: { printer: "Parçayı ya da yazıcıyı sürükleyerek döndürün · bilgi için bir parçaya tıklayın", mug: "Kupayı döndürmek için sürükleyin" },
       souvenir: {
         cta: "Kupa kartını al",

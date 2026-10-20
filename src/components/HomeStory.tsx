@@ -174,7 +174,11 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       const caption = Math.min(smoothstep(apart / 0.12), 1 - smoothstep((apart - 0.88) / 0.12));
       section.style.setProperty("--caption", String(caption));
       // When the mug takes over, its text is a caption under it, with the giant line.
-      revealCaption.style.setProperty("--caption", String(revealMotion(localProgress(progress, "reveal")).type));
+      const hero = revealMotion(localProgress(progress, "reveal")).type;
+      revealCaption.style.setProperty("--caption", String(hero));
+      // While the mug stands in front of the line, it invites a touch.
+      if (live && hero > 0.6) section.dataset.hero = "1";
+      else delete section.dataset.hero;
       // The slicer panel opens before printing; it can be used only while it shows.
       const panel = slicerPanel(progress);
       section.style.setProperty("--slicer", String(panel));
@@ -243,6 +247,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           for (const part of PART_IDS) labelRefs.current[part]?.classList.toggle("story__label--hot", part === id);
         },
         onSelectPart: setSelected,
+        onTouchMug(touching) {
+          if (touching) section.dataset.glow = "1";
+          else delete section.dataset.glow;
+        },
         onScreen(corners) {
           // The slicer sits on the printer's screen, in perspective.
           const screen = screenRef.current;
@@ -466,6 +474,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         style={{ "--poster-light": `url(${POSTERS.light.src})`, "--poster-dark": `url(${POSTERS.dark.src})` } as CSSProperties}
       >
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
+        {/* Colour floods in from the screen's edges while the visitor touches the freshly printed mug. */}
+        <div className="story__glow" aria-hidden="true" />
         <div className="story__fade" aria-hidden="true" />
         {/* The story is also how a model is made: its four steps, the current one underlined. */}
         <nav className="story__chapters" aria-label={t.story.chapters}>
@@ -521,6 +531,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         </div>
         <p className="story__hint story__hint--mug" aria-hidden="true">
           {t.story.dragHint.mug}
+        </p>
+        <p className="story__hint story__hint--glow" aria-hidden="true">
+          <span className="story__hint-pointer">{t.story.glowHint.pointer}</span>
+          <span className="story__hint-touch">{t.story.glowHint.touch}</span>
         </p>
         {/* While the printer is apart in the middle of the stage, its text is a caption at the bottom. */}
         <div className="story__caption" aria-hidden="true">

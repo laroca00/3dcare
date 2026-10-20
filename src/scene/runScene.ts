@@ -56,6 +56,8 @@ export interface SceneOptions {
    * (top left, top right, bottom left, bottom right), while the camera is up close to it.
    */
   onScreen?: (corners: [Point, Point, Point, Point] | null) => void;
+  /** Called when the pointer moves onto or off the freshly printed mug (or a finger presses it), while it stands in front of the giant line. */
+  onTouchMug?: (touching: boolean) => void;
 }
 
 export type GrabTarget = "printer" | "mug";
@@ -446,7 +448,25 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     opts.onHoverPart?.(part?.id ?? null);
   }
 
+  // While the mug stands in front of the giant line, pointing at it (or
+  // pressing it on a touch screen) lights the screen's edges.
+  let heroMug = false;
+  let touchingMug = false;
+  function mugAt(e: PointerEvent) {
+    const rect = canvas.getBoundingClientRect();
+    pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    raycaster.setFromCamera(pointer, camera);
+    return raycaster.intersectObject(job.object, true).length > 0;
+  }
+  function setTouchingMug(touching: boolean) {
+    if (touching === touchingMug) return;
+    touchingMug = touching;
+    canvas.dataset.mug = touching ? "1" : "";
+    opts.onTouchMug?.(touching);
+  }
+
   function onPointerDown(e: PointerEvent) {
+    if (heroMug && e.button === 0 && mugAt(e)) setTouchingMug(true);
     if (!grabbable || e.button !== 0) return;
     const part = grabbable === "printer" ? partAt(e) : null;
     if (part) setHovered(part);
@@ -462,6 +482,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     canvas.dataset.dragging = "1";
   }
   function onPointerMove(e: PointerEvent) {
+    if (heroMug && (e.pointerType === "mouse" || touchingMug)) setTouchingMug(mugAt(e));
     const turned = drag.spin;
     if (!turned) {
       if (grabbable === "printer" && e.pointerType === "mouse") setHovered(partAt(e));
@@ -477,6 +498,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     handle.invalidate();
   }
   function onPointerUp(e: PointerEvent) {
+    if (e.pointerType !== "mouse") setTouchingMug(false);
     if (!drag.spin) return;
     // A press without a drag is a click: it opens the part's card, or closes it on empty space.
     if (grabbable === "printer" && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 6) {
@@ -489,6 +511,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     handle.invalidate();
   }
   function onPointerLeave() {
+    setTouchingMug(false);
     if (!drag.spin) setHovered(null);
   }
   canvas.addEventListener("pointerdown", onPointerDown);
@@ -639,6 +662,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     lineup.object.updateMatrixWorld();
     lineup.setReveal((outro - 0.08) / 0.5);
     placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5);
+    heroMug = reveal.type > 0.6 && !opts.frozen;
+    if (!heroMug) setTouchingMug(false);
     // The line sits a little above the mug's middle, so the mug covers the lower half of the letters.
     giantType.update(camera, typeCenter.copy(mugMiddle).setY(mugMiddle.y + 2.5), TYPE_BEHIND, reveal.type, wide);
     // The light follows the story, from a cool blueprint to a warm morning.

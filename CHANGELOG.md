@@ -7,6 +7,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-20
 
+### Light from the edges
+- While the freshly printed mug stands in front of the giant line, pointing
+  at it (or pressing and holding it on a touch screen) floods the edges of
+  the screen with the project's teal, violet and yellow, leaving the mug and
+  the line clear. A small hint invites the visitor to try it.
+
 ### The mug takes over
 - After the print, the home story hands over from the printer to the mug:
   the print head lifts away, the mug rises off the bed towards the visitor

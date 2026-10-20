@@ -394,6 +394,10 @@ main:focus {
   cursor: grab;
 }
 
+.story__canvas[data-mug="1"] {
+  cursor: pointer;
+}
+
 .story__canvas[data-dragging] {
   cursor: grabbing;
 }
@@ -419,6 +423,78 @@ main:focus {
 .story[data-grab="mug"] .story__hint--mug {
   opacity: 1;
   transform: none;
+}
+
+.story[data-hero] .story__hint--glow {
+  opacity: 1;
+  transform: none;
+}
+
+/* Fine pointers point at the mug; touch screens press it. */
+.story__hint-touch {
+  display: none;
+}
+
+@media (hover: none) {
+  .story__hint-pointer {
+    display: none;
+  }
+
+  .story__hint-touch {
+    display: inline;
+  }
+}
+
+.story[data-glow] .story__hint--glow {
+  opacity: 0;
+}
+
+/* The project's three colours flood in from the screen's edges, leaving the
+   middle (the mug and the line) clear, and breathe slowly while lit. */
+.story__glow {
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(60% 55% at 0% 100%, var(--violet), transparent 70%),
+    radial-gradient(55% 60% at 100% 0%, #f5c400, transparent 70%),
+    radial-gradient(60% 60% at 100% 100%, var(--teal), transparent 72%),
+    radial-gradient(55% 55% at 0% 0%, var(--teal), transparent 70%);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 45%, #000 100%);
+  mask-image: radial-gradient(closest-side, transparent 45%, #000 100%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: scale(1.12);
+  transition: opacity 0.7s ease, transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+
+.story[data-glow] .story__glow {
+  opacity: 1;
+  transform: scale(1);
+  animation: story-glow 3.2s ease-in-out 0.9s infinite alternate;
+}
+
+@keyframes story-glow {
+  to {
+    opacity: 0.65;
+    transform: scale(1.04);
+  }
+}
+
+:root[data-theme="light"] .story__glow {
+  mix-blend-mode: multiply;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .story__glow {
+    mix-blend-mode: multiply;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story[data-glow] .story__glow {
+    animation: none;
+  }
 }
 
 :root[data-story-still] .story__hint {
