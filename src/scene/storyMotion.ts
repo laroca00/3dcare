@@ -53,13 +53,17 @@ export function nozzlePath(t: number): { x: number; y: number; z: number; layer:
 /**
  * The mug takes over, r = 0..1: the print head lifts away, the mug rises off
  * the bed towards the camera turning once, and the giant line glows behind it.
+ * Once it has stopped turning, a hand reaches in (reach), closes its fingers
+ * round a handle (grip), and lets go again before the scene ends.
  */
-export function revealMotion(r: number): { lift: number; rise: number; turn: number; type: number } {
+export function revealMotion(r: number): { lift: number; rise: number; turn: number; type: number; reach: number; grip: number } {
   return {
     lift: smoothstep(r / 0.2),
     rise: smoothstep((r - 0.1) / 0.4),
-    turn: smoothstep((r - 0.1) / 0.8) * Math.PI * 2,
+    turn: smoothstep((r - 0.1) / 0.5) * Math.PI * 2,
     type: Math.min(smoothstep((r - 0.25) / 0.2), 1 - smoothstep((r - 0.85) / 0.15)),
+    reach: Math.min(smoothstep((r - 0.5) / 0.22), 1 - smoothstep((r - 0.88) / 0.12)),
+    grip: Math.min(smoothstep((r - 0.66) / 0.1), 1 - smoothstep((r - 0.84) / 0.06)),
   };
 }
 

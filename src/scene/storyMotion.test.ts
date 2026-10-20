@@ -53,10 +53,22 @@ test("when the mug takes over, the head lifts first, then the mug rises and turn
   const early = revealMotion(0.15);
   const middle = revealMotion(0.6);
   const end = revealMotion(1);
-  assert.deepEqual(start, { lift: 0, rise: 0, turn: 0, type: 0 });
+  assert.deepEqual(start, { lift: 0, rise: 0, turn: 0, type: 0, reach: 0, grip: 0 });
   assert.ok(early.lift > early.rise && early.type === 0);
   assert.ok(middle.rise === 1 && middle.type === 1);
   assert.ok(Math.abs(end.turn - Math.PI * 2) < 1e-9 && end.type === 0);
+});
+
+test("a hand reaches for the mug once it has stopped turning, holds it, and lets go before the scene ends", () => {
+  assert.equal(revealMotion(0.5).reach, 0);
+  assert.ok(Math.abs(revealMotion(0.6).turn - Math.PI * 2) < 1e-9, "the mug has stopped turning");
+  const holding = revealMotion(0.8);
+  assert.equal(holding.reach, 1);
+  assert.equal(holding.grip, 1);
+  assert.ok(revealMotion(0.7).grip < 1, "the fingers close after the hand arrives");
+  const end = revealMotion(1);
+  assert.equal(end.reach, 0);
+  assert.equal(end.grip, 0);
 });
 
 test("in the last scene the mug reaches the table before coffee is poured and steam rises", () => {

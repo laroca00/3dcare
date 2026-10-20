@@ -258,6 +258,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         getOutro: () => outro,
         labels: t.story.labels,
         giantType: t.story.scenes[4].title,
+        handUrl: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/3d/first-person-hands.glb`,
         isVisible: () => visible,
         frozen: fixed !== null,
         onGrabbable(target) {

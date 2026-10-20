@@ -14,6 +14,7 @@ import { centerAmount, explodeAmount, setExplode, spinTurn } from "./explode";
 import type { MugShapeId } from "./mugShapes";
 import type { PartId } from "./parts";
 import { TYPE_LAYER, createGiantType } from "./giantType";
+import { type Hand, loadHand } from "./hand";
 import { createPrintJob } from "./printJob";
 import { BED_SURFACE_Y, NOZZLE_HOME, SCREEN_SIZE, buildPrinter, type PrinterPart } from "./printer";
 import type { Point } from "./quadTransform";
@@ -68,6 +69,8 @@ export interface SceneOptions {
   onTouchMug?: (touching: boolean) => void;
   /** Called after each frame with where the mug is on the canvas, while its plan or its layers are shown (null otherwise). */
   onMug?: (frame: MugFrame | null) => void;
+  /** Where the hand that reaches for the mug is loaded from. */
+  handUrl?: string;
 }
 
 /**
@@ -215,6 +218,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const drawing = createDrawing(printer, opts.theme);
   await yieldToMain();
   const job = createPrintJob(printer.bedSurface, opts.quality);
+  // Loads alongside the rest of the set-up.
+  const handLoading = opts.handUrl ? loadHand(opts.handUrl).catch(() => null) : Promise.resolve(null);
+  let hand: Hand | null = null;
   const steam = createSteam(opts.theme);
   // The closing: the project's other nine tools, sketched beside the mug.
   const lineup = createLineup(opts.theme);
@@ -589,7 +595,13 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     if (touching === touchingMug) return;
     touchingMug = touching;
     canvas.dataset.mug = touching ? "1" : "";
-    opts.onTouchMug?.(touching);
+    opts.onTouchMug?.(touchingMug || handHolding);
+  }
+  let handHolding = false;
+  function setHandHolding(holding: boolean) {
+    if (holding === handHolding) return;
+    handHolding = holding;
+    opts.onTouchMug?.(touchingMug || handHolding);
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -780,17 +792,23 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     );
     // Ends with a handle on each side, as seen from the camera.
     job.object.rotation.y = reveal.turn + smoothstep(u / 0.5) * 0.2 + mugSpin.yaw;
-    // While it is looked at, the mug turns its logo to the camera, so its
-    // plan shows a handle on each side; up close it turns a little further,
-    // so the camera finds plain wall between the logo and a handle.
+    // Once it has stopped turning, and while it is looked at, the mug turns
+    // its logo to the camera, so a hand can reach the handle on the right and
+    // its plan shows a handle on each side; up close it turns a little
+    // further, so the camera finds plain wall between the logo and a handle.
+    // It lets go of that pose as it goes down to the table.
     const looks = heroLooks(p);
-    if (looks.hero > 0) {
+    const facingCamera = Math.max(smoothstep(looks.hero), smoothstep((r - 0.55) / 0.15) * (1 - smoothstep(u / 0.4)));
+    if (facingCamera > 0) {
       stage.updateMatrixWorld(true);
       job.object.getWorldQuaternion(mugTurn);
       mugFront.set(0, 0, 1).applyQuaternion(mugTurn);
       const facing = Math.atan2(revealDir.x, revealDir.z) - Math.atan2(mugFront.x, mugFront.z) + Math.PI * 0.28 * smoothstep(looks.macro);
-      job.object.rotation.y += Math.atan2(Math.sin(facing), Math.cos(facing)) * smoothstep(looks.hero);
+      job.object.rotation.y += Math.atan2(Math.sin(facing), Math.cos(facing)) * facingCamera;
     }
+    hand?.update(reveal.reach, reveal.grip);
+    // While the hand holds the mug, the screen's edges light up as if the visitor touched it.
+    setHandHolding(reveal.grip > 0.9 && !opts.frozen);
     job.setLooks(looks.thermal, looks.cool, looks.macro);
     job.setCoffee(end.pour);
     stage.updateMatrixWorld(true);
@@ -873,6 +891,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     },
     setShape(id) {
       job.setShape(id);
+      hand?.setShape(id);
       handle.invalidate();
     },
     snapshot() {
@@ -914,6 +933,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       lineup.dispose();
       giantType.dispose();
       desk.dispose();
+      hand?.dispose();
       composer.dispose();
       bokeh.dispose();
       studio.dispose();
@@ -922,6 +942,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   };
 
   resize();
+  // The hand joins the mug once it has loaded; the story works without it.
+  hand = await handLoading;
+  if (hand) job.object.add(hand.object);
   // Compile shaders in parallel where supported, so the first frame does not stall.
   await renderer.compileAsync(scene, camera);
   resizeObserver.observe(canvas);

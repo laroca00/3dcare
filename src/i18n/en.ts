@@ -141,7 +141,7 @@ export const en = {
         "A desktop 3D printer lit from the side in a studio.",
         "The printer taken apart: base, heated bed, frame, moving axis, print head, filament spool and screen.",
         "The printer printing a two-handled mug layer by layer.",
-        "The freshly printed two-handled mug floating in front of the dark printer, with the words “Just printed” glowing behind it.",
+        "The freshly printed two-handled mug floating in front of the dark printer, with the words “Just printed” glowing behind it, as a hand reaches for its handle.",
         "Thermal view of the mug: the base glows hot, the handles are cooler.",
         "Technical drawing of the mug with its measurements; the drawing's construction circles form the words 3D CARE above it.",
         "Close-up of the mug's wall: fine 0.3 mm layer lines.",
@@ -325,5 +325,6 @@ export const en = {
     privacy: "Privacy",
     accessibility: "Accessibility",
     source: "Source code and model files on GitHub",
+    handCredit: { before: "3D hand in the home story:", title: "First Person hands rigged", by: "by David Fischer", license: "CC BY 4.0" },
   },
 };

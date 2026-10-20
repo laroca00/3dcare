@@ -7,6 +7,17 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-20
 
+### A hand reaches for the mug
+- In "Just printed", once the mug has stopped turning it faces the
+  camera, and a hand reaches in from the right, closes its fingers round
+  the handle (the loop, or the T-grip if the visitor chose it) and lets go
+  again before the thermal view. While it holds the mug, the screen's edges
+  light up in the project's colours, as when the visitor touches the mug.
+- The hand is the free model "First Person hands rigged" by David Fischer
+  (CC BY 4.0, on Sketchfab); the footer credits it on every page. It loads
+  with the 3D scene, and the story works without it if it cannot load.
+- The still frame for this moment shows the hand.
+
 ### Choose the grip
 - The slicer on the printer's screen now offers three grips besides the
   colour: two handles, one handle, or a T-grip on each side to close a fist

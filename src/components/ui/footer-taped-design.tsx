@@ -7,6 +7,7 @@ import emblemTr from "@/assets/eu/co-funded-tr-neg.png";
 import { LogoMark } from "../Logo";
 
 const REPO_URL = "https://github.com/laroca00/3dcare";
+const HAND_URL = "https://sketchfab.com/3d-models/first-person-hands-rigged-547a45535f0c4fe787948f7a7a6a88db";
 
 // Official "Co-funded by the European Union" emblems (negative version for dark
 // backgrounds) from the European Commission download centre.
@@ -153,6 +154,13 @@ export function TapedFooter({ lang, t }: { lang: Locale; t: Dictionary }) {
           </li>
         </ul>
       </div>
+      {/* The hand model's licence (CC BY 4.0) asks for this credit. */}
+      <p className="m-0 mt-3 px-2 text-xs text-muted-foreground md:px-8">
+        {t.footer.handCredit.before} <a className="text-muted-foreground" href={HAND_URL}>“{t.footer.handCredit.title}”</a> {t.footer.handCredit.by},{" "}
+        <a className="text-muted-foreground" href="https://creativecommons.org/licenses/by/4.0/">
+          {t.footer.handCredit.license}
+        </a>
+      </p>
     </footer>
   );
 }

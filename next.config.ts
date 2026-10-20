@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
   basePath,
+  // Files in public/ that the browser's own code loads need the base path too.
+  env: { NEXT_PUBLIC_BASE_PATH: basePath },
   images: { unoptimized: true },
   // One 404 page for every unknown address (see src/app/global-not-found.tsx).
   experimental: { globalNotFound: true },

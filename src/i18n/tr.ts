@@ -143,7 +143,7 @@ export const tr: typeof en = {
         "Stüdyoda yandan aydınlatılmış bir masaüstü 3D yazıcı.",
         "Parçalarına ayrılmış yazıcı: gövde, ısıtmalı tabla, çerçeve, hareketli eksen, baskı kafası, filament makarası ve ekran.",
         "Yazıcı çift kulplu bir kupayı katman katman basıyor.",
-        "Yeni basılmış çift kulplu kupa karanlıktaki yazıcının önünde duruyor; arkasında “Az önce basıldı” yazısı parlıyor.",
+        "Yeni basılmış çift kulplu kupa karanlıktaki yazıcının önünde duruyor; arkasında “Az önce basıldı” yazısı parlıyor, bir el kulpuna uzanıyor.",
         "Kupanın termal görüntüsü: taban sıcak parlıyor, kulplar daha serin.",
         "Kupanın ölçülü teknik çizimi; çizimdeki yardımcı çemberler üstte 3D CARE yazısını oluşturuyor.",
         "Kupa duvarının yakın çekimi: 0,3 mm'lik ince katman çizgileri.",
@@ -327,5 +327,6 @@ export const tr: typeof en = {
     privacy: "Gizlilik",
     accessibility: "Erişilebilirlik",
     source: "Kaynak kodu ve model dosyaları GitHub'da",
+    handCredit: { before: "Ana sayfa hikâyesindeki 3D el:", title: "First Person hands rigged", by: "David Fischer", license: "CC BY 4.0" },
   },
 };
