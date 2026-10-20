@@ -7,6 +7,15 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-20
 
+### Story chapters and progress
+- The step chip at the top of the home story became a row of the four
+  steps of making a model. The current step is underlined, and clicking a
+  step scrolls to where it begins. On phones only the current step shows
+  its name.
+- A thin bar on the right edge fills as the story goes on, and a "Scroll to
+  continue" hint at the bottom of the first screen fades once the visitor
+  starts scrolling.
+
 ### A real-looking open printer
 - The 3D printer in the home page story was rebuilt as an open-hardware "i3"
   printer of the kind adult education centres use: black aluminium

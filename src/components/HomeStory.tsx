@@ -45,11 +45,16 @@ const DELIVER_ICONS = [
   "M3 11l9-7 9 7v9H3zM9 20v-5h6v5",
 ];
 
+/** Story progress at which steps 2 and 3 of making a model begin; step 4 is the closing part. */
+const STEP_STARTS = [0.16, 0.84];
+/** Closing-part progress at which step 4 begins. */
+const OUTRO_STEP = 0.04;
+
 /** Which of the four steps of making a model the story is showing. */
 function stepAt(story: number, outro: number) {
-  if (outro > 0.04) return 4;
-  if (story < 0.16) return 1;
-  if (story < 0.84) return 2;
+  if (outro > OUTRO_STEP) return 4;
+  if (story < STEP_STARTS[0]) return 1;
+  if (story < STEP_STARTS[1]) return 2;
   return 3;
 }
 
@@ -149,9 +154,13 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         const rect = section.getBoundingClientRect();
         const scrollable = rect.height - window.innerHeight;
         storyShareRef.current = scrollable > 0 ? (scrollable - outroBeat.offsetHeight) / scrollable : 1;
-        const split = splitProgress(progressFor(rect.top, rect.height, window.innerHeight), storyShareRef.current);
+        const overall = progressFor(rect.top, rect.height, window.innerHeight);
+        const split = splitProgress(overall, storyShareRef.current);
         progress = split.story;
         outro = split.outro;
+        // The thin bar on the right fills with the whole section; the scroll hint goes once the visitor starts.
+        section.style.setProperty("--progress", String(overall));
+        section.style.setProperty("--scroll-hint", String(1 - smoothstep(overall / 0.015)));
       }
       outroBeat.style.setProperty("--reveal", String(outro * 2.2));
       // At the very end the stage fades into the page.
@@ -363,6 +372,15 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     takeOver.forEach((type) => window.addEventListener(type, stop, { passive: true }));
   }
 
+  /** Scrolls to where one of the four steps begins. */
+  function goToStep(index: number) {
+    const section = sectionRef.current!;
+    const share = storyShareRef.current;
+    const at = index === 0 ? 0 : index < 3 ? STEP_STARTS[index - 1] * share : share + OUTRO_STEP * 1.5 * (1 - share);
+    const top = section.getBoundingClientRect().top + window.scrollY + at * (section.offsetHeight - window.innerHeight);
+    window.scrollTo({ top: Math.ceil(top) + 2, behavior: "smooth" });
+  }
+
   /** Makes the souvenir card from a picture of the mug as it is on the table now. */
   async function openSouvenir() {
     const picture = sceneRef.current?.snapshot();
@@ -444,16 +462,27 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       >
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
         <div className="story__fade" aria-hidden="true" />
-        {/* The story is also how a model is made: which of the four steps it is showing. */}
-        <p className="story__step" aria-hidden="true">
-          <span className="story__step-dots">
-            {t.process.map((_, i) => (
-              <span key={i} className={i < step ? "is-done" : undefined} />
+        {/* The story is also how a model is made: its four steps, the current one underlined. */}
+        <nav className="story__chapters" aria-label={t.story.chapters}>
+          <ol>
+            {t.process.map((item, i) => (
+              <li key={item.title}>
+                <button
+                  type="button"
+                  className={i < step ? "is-done" : undefined}
+                  aria-current={step === i + 1 ? "step" : undefined}
+                  onClick={() => goToStep(i)}
+                >
+                  <span className="story__chapter-number">0{i + 1}</span>
+                  <span className="story__chapter-name">{item.title}</span>
+                </button>
+              </li>
             ))}
-          </span>
-          <span key={step} className="story__step-name">
-            {step}/4 · {t.process[step - 1].title}
-          </span>
+          </ol>
+        </nav>
+        <div className="story__progress" aria-hidden="true" />
+        <p className="story__scroll-hint" aria-hidden="true">
+          <span>{t.story.scrollHint}</span>
         </p>
         <svg className="story__leaders" aria-hidden="true">
           {PART_IDS.map((id) => (

@@ -531,6 +531,8 @@ main:focus {
 
 .story__beat--intro {
   min-height: 150svh;
+  /* Clear of the chapters row under the navigation. */
+  padding-top: max(12svh, 136px);
   opacity: 1;
 }
 
@@ -874,56 +876,149 @@ main:focus {
   pointer-events: none;
 }
 
-/* Which of the four steps of making a model the story is showing. */
-.story__step {
+/* The four steps of making a model, as the story's chapters; the current one is underlined. */
+.story__chapters {
   position: absolute;
   top: 84px;
   left: max(var(--gutter, 16px), calc((100% - 1120px) / 2 + var(--gutter, 16px)));
+  opacity: calc(1 - var(--fade, 0));
+}
+
+.story__chapters ol {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 2px;
   margin: 0;
-  padding: 6px 14px 6px 10px;
+  padding: 4px;
+  list-style: none;
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface) 78%, transparent);
   backdrop-filter: blur(8px);
-  color: var(--ink);
+}
+
+.story__chapters button {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  font: inherit;
   font-size: 0.82rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.story__chapters button:hover,
+.story__chapters button[aria-current] {
+  color: var(--ink);
+}
+
+.story__chapters button:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.story__chapter-number {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.story__chapters .is-done .story__chapter-number {
+  color: var(--teal);
+}
+
+.story__chapter-name {
+  background: linear-gradient(currentColor, currentColor) left bottom / 0 1.5px no-repeat;
+  transition: background-size 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.story__chapters [aria-current] .story__chapter-name {
+  background-size: 100% 1.5px;
+}
+
+/* On narrow screens only the current step keeps its name. */
+@media (max-width: 899px) {
+  .story__chapters button:not([aria-current]) .story__chapter-name {
+    display: none;
+  }
+}
+
+/* A thin bar down the right edge fills as the story goes on. */
+.story__progress {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 2px;
+  height: min(40svh, 320px);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink) 14%, transparent);
+  transform: translateY(-50%);
   opacity: calc(1 - var(--fade, 0));
   pointer-events: none;
 }
 
-.story__step-dots {
-  display: inline-flex;
-  gap: 4px;
-}
-
-.story__step-dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ink) 22%, transparent);
-  transition: background-color 0.3s ease;
-}
-
-.story__step-dots .is-done {
+.story__progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   background: var(--teal);
+  transform: scaleY(var(--progress, 0));
+  transform-origin: top;
 }
 
-.story__step-name {
-  animation: story-step-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+/* At the top of the page: a nudge to start scrolling. */
+.story__scroll-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 3svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: var(--scroll-hint, 1);
+  transform: translate(-50%, calc((1 - var(--scroll-hint, 1)) * 10px));
+  pointer-events: none;
 }
 
-@keyframes story-step-in {
+.story__scroll-hint::after {
+  content: "";
+  width: 1.5px;
+  height: 28px;
+  background: linear-gradient(currentColor, currentColor) top / 100% 40% no-repeat;
+  animation: story-scroll-hint 1.8s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+}
+
+@keyframes story-scroll-hint {
   from {
-    opacity: 0;
-    transform: translateY(6px);
+    background-position: 0 -12px;
+  }
+  to {
+    background-position: 0 30px;
   }
 }
 
-.story--stills .story__step,
-:root[data-story-still] .story__step,
+@media (prefers-reduced-motion: reduce) {
+  .story__scroll-hint::after {
+    animation: none;
+  }
+}
+
+.story--stills .story__chapters,
+.story--stills .story__progress,
+.story--stills .story__scroll-hint,
+:root[data-story-still] .story__chapters,
+:root[data-story-still] .story__progress,
+:root[data-story-still] .story__scroll-hint,
 :root[data-story-still] .story__fade {
   display: none;
 }

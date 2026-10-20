@@ -56,6 +56,8 @@ export const tr: typeof en = {
         display: "Kontrol ekranı",
       },
       partsListTitle: "Yazıcının parçaları",
+      chapters: "Hikâyenin adımları",
+      scrollHint: "Devam etmek için kaydırın",
       dragHint: { printer: "Parçayı ya da yazıcıyı sürükleyerek döndürün · bilgi için bir parçaya tıklayın", mug: "Kupayı döndürmek için sürükleyin" },
       souvenir: {
         cta: "Kupa kartını al",
