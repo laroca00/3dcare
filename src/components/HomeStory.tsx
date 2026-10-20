@@ -107,6 +107,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const slicerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const revealCaptionRef = useRef<HTMLDivElement>(null);
+  const selectionRef = useRef<HTMLDivElement>(null);
   const [filament, setFilament] = useState<FilamentId>("teal");
   const [step, setStep] = useState(1);
   // Share of the section's scroll that the story takes; the closing part has the rest.
@@ -250,6 +251,18 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         onTouchMug(touching) {
           if (touching) section.dataset.glow = "1";
           else delete section.dataset.glow;
+        },
+        onSelection(box, [width, depth, height]) {
+          // At the start the drawing is "selected", as in a design program, with its size.
+          const selection = selectionRef.current;
+          if (!selection) return;
+          selection.style.visibility = box ? "visible" : "hidden";
+          if (!box) return;
+          selection.style.transform = `translate(${box.x}px, ${box.y}px)`;
+          selection.style.width = `${box.width}px`;
+          selection.style.height = `${box.height}px`;
+          selection.style.opacity = String(box.opacity);
+          selection.dataset.size = `${width} × ${depth} × ${height} cm`;
         },
         onScreen(corners) {
           // The slicer sits on the printer's screen, in perspective.
@@ -476,6 +489,12 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
         {/* Colour floods in from the screen's edges while the visitor touches the freshly printed mug. */}
         <div className="story__glow" aria-hidden="true" />
+        {/* At the start the printer's drawing is selected, as in a design program. */}
+        <div className="story__selection" ref={selectionRef} aria-hidden="true" data-file={t.story.selectionFile}>
+          {["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
+            <span key={handle} className={`story__handle story__handle--${handle}`} />
+          ))}
+        </div>
         <div className="story__fade" aria-hidden="true" />
         {/* The story is also how a model is made: its four steps, the current one underlined. */}
         <nav className="story__chapters" aria-label={t.story.chapters}>

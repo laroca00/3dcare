@@ -398,6 +398,68 @@ main:focus {
   cursor: pointer;
 }
 
+/* At the start the printer's drawing is selected, as in a design program:
+   a thin frame with eight handles, the file name above and the size below. */
+.story__selection {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  border: 1px solid var(--violet);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.story__selection::before,
+.story__selection::after {
+  position: absolute;
+  left: -1px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.story__selection::before {
+  content: attr(data-file);
+  bottom: calc(100% + 6px);
+  background: var(--violet);
+  color: #fff;
+}
+
+.story__selection::after {
+  content: attr(data-size);
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--violet);
+  font-variant-numeric: tabular-nums;
+}
+
+.story__handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border: 1px solid var(--violet);
+  background: var(--paper);
+}
+
+.story__handle--nw { left: 0; top: 0; }
+.story__handle--n { left: 50%; top: 0; }
+.story__handle--ne { left: 100%; top: 0; }
+.story__handle--e { left: 100%; top: 50%; }
+.story__handle--se { left: 100%; top: 100%; }
+.story__handle--s { left: 50%; top: 100%; }
+.story__handle--sw { left: 0; top: 100%; }
+.story__handle--w { left: 0; top: 50%; }
+
+.story--stills .story__selection,
+:root[data-story-still] .story__selection {
+  display: none;
+}
+
 .story__canvas[data-dragging] {
   cursor: grabbing;
 }

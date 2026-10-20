@@ -61,6 +61,7 @@ export const en = {
       chapters: "Steps of the story",
       scrollHint: "Scroll to continue",
       glowHint: { pointer: "Point at the mug", touch: "Press and hold the mug" },
+      selectionFile: "printer.stl",
       dragHint: { printer: "Drag to turn a part or the printer · click a part to learn more", mug: "Drag to turn the mug" },
       souvenir: {
         cta: "Get your mug card",

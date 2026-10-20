@@ -7,6 +7,15 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-20
 
+### An opening desk
+- The home story now opens from above, on a designer's desk: the printer's
+  drawing lies on a cutting mat with a measuring grid, a pencil and a steel
+  ruler. A selection frame with handles marks the drawing, labelled with
+  its file name and its real size. As the visitor scrolls, the camera
+  comes down, the desk fades away and the drawing becomes the printer.
+- On phones the desk sits below the opening text so the two do not
+  overlap. The still frames were rendered again with the desk.
+
 ### Light from the edges
 - While the freshly printed mug stands in front of the giant line, pointing
   at it (or pressing and holding it on a touch screen) floods the edges of

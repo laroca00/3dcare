@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Theme } from "../theme/theme";
+import { createDesk } from "./desk";
 import { createDrawing } from "./drawing";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
@@ -56,6 +57,12 @@ export interface SceneOptions {
    * (top left, top right, bottom left, bottom right), while the camera is up close to it.
    */
   onScreen?: (corners: [Point, Point, Point, Point] | null) => void;
+  /**
+   * Called after each frame with where the printer's drawing is on the canvas,
+   * for the selection box drawn round it at the start (null once it has gone),
+   * and its size in cm (width, depth, height).
+   */
+  onSelection?: (box: { x: number; y: number; width: number; height: number; opacity: number } | null, size: [number, number, number]) => void;
   /** Called when the pointer moves onto or off the freshly printed mug (or a finger presses it), while it stands in front of the giant line. */
   onTouchMug?: (touching: boolean) => void;
 }
@@ -142,6 +149,9 @@ const REVEAL_ASIDE = 105;
 /** How far the camera is from the mug then; narrow screens need more room for the handles. */
 const REVEAL_DISTANCE_WIDE = 54;
 const REVEAL_DISTANCE_NARROW = 82;
+/** At the very top the camera looks down on the desk from here (relative to where it aims). */
+const DESK_WIDE = new THREE.Vector3(18, 205, 92);
+const DESK_NARROW = new THREE.Vector3(6, 420, 150);
 /** How far behind the mug the giant line glows. */
 const TYPE_BEHIND = 40;
 /** The close: where the camera ends up above the ten tools. */
@@ -162,6 +172,12 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const camera = new THREE.PerspectiveCamera(30, 1, 1, 1000);
 
   const printer = buildPrinter(opts.quality);
+  // The printer's own size (before the drawing and the print are added to it),
+  // for the selection box round its drawing at the start.
+  printer.root.updateMatrixWorld(true);
+  const printerBox = new THREE.Box3().setFromObject(printer.root).applyMatrix4(printer.root.matrixWorld.clone().invert());
+  const printerSize = printerBox.getSize(new THREE.Vector3());
+  const sizeCm: [number, number, number] = [Math.round(printerSize.x), Math.round(printerSize.z), Math.round(printerSize.y)];
   await yieldToMain();
   const stage = new THREE.Group();
   stage.add(printer.root);
@@ -177,6 +193,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   // The closing: the project's other nine tools, sketched beside the mug.
   const lineup = createLineup(opts.theme);
   stage.add(lineup.object);
+  // The opening desk under the drawing: a cutting mat, a pencil and a ruler.
+  const desk = createDesk(PRINTER_Y, opts.theme);
+  stage.add(desk.object);
   const giantType = await createGiantType(opts.giantType, opts.theme);
   scene.add(giantType.object);
   camera.layers.enable(TYPE_LAYER);
@@ -185,6 +204,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   stage.traverse((o) => {
     if ((o as THREE.Mesh).material instanceof LineMaterial) lineObjects.push(o);
   });
+  // The desk is flat on the floor; it stays out of the contact shadow too.
+  const noContactShadow = [...lineObjects, desk.object];
   scene.add(steam.object);
   camera.layers.enable(STEAM_LAYER);
   camera.layers.enable(FLOOR_LAYER);
@@ -328,7 +349,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const outroLook = new THREE.Vector3();
   const outroView = new THREE.Vector3();
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number) {
+  const deskEye = new THREE.Vector3();
+
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -336,6 +359,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const near = smoothstep(apart);
     camera.position.set(85 - near * 10, 46 - near * 6, (wide ? 140 : 190) + near * (wide ? 40 : 85));
     home.set(wide ? 20 * (1 - center) + near * 4 : near * 3, 2 - near * (wide ? 13 : 18), 0);
+    // At the very top the camera looks down on the desk, then comes down as the drawing becomes the printer.
+    if (above > 0) camera.position.lerp(deskEye.copy(home).add(wide ? DESK_WIDE : DESK_NARROW), smoothstep(above));
     // While printing, the camera swings slowly round the printer and back,
     // like a print time-lapse, coming a little closer on the way.
     const swing = Math.sin(Math.PI * printed);
@@ -350,6 +375,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     revealView.copy(mugMiddle).addScaledVector(revealDir, wide ? REVEAL_DISTANCE_WIDE : REVEAL_DISTANCE_NARROW).y += 3;
     camera.position.lerp(revealView, hero);
     lookAt.copy(home).lerp(mugMiddle, hero);
+    // On narrow screens the text fills the top, so the desk sits lower in the view.
+    if (!wide && above > 0) lookAt.z -= smoothstep(above) * 85;
     closeUp.copy(mug).add(wide ? CLOSE_UP_WIDE : CLOSE_UP_NARROW);
     camera.position.lerp(closeUp, push);
     mugFocus.copy(mug).add(wide ? FOCUS_WIDE : FOCUS_NARROW);
@@ -397,6 +424,26 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       return [((corner.x + 1) / 2) * w, ((1 - corner.y) / 2) * h] as Point;
     });
     opts.onScreen(corners as [Point, Point, Point, Point]);
+  }
+
+  const boxCorner = new THREE.Vector3();
+  /** Reports the outline of the drawing's footprint on the mat, while the selection box shows. */
+  function updateSelection(opacity: number) {
+    if (!opts.onSelection) return;
+    if (opacity <= 0) return opts.onSelection(null, sizeCm);
+    const { clientWidth: w, clientHeight: h } = canvas;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < 4; i++) {
+      boxCorner.set(i & 1 ? printerBox.max.x : printerBox.min.x, printerBox.min.y, i & 2 ? printerBox.max.z : printerBox.min.z);
+      printer.root.localToWorld(boxCorner).project(camera);
+      const x = ((boxCorner.x + 1) / 2) * w;
+      const y = ((1 - boxCorner.y) / 2) * h;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+    opts.onSelection({ x: minX, y: minY, width: maxX - minX, height: maxY - minY, opacity }, sizeCm);
   }
 
   function updateLabels(apart: number) {
@@ -575,6 +622,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     //    page, matching the poster frame shown before the scene loads.
     const draw = localProgress(p, "draw");
     drawing.setReveal(DRAWING_START + (1 - DRAWING_START) * smoothstep(draw / 0.6), smoothstep((draw - 0.55) / 0.45));
+    desk.setAmount(1 - smoothstep((draw - 0.5) / 0.45));
 
     // 2–3. Turn, then take apart.
     const apart = explodeAmount(p);
@@ -588,6 +636,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     stage.rotation.y =
       -0.7 + localProgress(p, "meet") * 1.4 + spinTurn(p) + localProgress(p, "explode") * 0.3 - localProgress(p, "print") * 0.3 + printerSpin.yaw;
     stage.rotation.x = printerSpin.pitch;
+    // The mat lies square to the view while the printer's drawing stands on it at an angle.
+    desk.object.rotation.y = -stage.rotation.y;
     setExplode(printer.parts, apart, 0.07);
     // Parts the visitor has turned, each around its own middle.
     for (const [part, turned] of partSpins) {
@@ -661,7 +711,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     lineup.object.rotation.y = -stage.rotation.y + 0.15;
     lineup.object.updateMatrixWorld();
     lineup.setReveal((outro - 0.08) / 0.5);
-    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5);
+    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8);
     heroMug = reveal.type > 0.6 && !opts.frozen;
     if (!heroMug) setTouchingMug(false);
     // The line sits a little above the mug's middle, so the mug covers the lower half of the letters.
@@ -688,7 +738,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // At the close everything comes into focus for the overview.
     const aperture = Math.max(mugBlur * 0.0004 * (1 - smoothstep(outro / 0.3)), focusAmount * 0.00022);
 
-    studio.renderShadow(lineObjects);
+    studio.renderShadow(noContactShadow);
     if (quality.level > 0) {
       bokeh.enabled = aperture > 0.000004;
       if (bokeh.enabled) {
@@ -707,6 +757,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       renderer.render(scene, camera);
     }
     updateLabels(apart);
+    updateSelection(1 - smoothstep(draw / 0.3));
     updateScreen(zoom);
     if (transitioning || turning || steaming || drifting || focusing || breathing) handle.invalidate();
   }
@@ -718,6 +769,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       steam.setTheme(theme);
       lineup.setTheme(theme);
       giantType.setTheme(theme);
+      desk.setTheme(theme);
       applyLens(theme);
       handle.invalidate();
     },
@@ -764,6 +816,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       steam.dispose();
       lineup.dispose();
       giantType.dispose();
+      desk.dispose();
       composer.dispose();
       bokeh.dispose();
       studio.dispose();
