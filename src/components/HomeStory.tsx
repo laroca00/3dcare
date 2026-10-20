@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import type { Dictionary, Locale } from "@/i18n/config";
 import { PART_IDS, type PartId } from "@/scene/parts";
+import { MUG_SHAPES, SHAPES, mugWidth, type MugShapeId } from "@/scene/mugShapes";
 import { initialQuality } from "@/scene/quality";
 import type { SceneHandle } from "@/scene/runScene";
 import { progressFor, splitProgress } from "@/scene/scrollProgress";
@@ -73,17 +74,21 @@ const PRINT_MS = 14000;
 const SCREEN_W = 760;
 const SCREEN_H = 420;
 
-/** The mug as the slicer draws it: one line per layer, with both handles. */
-function MugLayers({ color }: { color: string }) {
+/** The mug as the slicer draws it: one line per layer, with its handles (10 px per cm). */
+function MugLayers({ color, shape }: { color: string; shape: MugShapeId }) {
+  const { blocks, sides } = SHAPES[shape];
   const lines = [];
   for (let layer = 0; layer < LAYERS; layer++) {
     const y = 176 - layer * 5;
     lines.push(<line key={`w${layer}`} x1={70} x2={150} y1={y} y2={y} />);
-    const arm = [5, 6, 7, 22, 23, 24].includes(layer);
-    const grip = layer >= 8 && layer <= 21;
-    if (arm) lines.push(<line key={`a${layer}`} x1={36} x2={70} y1={y} y2={y} />, <line key={`b${layer}`} x1={150} x2={184} y1={y} y2={y} />);
-    if (grip) lines.push(<line key={`g${layer}`} x1={34} x2={44} y1={y} y2={y} />, <line key={`h${layer}`} x1={176} x2={186} y1={y} y2={y} />);
   }
+  blocks.forEach((b, i) => {
+    const y = 176 - b.layer * 5;
+    for (const side of sides) {
+      const [x1, x2] = [b.x - b.width / 2, b.x + b.width / 2].map((x) => 110 + side * Math.max(x, 4) * 10);
+      lines.push(<line key={`h${i}${side}`} x1={x1} x2={x2} y1={y} y2={y} />);
+    }
+  });
   return (
     <svg className="story__screen-mug" viewBox="0 0 220 200" aria-hidden="true" stroke={color} strokeWidth="2.4" strokeLinecap="round">
       {lines}
@@ -120,6 +125,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const planRef = useRef<SVGSVGElement>(null);
   const scaleRef = useRef<HTMLDivElement>(null);
   const [filament, setFilament] = useState<FilamentId>("teal");
+  const [shape, setShape] = useState<MugShapeId>("double");
+  const shapeRef = useRef<MugShapeId>("double");
   const [step, setStep] = useState(1);
   // Share of the section's scroll that the story takes; the closing part has the rest.
   const storyShareRef = useRef(1);
@@ -281,7 +288,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         },
         onMug(frame) {
           // The mug's plan and the close-up's scale, drawn over the mug.
-          if (planRef.current) drawPlan(planRef.current, frame);
+          if (planRef.current) drawPlan(planRef.current, frame, shapeRef.current);
           if (scaleRef.current) drawScale(scaleRef.current, frame);
         },
         onScreen(corners) {
@@ -334,6 +341,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       handle = started;
       sceneRef.current = started;
       started.setFilament(FILAMENTS.find((f) => f.id === filamentRef.current)!.color);
+      started.setShape(shapeRef.current);
       handle.invalidate();
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
@@ -392,6 +400,12 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     sceneRef.current?.setFilament(FILAMENTS.find((f) => f.id === filament)!.color);
   }, [filament]);
 
+  // The chosen handles go to the slicer preview, the mug and its plan.
+  useEffect(() => {
+    shapeRef.current = shape;
+    sceneRef.current?.setShape(shape);
+  }, [shape]);
+
   /**
    * "Print": the page scrolls on by itself to the end of the story, as if the
    * printer had started. Any scroll, touch, click or key press takes over.
@@ -436,7 +450,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       picture,
       {
         title: t.story.souvenir.title,
-        details: t.story.souvenir.details.replace("{colour}", colour),
+        details: t.story.souvenir.details.replace("{shape}", t.story.slicer.models[shape]).replace("{colour}", colour),
         tagline: t.title,
         url: location.origin + location.pathname,
       },
@@ -521,7 +535,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           <path className="story__plan-dims" />
           <path className="story__plan-outline" />
           <text data-dim="diameter">{t.story.plan.diameter}</text>
-          <text data-dim="width">{t.story.plan.width}</text>
+          <text data-dim="width">{`${new Intl.NumberFormat(lang).format(mugWidth(shape))} cm`}</text>
           <text data-dim="height">{t.story.plan.height}</text>
           <g className="story__plan-circles">
             {WORDMARK.map((_, i) => (
@@ -624,10 +638,23 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
               <span>{t.story.slicer.kicker}</span>
             </p>
             <div className="story__screen-body">
-              <MugLayers color={`#${FILAMENTS.find((f) => f.id === filament)!.color.toString(16).padStart(6, "0")}`} />
               <div>
-                <h3 id="slicer-title">{t.story.slicer.model}</h3>
+                <MugLayers color={`#${FILAMENTS.find((f) => f.id === filament)!.color.toString(16).padStart(6, "0")}`} shape={shape} />
+                <p className="story__slicer-note">{t.story.slicer.adapted}</p>
+              </div>
+              <div>
+                <h3 id="slicer-title">{t.story.slicer.models[shape]}</h3>
                 <p className="story__slicer-details">{t.story.slicer.details}</p>
+                {/* The same mug for different hands: two loops, one loop, or a T-grip for a closed fist. */}
+                <fieldset className="story__shapes">
+                  <legend>{t.story.slicer.shape}</legend>
+                  {MUG_SHAPES.map((id) => (
+                    <label key={id} className="story__shape">
+                      <input type="radio" name="mug-shape" value={id} checked={shape === id} onChange={() => setShape(id)} />
+                      <span>{t.story.slicer.shapes[id]}</span>
+                    </label>
+                  ))}
+                </fieldset>
                 <fieldset className="story__swatches">
                   <legend>{t.story.slicer.color}</legend>
                   {FILAMENTS.map((f) => (

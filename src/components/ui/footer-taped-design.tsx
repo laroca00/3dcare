@@ -31,6 +31,27 @@ function Tape({ className }: { className?: string }) {
   );
 }
 
+/** The footer is dark in both themes, so the specks keep the bright brand colours. */
+const SPECK_COLORS = { teal: "#3cc2b0", violet: "#a48be6", yellow: "#f5c400" };
+
+/** Specks round the footer's wordmark: x and y (%), size (px), colour, delay (s). */
+const SPECKS: [number, number, number, keyof typeof SPECK_COLORS, number][] = [
+  [6, 30, 5, "teal", 0],
+  [13, 72, 3, "yellow", -4],
+  [21, 18, 4, "violet", -9],
+  [29, 58, 6, "teal", -2],
+  [36, 26, 3, "yellow", -7],
+  [44, 80, 4, "violet", -12],
+  [51, 14, 5, "teal", -5],
+  [58, 64, 3, "yellow", -10],
+  [65, 34, 4, "violet", -3],
+  [72, 76, 5, "teal", -8],
+  [79, 20, 3, "yellow", -1],
+  [86, 54, 6, "violet", -11],
+  [93, 28, 4, "teal", -6],
+  [97, 70, 3, "yellow", -13],
+];
+
 const linkClass = "text-footer-text no-underline hover:text-footer-text hover:underline";
 const titleClass = "m-0 text-sm font-semibold uppercase tracking-wider text-footer-muted";
 
@@ -97,6 +118,18 @@ export function TapedFooter({ lang, t }: { lang: Locale; t: Dictionary }) {
         <div className="mt-10 flex flex-col gap-4 border-t border-footer-muted/25 pt-8 md:flex-row md:items-start md:gap-8">
           <Image src={emblems[lang]} alt={t.footer.cofunded} className="h-[60px] w-auto shrink-0" />
           <p className="m-0 max-w-[68ch] text-sm text-footer-muted">{t.footer.disclaimer}</p>
+        </div>
+
+        {/* A giant wordmark closes the card, with specks of filament drifting round it. */}
+        <div className="footer-wordmark -mx-6 mt-10 -mb-10 md:-mx-12" aria-hidden="true">
+          {SPECKS.map(([x, y, size, color, delay], i) => (
+            <span
+              key={i}
+              className="footer-speck"
+              style={{ left: `${x}%`, top: `${y}%`, width: size, height: size, background: SPECK_COLORS[color], animationDelay: `${delay}s` }}
+            />
+          ))}
+          <p>3D CARE</p>
         </div>
       </div>
 

@@ -7,6 +7,21 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-20
 
+### Choose the grip
+- The slicer on the printer's screen now offers three grips besides the
+  colour: two handles, one handle, or a T-grip on each side to close a fist
+  round. The preview, the printed mug, its plan (with the right width:
+  15.6, 12 or 16.8 cm) and the mug card all follow the choice. A note says
+  these are the same mug adapted for different hands; they are not models
+  from the catalogue.
+- The story's text no longer assumes two handles.
+
+### A giant wordmark in the footer
+- The footer card on every page ends in a giant "3D CARE", cut by the
+  card's edge, with specks of teal, violet and yellow filament drifting
+  round it (they stay still for visitors who prefer reduced motion).
+- The gallery planned for this step waits for the project's photos.
+
 ### Four looks at the fresh mug
 - Between "Just printed" and the morning table, the home story now looks at
   the mug four ways, keeping it in the middle of the picture (beside the

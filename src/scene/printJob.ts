@@ -3,6 +3,7 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import type { QualityLevel } from "./quality";
+import { MUG_SHAPES, SHAPES, type MugShapeId } from "./mugShapes";
 import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, nozzlePath } from "./storyMotion";
 import { smoothstep } from "./timeline";
 
@@ -25,6 +26,8 @@ export interface PrintJob {
    * how far the mug has cooled), and the real 0.3 mm layer ridges for the close-up.
    */
   setLooks(thermal: number, cool: number, ridges: number): void;
+  /** The handles chosen in the slicer; the mug and its preview are rebuilt. */
+  setShape(id: MugShapeId): void;
   /** Filament colour for the mug and its preview. */
   setColor(color: number): void;
   /** Line widths are in pixels, so the preview needs the canvas size. */
@@ -32,12 +35,9 @@ export interface PrintJob {
   dispose(): void;
 }
 
-// The two-handled mug: a round wall with a loop handle on each side, built
-// from the same layers a slicer would print.
+// The mug: a round wall with the handles chosen in the slicer (see
+// mugShapes.ts), built from the same layers a slicer would print.
 const BASE_LAYERS = 2;
-const ARM_LAYERS = new Set([5, 6, 7, 22, 23, 24]);
-const GRIP_FROM = 8;
-const GRIP_TO = 21;
 
 /**
  * The 3D Care mark (three concentric arcs opening to the right and a dot),
@@ -187,21 +187,30 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   // One instanced mesh per shape; instance i is layer i, so `count` reveals layers bottom-up.
   const walls = new THREE.InstancedMesh(ring, filament, LAYERS);
   const bases = new THREE.InstancedMesh(disc, filament, BASE_LAYERS);
-  const handleLayers = [...Array(LAYERS).keys()].filter((i) => ARM_LAYERS.has(i) || (i >= GRIP_FROM && i <= GRIP_TO));
-  // Two instances per layer, one for each handle.
-  const handle = new THREE.InstancedMesh(block, filament, handleLayers.length * 2);
+  // Room for the largest set of handle blocks; instances go bottom layer first.
+  const handle = new THREE.InstancedMesh(block, filament, Math.max(...MUG_SHAPES.map((id) => SHAPES[id].blocks.length * SHAPES[id].sides.length)));
+  /** The layer of each handle instance, for revealing them with the wall. */
+  let handleLayers: number[] = [];
   const m = new THREE.Matrix4();
   for (let i = 0; i < LAYERS; i++) walls.setMatrixAt(i, m.makeTranslation(0, i * LAYER_HEIGHT, 0));
   for (let i = 0; i < BASE_LAYERS; i++) bases.setMatrixAt(i, m.makeTranslation(0, i * LAYER_HEIGHT, 0));
-  handleLayers.forEach((layer, i) => {
-    const arm = ARM_LAYERS.has(layer);
-    // Arms reach out from the wall; the grip is the upright bar of the loop.
-    const [x, width, depth] = arm ? [MUG_RADIUS + 1.9, 3.8, 1.6] : [MUG_RADIUS + 3.3, 1, 2.2];
-    for (const side of [1, -1]) {
-      m.compose(new THREE.Vector3(side * x, layer * LAYER_HEIGHT, 0), new THREE.Quaternion(), new THREE.Vector3(width, 1, depth));
-      handle.setMatrixAt(i * 2 + (side > 0 ? 0 : 1), m);
+  const blockAt = new THREE.Vector3();
+  const blockSize = new THREE.Vector3();
+  const noTurn = new THREE.Quaternion();
+  function layoutHandles(id: MugShapeId) {
+    const { blocks, sides } = SHAPES[id];
+    handleLayers = [];
+    for (const b of blocks) {
+      for (const side of sides) {
+        m.compose(blockAt.set(side * b.x, b.layer * LAYER_HEIGHT, 0), noTurn, blockSize.set(b.width, 1, b.depth));
+        handle.setMatrixAt(handleLayers.length, m);
+        handleLayers.push(b.layer);
+      }
     }
-  });
+    handle.instanceMatrix.needsUpdate = true;
+    handle.computeBoundingSphere();
+  }
+  layoutHandles("double");
   for (const mesh of [walls, bases, handle]) {
     mesh.castShadow = mesh.receiveShadow = true;
     object.add(mesh);
@@ -212,39 +221,51 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
 
   // Slicer preview: one loop per layer along the middle of the wall, the
   // handles' outlines, and infill lines across the base, bottom layer first.
-  const lines: number[] = [];
-  const segment = (a: [number, number, number], b: [number, number, number]) => lines.push(...a, ...b);
-  const loop = 48;
-  for (let layer = 0; layer < LAYERS; layer++) {
-    const y = (layer + 0.5) * LAYER_HEIGHT;
-    if (layer < BASE_LAYERS) {
-      // Infill: parallel lines, crossing direction every layer.
-      for (let k = -MUG_RADIUS + 0.6; k < MUG_RADIUS; k += 0.8) {
-        const half = Math.sqrt(MUG_RADIUS * MUG_RADIUS - k * k);
-        if (layer % 2) segment([k, y, -half], [k, y, half]);
-        else segment([-half, y, k], [half, y, k]);
+  function previewLines(id: MugShapeId) {
+    const { blocks, sides } = SHAPES[id];
+    const lines: number[] = [];
+    const segment = (a: [number, number, number], b: [number, number, number]) => lines.push(...a, ...b);
+    const loop = 48;
+    for (let layer = 0; layer < LAYERS; layer++) {
+      const y = (layer + 0.5) * LAYER_HEIGHT;
+      if (layer < BASE_LAYERS) {
+        // Infill: parallel lines, crossing direction every layer.
+        for (let k = -MUG_RADIUS + 0.6; k < MUG_RADIUS; k += 0.8) {
+          const half = Math.sqrt(MUG_RADIUS * MUG_RADIUS - k * k);
+          if (layer % 2) segment([k, y, -half], [k, y, half]);
+          else segment([-half, y, k], [half, y, k]);
+        }
+      }
+      for (let i = 0; i < loop; i++) {
+        const a = (i / loop) * Math.PI * 2;
+        const b = ((i + 1) / loop) * Math.PI * 2;
+        segment([Math.cos(a) * MUG_RADIUS, y, Math.sin(a) * MUG_RADIUS], [Math.cos(b) * MUG_RADIUS, y, Math.sin(b) * MUG_RADIUS]);
+      }
+      for (const { x, width, depth } of blocks.filter((b) => b.layer === layer)) {
+        for (const side of sides) {
+          const x0 = side * (x - width / 2);
+          const x1 = side * (x + width / 2);
+          const z = depth / 2;
+          segment([x0, y, -z], [x1, y, -z]);
+          segment([x1, y, -z], [x1, y, z]);
+          segment([x1, y, z], [x0, y, z]);
+          segment([x0, y, z], [x0, y, -z]);
+        }
       }
     }
-    for (let i = 0; i < loop; i++) {
-      const a = (i / loop) * Math.PI * 2;
-      const b = ((i + 1) / loop) * Math.PI * 2;
-      segment([Math.cos(a) * MUG_RADIUS, y, Math.sin(a) * MUG_RADIUS], [Math.cos(b) * MUG_RADIUS, y, Math.sin(b) * MUG_RADIUS]);
-    }
-    if (ARM_LAYERS.has(layer) || (layer >= GRIP_FROM && layer <= GRIP_TO)) {
-      const [x, width, depth] = ARM_LAYERS.has(layer) ? [MUG_RADIUS + 1.9, 3.8, 1.6] : [MUG_RADIUS + 3.3, 1, 2.2];
-      for (const side of [1, -1]) {
-        const x0 = side * (x - width / 2);
-        const x1 = side * (x + width / 2);
-        const z = depth / 2;
-        segment([x0, y, -z], [x1, y, -z]);
-        segment([x1, y, -z], [x1, y, z]);
-        segment([x1, y, z], [x0, y, z]);
-        segment([x0, y, z], [x0, y, -z]);
-      }
-    }
+    return lines;
   }
-  const previewGeometry = new LineSegmentsGeometry().setPositions(lines);
-  const previewSegments = lines.length / 6;
+  const previewGeometry = new LineSegmentsGeometry();
+  let previewSegments = 0;
+  function layoutPreview(id: MugShapeId) {
+    const lines = previewLines(id);
+    previewGeometry.setPositions(lines);
+    previewSegments = lines.length / 6;
+  }
+  layoutPreview("double");
+  // Kept so a new shape can be shown at the same point of the print.
+  let printedT = 0;
+  let previewReveal = 0;
   const previewMaterial = new LineMaterial({ color: 0x2aa898, linewidth: 1.3, transparent: true, depthWrite: false });
   const preview = new LineSegments2(previewGeometry, previewMaterial);
   preview.visible = false;
@@ -274,20 +295,22 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   coffee.visible = false;
   object.add(coffee);
 
-  return {
+  const job: PrintJob = {
     object,
     setProgress(t) {
+      printedT = t;
       const { layer } = nozzlePath(t);
       const done = t <= 0 ? 0 : t >= 1 ? LAYERS : layer;
       walls.count = done;
       bases.count = Math.min(done, BASE_LAYERS);
-      handle.count = handleLayers.filter((l) => l < done).length * 2;
+      handle.count = handleLayers.filter((l) => l < done).length;
       currentLayer.visible = t > 0 && t < 1;
       currentLayer.position.y = Math.min(layer, LAYERS - 1) * LAYER_HEIGHT;
       printedHeight = t >= 1 ? Infinity : done * LAYER_HEIGHT;
       logo.visible = done > 0;
     },
     setPreview(reveal, printed) {
+      previewReveal = reveal;
       preview.visible = reveal > 0 && printed < 1;
       previewGeometry.instanceCount = Math.floor(previewSegments * reveal);
       previewMaterial.opacity = 1 - smoothstep(printed / 0.08) * 0.7;
@@ -298,6 +321,12 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
       // Only up close: further away the ridges would shimmer.
       looks.uRidges.value = smoothstep((ridges - 0.5) / 0.5);
       looks.uSeal.value = smoothstep(ridges / 0.3);
+    },
+    setShape(id) {
+      layoutHandles(id);
+      layoutPreview(id);
+      job.setProgress(printedT);
+      previewGeometry.instanceCount = Math.floor(previewSegments * previewReveal);
     },
     setColor(color) {
       filament.color.setHex(color);
@@ -322,4 +351,5 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
       [walls, bases, handle].forEach((mesh) => mesh.dispose());
     },
   };
+  return job;
 }

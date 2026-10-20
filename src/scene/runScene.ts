@@ -11,6 +11,7 @@ import type { Pass } from "three/addons/postprocessing/Pass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { centerAmount, explodeAmount, setExplode, spinTurn } from "./explode";
+import type { MugShapeId } from "./mugShapes";
 import type { PartId } from "./parts";
 import { TYPE_LAYER, createGiantType } from "./giantType";
 import { createPrintJob } from "./printJob";
@@ -93,6 +94,8 @@ export interface SceneHandle {
   setSelected(id: PartId | null): void;
   /** Filament colour chosen in the slicer: the spool, the preview and the printed mug. */
   setFilament(color: number): void;
+  /** Handles chosen in the slicer: the preview and the printed mug. */
+  setShape(id: MugShapeId): void;
   /** Requests one frame. The scene draws only when asked or while a transition runs. */
   invalidate(): void;
   dispose(): void;
@@ -866,6 +869,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     setFilament(color) {
       printer.setFilament(color);
       job.setColor(color);
+      handle.invalidate();
+    },
+    setShape(id) {
+      job.setShape(id);
       handle.invalidate();
     },
     snapshot() {

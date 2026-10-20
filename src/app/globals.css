@@ -1030,22 +1030,75 @@ main:focus {
   font-size: 21px;
 }
 
-.story__swatches {
+.story__slicer-note {
+  margin: 8px 0 0;
+  color: #9fb3ad;
+  font-size: 17px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.story__swatches,
+.story__shapes {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin: 20px 0 22px;
+  gap: 12px;
+  margin: 12px 0 0;
   padding: 0;
   border: 0;
 }
 
-.story__swatches legend {
+.story__swatches {
+  margin-bottom: 14px;
+}
+
+.story__swatches legend,
+.story__shapes legend {
   width: 100%;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   padding: 0;
   color: #e3efec;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 600;
+}
+
+/* The handles: a row of pill buttons, the chosen one filled. */
+.story__shape {
+  display: inline-flex;
+}
+
+.story__shape input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.story__shape span {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 18px;
+  border: 2px solid rgb(255 255 255 / 0.22);
+  border-radius: 999px;
+  color: #e3efec;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.story__shape span:hover {
+  border-color: #3cc2b0;
+}
+
+.story__shape input:checked + span {
+  border-color: #3cc2b0;
+  background: #3cc2b0;
+  color: #06171b;
+}
+
+.story__shape input:focus-visible + span {
+  outline: 3px solid #ffffff;
+  outline-offset: 3px;
 }
 
 .story__swatch {
@@ -1054,8 +1107,8 @@ main:focus {
 
 .story__swatch input {
   appearance: none;
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   margin: 0;
   border-radius: 999px;
   background: var(--swatch);
@@ -2057,5 +2110,44 @@ main:focus {
   * {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* Footer: a giant wordmark at the bottom of the card, cut by its edge, with
+   specks of filament drifting round it. */
+.footer-wordmark {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 1.5rem 1.5rem;
+}
+
+.footer-wordmark p {
+  margin: 0 0 -0.16em;
+  font-size: min(16vw, 14.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-align: center;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #3cc2b0 0%, rgb(60 194 176 / 0.08) 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  user-select: none;
+}
+
+.footer-speck {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: footer-drift 16s ease-in-out infinite alternate;
+}
+
+@keyframes footer-drift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(14px, -26px);
   }
 }

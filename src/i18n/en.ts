@@ -41,15 +41,15 @@ export const en = {
         },
         {
           title: "Just printed",
-          text: "Two handles, a wide grip, about 300 thin layers. A file a moment ago, now something you can hold.",
+          text: "A wide grip and about 300 thin layers. A file a moment ago, now something you can hold.",
         },
         {
           title: "Still warm",
-          text: "Through a thermal camera: the base has just left the hot bed and is still the warmest part. The thin handles cool first. As the mug cools, it sets into its final shape.",
+          text: "Through a thermal camera: the base has just left the hot bed and is still the warmest part. Thin parts like the handles cool first. As the mug cools, it sets into its final shape.",
         },
         {
           title: "Measurements open to all",
-          text: "8.4 cm across, 9 cm tall, 15.6 cm with the handles. Every model's file and measurements are open, so a centre can adapt it to the hands of the person who will use it.",
+          text: "8.4 cm across and 9 cm tall. Every model's file and measurements are open, so a centre can adapt it to the hands of the person who will use it.",
         },
         {
           title: "Layers of 0.3 millimetres",
@@ -61,7 +61,7 @@ export const en = {
         },
         {
           title: "From the printer to everyday life",
-          text: "A mug with two handles, printed in an afternoon, makes a morning coffee possible without help.",
+          text: "A mug with an easy grip, printed in an afternoon, makes a morning coffee possible without help.",
         },
       ],
       labels: {
@@ -78,7 +78,7 @@ export const en = {
       scrollHint: "Scroll to continue",
       glowHint: { pointer: "Point at the mug", touch: "Press and hold the mug" },
       selectionFile: "printer.stl",
-      plan: { diameter: "Ø 8.4 cm", height: "9 cm", width: "15.6 cm" },
+      plan: { diameter: "Ø 8.4 cm", height: "9 cm" },
       thermal: { hot: "Warm", cold: "Cool" },
       layerScale: "0.3 mm",
       dragHint: { printer: "Drag to turn a part or the printer · click a part to learn more", mug: "Drag to turn the mug" },
@@ -86,7 +86,7 @@ export const en = {
         cta: "Get your mug card",
         heading: "Your mug card",
         title: "I printed this mug",
-        details: "{colour} filament · 0.3 mm layers",
+        details: "{shape} · {colour} filament · 0.3 mm layers",
         download: "Download card",
         share: "Share",
         close: "Close",
@@ -95,7 +95,10 @@ export const en = {
       },
       slicer: {
         kicker: "Slicer",
-        model: "Two-handled mug",
+        models: { double: "Two-handled mug", single: "One-handled mug", tgrip: "T-grip mug" },
+        shape: "Grip",
+        shapes: { double: "Two handles", single: "One handle", tgrip: "T-grip" },
+        adapted: "The same mug, adapted for different hands.",
         details: "~300 layers · 0.3 mm · PETG",
         color: "Filament colour",
         colors: { teal: "Teal", violet: "Violet", yellow: "Yellow", white: "White", coral: "Coral" },
