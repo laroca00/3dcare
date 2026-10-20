@@ -40,6 +40,10 @@ export const en = {
           text: "Each model is printed layer by layer, then tried by adults with disabilities and their therapists.",
         },
         {
+          title: "Just printed",
+          text: "Two handles, a wide grip, thirty layers. A file a moment ago, now something you can hold.",
+        },
+        {
           title: "From the printer to everyday life",
           text: "A mug with two handles, printed in an afternoon, makes a morning coffee possible without help.",
         },
@@ -113,6 +117,7 @@ export const en = {
         "A desktop 3D printer lit from the side in a studio.",
         "The printer taken apart: base, heated bed, frame, moving axis, print head, filament spool and screen.",
         "The printer printing a two-handled mug layer by layer.",
+        "The freshly printed two-handled mug floating in front of the dark printer, with the words “Just printed” glowing behind it.",
         "The printed two-handled mug, filled with steaming coffee, on the table next to the printer.",
       ],
     },

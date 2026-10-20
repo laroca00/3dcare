@@ -42,6 +42,10 @@ export const tr: typeof en = {
           text: "Her model katman katman basılıyor, sonra engelli yetişkinler ve terapistleri tarafından deneniyor.",
         },
         {
+          title: "Az önce basıldı",
+          text: "İki kulp, geniş bir tutma yeri, otuz katman. Az önce bir dosyaydı, şimdi elinde tutabileceğin bir şey.",
+        },
+        {
           title: "Yazıcıdan günlük hayata",
           text: "Bir öğleden sonrada basılan çift kulplu kupa, sabah kahvesini yardım almadan içmeyi mümkün kılıyor.",
         },
@@ -115,6 +119,7 @@ export const tr: typeof en = {
         "Stüdyoda yandan aydınlatılmış bir masaüstü 3D yazıcı.",
         "Parçalarına ayrılmış yazıcı: gövde, ısıtmalı tabla, çerçeve, hareketli eksen, baskı kafası, filament makarası ve ekran.",
         "Yazıcı çift kulplu bir kupayı katman katman basıyor.",
+        "Yeni basılmış çift kulplu kupa karanlıktaki yazıcının önünde duruyor; arkasında “Az önce basıldı” yazısı parlıyor.",
         "Basılan çift kulplu kupa, içinde dumanı tüten kahveyle yazıcının yanındaki masada.",
       ],
     },

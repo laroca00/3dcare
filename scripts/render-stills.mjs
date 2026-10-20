@@ -15,8 +15,8 @@ const BASE = process.env.BASE_PATH ?? "";
 const TARGET = "src/assets/story";
 const EDGE = process.env.EDGE_PATH ?? "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 // The poster (top of the page, frame 0), then one representative moment per
-// scene: drawing, studio, exploded with labels, printing, in use.
-const MOMENTS = [0, 0.07, 0.26, 0.55, 0.72, 0.97];
+// scene: drawing, studio, exploded with labels, printing, the mug taking over, in use.
+const MOMENTS = [0, 0.06, 0.225, 0.465, 0.607, 0.79, 0.975];
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".woff2": "font/woff2" };
 
 const server = createServer((req, res) => {

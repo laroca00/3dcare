@@ -1,13 +1,15 @@
-// The home story's five scenes on a 0..1 scroll timeline.
+// The home story's six scenes on a 0..1 scroll timeline.
 
-export type SceneId = "draw" | "meet" | "explode" | "print" | "use";
+export type SceneId = "draw" | "meet" | "explode" | "print" | "reveal" | "use";
 
 export const SCENES: readonly { id: SceneId; start: number; end: number }[] = [
-  { id: "draw", start: 0, end: 0.16 },
-  { id: "meet", start: 0.16, end: 0.36 },
-  { id: "explode", start: 0.36, end: 0.58 },
-  { id: "print", start: 0.58, end: 0.82 },
-  { id: "use", start: 0.82, end: 1 },
+  { id: "draw", start: 0, end: 0.14 },
+  { id: "meet", start: 0.14, end: 0.31 },
+  { id: "explode", start: 0.31, end: 0.49 },
+  { id: "print", start: 0.49, end: 0.69 },
+  // The printed mug takes over from the printer.
+  { id: "reveal", start: 0.69, end: 0.83 },
+  { id: "use", start: 0.83, end: 1 },
 ];
 
 export const clamp01 = (t: number) => Math.min(Math.max(t, 0), 1);

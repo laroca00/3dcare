@@ -50,12 +50,24 @@ export function nozzlePath(t: number): { x: number; y: number; z: number; layer:
   };
 }
 
-/** Last scene, u = 0..1: the mug moves from the bed to the table, coffee is poured, then steam rises. */
-export function endingMotion(u: number): { lift: number; travel: number; bounce: number; pour: number; steam: number } {
+/**
+ * The mug takes over, r = 0..1: the print head lifts away, the mug rises off
+ * the bed towards the camera turning once, and the giant line glows behind it.
+ */
+export function revealMotion(r: number): { lift: number; rise: number; turn: number; type: number } {
+  return {
+    lift: smoothstep(r / 0.2),
+    rise: smoothstep((r - 0.1) / 0.4),
+    turn: smoothstep((r - 0.1) / 0.8) * Math.PI * 2,
+    type: Math.min(smoothstep((r - 0.25) / 0.2), 1 - smoothstep((r - 0.85) / 0.15)),
+  };
+}
+
+/** Last scene, u = 0..1: the mug moves down to the table, coffee is poured, then steam rises. */
+export function endingMotion(u: number): { travel: number; bounce: number; pour: number; steam: number } {
   // After landing the mug hops once, a little, and settles (in cm).
   const landed = clamp01((u - 0.55) / 0.12);
   return {
-    lift: smoothstep(u / 0.3),
     travel: smoothstep(u / 0.55),
     bounce: landed > 0 && landed < 1 ? Math.sin(landed * Math.PI) * 0.8 * (1 - landed) : 0,
     pour: smoothstep((u - 0.55) / 0.25),

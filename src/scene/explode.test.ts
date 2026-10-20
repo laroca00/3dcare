@@ -48,23 +48,27 @@ test("easeOutBack overshoots before settling at 1", () => {
   assert.ok(Math.abs(easeOutBack(1) - 1) < 1e-9);
 });
 
+/** Story progress at a point inside the explode and print scenes. */
+const apart = (t: number) => 0.31 + 0.18 * t;
+const printing = (t: number) => 0.49 + 0.2 * t;
+
 test("the printer comes apart in the second half of the explode scene and back together early in the print scene", () => {
-  assert.equal(explodeAmount(0.3), 0);
-  assert.ok(explodeAmount(0.36 + 0.22 * 0.35) < 1e-9);
-  assert.ok(Math.abs(explodeAmount(0.36 + 0.22 * 0.6) - 0.5) < 1e-9);
-  assert.equal(explodeAmount(0.58), 1);
-  assert.ok(Math.abs(explodeAmount(0.604) - 0.5) < 1e-9);
-  assert.equal(explodeAmount(0.7), 0);
+  assert.equal(explodeAmount(0.25), 0);
+  assert.ok(explodeAmount(apart(0.35)) < 1e-9);
+  assert.ok(Math.abs(explodeAmount(apart(0.6)) - 0.5) < 1e-9);
+  assert.equal(explodeAmount(apart(1)), 1);
+  assert.ok(Math.abs(explodeAmount(printing(0.1)) - 0.5) < 1e-9);
+  assert.equal(explodeAmount(printing(0.6)), 0);
   assert.equal(explodeAmount(1), 0);
 });
 
 test("the printer turns once on its axis while it moves to the middle, before it comes apart", () => {
-  assert.equal(centerAmount(0.3), 0);
-  assert.equal(spinTurn(0.3), 0);
-  const settled = 0.36 + 0.22 * 0.5;
+  assert.equal(centerAmount(0.25), 0);
+  assert.equal(spinTurn(0.25), 0);
+  const settled = apart(0.5);
   assert.equal(centerAmount(settled), 1);
   assert.ok(Math.abs(spinTurn(settled) - Math.PI * 2) < 1e-9);
-  assert.equal(explodeAmount(0.36 + 0.22 * 0.3), 0);
-  assert.equal(centerAmount(0.58), 1);
-  assert.equal(centerAmount(0.7), 0);
+  assert.equal(explodeAmount(apart(0.3)), 0);
+  assert.equal(centerAmount(apart(1)), 1);
+  assert.equal(centerAmount(printing(0.6)), 0);
 });

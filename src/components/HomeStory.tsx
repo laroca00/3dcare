@@ -8,7 +8,7 @@ import { initialQuality } from "@/scene/quality";
 import type { SceneHandle } from "@/scene/runScene";
 import { progressFor, splitProgress } from "@/scene/scrollProgress";
 import { quadTransform } from "@/scene/quadTransform";
-import { LAYERS, slicerPanel } from "@/scene/storyMotion";
+import { LAYERS, revealMotion, slicerPanel } from "@/scene/storyMotion";
 import { SCENES, localProgress, smoothstep } from "@/scene/timeline";
 import { readTheme, useTheme } from "@/theme/useTheme";
 import emblemEn from "@/assets/eu/co-funded-en-neg.png";
@@ -46,7 +46,7 @@ const DELIVER_ICONS = [
 ];
 
 /** Story progress at which steps 2 and 3 of making a model begin; step 4 is the closing part. */
-const STEP_STARTS = [0.16, 0.84];
+const STEP_STARTS = [0.14, 0.845];
 /** Closing-part progress at which step 4 begins. */
 const OUTRO_STEP = 0.04;
 
@@ -106,6 +106,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const cardTitleRef = useRef<HTMLHeadingElement>(null);
   const slicerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
+  const revealCaptionRef = useRef<HTMLDivElement>(null);
   const [filament, setFilament] = useState<FilamentId>("teal");
   const [step, setStep] = useState(1);
   // Share of the section's scroll that the story takes; the closing part has the rest.
@@ -126,6 +127,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     const canvas = canvasRef.current!;
     const labelLayer = labelsRef.current!;
     const slicer = slicerRef.current!;
+    const revealCaption = revealCaptionRef.current!;
     const params = new URLSearchParams(location.search);
     // ?story=0.5 freezes the story at one moment (used to render still frames).
     const fixed = params.has("story") ? Number(params.get("story")) : null;
@@ -171,6 +173,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       const apart = localProgress(progress, "explode");
       const caption = Math.min(smoothstep(apart / 0.12), 1 - smoothstep((apart - 0.88) / 0.12));
       section.style.setProperty("--caption", String(caption));
+      // When the mug takes over, its text is a caption under it, with the giant line.
+      revealCaption.style.setProperty("--caption", String(revealMotion(localProgress(progress, "reveal")).type));
       // The slicer panel opens before printing; it can be used only while it shows.
       const panel = slicerPanel(progress);
       section.style.setProperty("--slicer", String(panel));
@@ -226,6 +230,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         getProgress: () => progress,
         getOutro: () => outro,
         labels: t.story.labels,
+        giantType: t.story.scenes[4].title,
         isVisible: () => visible,
         frozen: fixed !== null,
         onGrabbable(target) {
@@ -317,7 +322,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       handle?.dispose();
       sceneRef.current = null;
     };
-  }, [t.story.labels]);
+  }, [t.story.labels, t.story.scenes]);
 
   // The open card: the scene focuses on its part, its label stays lit, Escape closes it.
   useEffect(() => {
@@ -523,6 +528,9 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           <p>{rest[1].text}</p>
           <p className="story__caption-hint">{t.story.dragHint.printer}</p>
         </div>
+        <div className="story__caption story__caption--reveal" ref={revealCaptionRef} aria-hidden="true">
+          <p>{rest[3].text}</p>
+        </div>
         {/* The slicer, on the printer's own screen: preview the mug, pick a filament colour, press Print. */}
         <div className="story__screen" ref={screenRef}>
           <div className="story__slicer" ref={slicerRef} role="group" aria-labelledby="slicer-title">
@@ -588,8 +596,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           {stillFrame(0)}
         </div>
         {rest.map((scene, i) => (
-          // The taken-apart scene shows its text as the stage's caption instead.
-          <div className={`story__beat${i === 1 ? " story__beat--caption" : ""}`} data-beat key={scene.title}>
+          // The taken-apart scene and the mug's entrance show their text on the stage instead.
+          <div className={`story__beat${i === 1 || i === 3 ? " story__beat--caption" : ""}`} data-beat key={scene.title}>
             {/* Each line rises from behind its own mask as the story reaches it. */}
             <div className="story__text">
               <RevealText as="h2" text={scene.title} />

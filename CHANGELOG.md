@@ -7,6 +7,16 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-20
 
+### The mug takes over
+- After the print, the home story hands over from the printer to the mug:
+  the print head lifts away, the mug rises off the bed towards the visitor
+  and turns once, and the printer slides back into the dark. A giant
+  glowing line ("Just printed" / "Az önce basıldı") stands behind the mug,
+  which passes in front of it, with a short caption underneath. The line
+  is also in the page as text for screen readers and search engines.
+- From there the mug comes down to the morning table as before. The still
+  frames (for reduced motion or no WebGL) gained a frame for this moment.
+
 ### Story chapters and progress
 - The step chip at the top of the home story became a row of the four
   steps of making a model. The current step is underlined, and clicking a

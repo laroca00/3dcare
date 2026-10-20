@@ -6,8 +6,9 @@ test("each part of the story has its own light, in both themes", () => {
   for (const theme of ["dark", "light"] as const) {
     assert.deepEqual(storyLook(theme, 0), MOODS[theme].blueprint);
     assert.deepEqual(storyLook(theme, 0.3), MOODS[theme].studio);
-    assert.deepEqual(storyLook(theme, 0.5), MOODS[theme].workshop);
-    assert.deepEqual(storyLook(theme, 0.7), MOODS[theme].printing);
+    assert.deepEqual(storyLook(theme, 0.45), MOODS[theme].workshop);
+    assert.deepEqual(storyLook(theme, 0.62), MOODS[theme].printing);
+    assert.deepEqual(storyLook(theme, 0.78), MOODS[theme].hero);
     assert.deepEqual(storyLook(theme, 1), MOODS[theme].morning);
   }
 });

@@ -8,7 +8,7 @@ test("scenes cover 0 to 1 without gaps", () => {
   for (let i = 1; i < SCENES.length; i++) assert.equal(SCENES[i].start, SCENES[i - 1].end);
   assert.deepEqual(
     SCENES.map((s) => s.id),
-    ["draw", "meet", "explode", "print", "use"],
+    ["draw", "meet", "explode", "print", "reveal", "use"],
   );
 });
 
@@ -16,11 +16,12 @@ test("sceneAt clamps progress outside 0..1", () => {
   assert.equal(sceneAt(-0.5), "draw");
   assert.equal(sceneAt(1.7), "use");
   assert.equal(sceneAt(1), "use");
-  assert.equal(sceneAt(0.5), "explode");
+  assert.equal(sceneAt(0.4), "explode");
+  assert.equal(sceneAt(0.75), "reveal");
 });
 
 test("localProgress is 0 before a scene, 1 after it and linear inside", () => {
-  assert.ok(Math.abs(localProgress(0.26, "meet") - 0.5) < 1e-9);
+  assert.ok(Math.abs(localProgress(0.225, "meet") - 0.5) < 1e-9);
   assert.equal(localProgress(0.1, "print"), 0);
   assert.equal(localProgress(0.9, "meet"), 1);
 });

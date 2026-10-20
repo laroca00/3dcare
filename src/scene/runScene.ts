@@ -11,12 +11,13 @@ import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { centerAmount, explodeAmount, setExplode, spinTurn } from "./explode";
 import type { PartId } from "./parts";
+import { TYPE_LAYER, createGiantType } from "./giantType";
 import { createPrintJob } from "./printJob";
 import { BED_SURFACE_Y, NOZZLE_HOME, SCREEN_SIZE, buildPrinter, type PrinterPart } from "./printer";
 import type { Point } from "./quadTransform";
 import { QualityController, type QualityLevel } from "./quality";
 import { STEAM_LAYER, createSteam } from "./steam";
-import { LAYERS, LAYER_HEIGHT, endingMotion, labelOpacity, nozzlePath, printProgress, screenZoom, slicerProgress } from "./storyMotion";
+import { LAYERS, LAYER_HEIGHT, endingMotion, labelOpacity, nozzlePath, printProgress, revealMotion, screenZoom, slicerProgress } from "./storyMotion";
 import { createLineup } from "./lineup";
 import { FLOOR_LAYER, createStudio } from "./studio";
 import { localProgress, smoothstep } from "./timeline";
@@ -36,6 +37,8 @@ export interface SceneOptions {
   /** 0..1 progress of the closing part after the story (0 while the story runs). */
   getOutro?: () => number;
   labels: Record<PartId, string>;
+  /** The line that glows behind the freshly printed mug. */
+  giantType: string;
   /** Called after each frame with where the part labels belong on screen. */
   onLabels?: (labels: LabelPosition[]) => void;
   /** Whether the stage is on screen; the steam only keeps animating while it is. */
@@ -128,6 +131,17 @@ const CLOSE_UP_WIDE = new THREE.Vector3(48, 26, 40);
 const CLOSE_UP_NARROW = new THREE.Vector3(60, 34, 66);
 const FOCUS_WIDE = new THREE.Vector3(-6, 7, 8);
 const FOCUS_NARROW = new THREE.Vector3(0, -3, 0);
+/** When the mug takes over: how far it rises off the bed and comes towards the camera, in cm. */
+const REVEAL_RISE = 16;
+const REVEAL_FORWARD = 22;
+/** How far the printer slides back into the dark behind it, and aside, out of the giant line's way. */
+const REVEAL_SLIDE = 80;
+const REVEAL_ASIDE = 105;
+/** How far the camera is from the mug then; narrow screens need more room for the handles. */
+const REVEAL_DISTANCE_WIDE = 54;
+const REVEAL_DISTANCE_NARROW = 82;
+/** How far behind the mug the giant line glows. */
+const TYPE_BEHIND = 40;
 /** The close: where the camera ends up above the ten tools. */
 const OUTRO_WIDE = new THREE.Vector3(14, 80, 130);
 const OUTRO_NARROW = new THREE.Vector3(0, 120, 190);
@@ -149,7 +163,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   await yieldToMain();
   const stage = new THREE.Group();
   stage.add(printer.root);
-  printer.root.position.y = -32;
+  const PRINTER_Y = -32;
+  printer.root.position.y = PRINTER_Y;
   scene.add(stage);
   const studio = createStudio(renderer, scene, opts.theme, opts.quality, stage, printer.root.position.y);
   await yieldToMain();
@@ -160,6 +175,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   // The closing: the project's other nine tools, sketched beside the mug.
   const lineup = createLineup(opts.theme);
   stage.add(lineup.object);
+  const giantType = await createGiantType(opts.giantType, opts.theme);
+  scene.add(giantType.object);
+  camera.layers.enable(TYPE_LAYER);
   // Line drawings (the opening drawing, the tool sketches) stay out of the floor's contact shadow.
   const lineObjects: THREE.Object3D[] = [];
   stage.traverse((o) => {
@@ -230,6 +248,15 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const resizeObserver = new ResizeObserver(resize);
 
   const mugWorld = new THREE.Vector3();
+  const mugMiddle = new THREE.Vector3();
+  const bedWorld = new THREE.Vector3();
+  const revealDir = new THREE.Vector3();
+  const hover = new THREE.Vector3();
+  const revealView = new THREE.Vector3();
+  const typeCenter = new THREE.Vector3();
+  const slide = new THREE.Vector3();
+  const aside = new THREE.Vector3();
+  const stageTurn = new THREE.Quaternion();
   const anchor = new THREE.Vector3();
 
   const home = new THREE.Vector3();
@@ -299,7 +326,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const outroLook = new THREE.Vector3();
   const outroView = new THREE.Vector3();
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number) {
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -314,10 +341,17 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       orbitOffset.copy(camera.position).sub(home).applyAxisAngle(UP, swing * 0.7).multiplyScalar(1 - swing * 0.14);
       camera.position.copy(home).add(orbitOffset);
     }
+    // When the mug takes over, the camera comes round in front of it and
+    // centres it, leaving the printer behind in the dark.
+    const hero = smoothstep(reveal);
+    mugMiddle.copy(mug).y += (LAYERS * LAYER_HEIGHT) / 2;
+    revealView.copy(mugMiddle).addScaledVector(revealDir, wide ? REVEAL_DISTANCE_WIDE : REVEAL_DISTANCE_NARROW).y += 3;
+    camera.position.lerp(revealView, hero);
+    lookAt.copy(home).lerp(mugMiddle, hero);
     closeUp.copy(mug).add(wide ? CLOSE_UP_WIDE : CLOSE_UP_NARROW);
     camera.position.lerp(closeUp, push);
     mugFocus.copy(mug).add(wide ? FOCUS_WIDE : FOCUS_NARROW);
-    lookAt.copy(home).lerp(mugFocus, push);
+    lookAt.lerp(mugFocus, push);
     // At the close the camera rises and pulls back over the ten tools on the table.
     if (outro > 0) {
       const ease = smoothstep(outro / 0.45);
@@ -543,26 +577,56 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
 
     // 4. Print the mug while the tool follows the nozzle path.
     const printed = printProgress(p);
+    const r = localProgress(p, "reveal");
+    const reveal = revealMotion(r);
     const slicer = slicerProgress(p);
     job.setProgress(printed);
     // Before printing, the slicer draws the mug as toolpaths on the bed.
     job.setPreview(slicer, printed);
     const target = nozzlePath(printed);
-    const toolOn = printed > 0 ? 1 - end.lift : 0;
+    const toolOn = printed > 0 ? 1 - reveal.lift : 0;
     printer.setToolPosition(
       target.x * toolOn,
       (NOZZLE_HOME.z - target.z) * toolOn,
       // The head waits above the preview until the print starts.
-      (BED_SURFACE_Y + target.y + 0.1 - NOZZLE_HOME.y) * toolOn + end.lift * 8 + (printed > 0 ? 0 : smoothstep(slicer) * 5),
+      (BED_SURFACE_Y + target.y + 0.1 - NOZZLE_HOME.y) * toolOn + reveal.lift * 8 + (printed > 0 ? 0 : smoothstep(slicer) * 5),
     );
     // The hotend glows while it prints and cools as the head lifts away.
-    printer.setPrinting(printed, printed > 0 ? smoothstep(printed / 0.04) * (1 - end.lift) : 0);
+    printer.setPrinting(printed, printed > 0 ? smoothstep(printed / 0.04) * (1 - reveal.lift) : 0);
 
-    // 5. The mug leaves the printer for the table beside it, is filled with
+    // 5. The mug takes over: it rises off the bed towards the camera, turning
+    //    once, in front of a giant line, while the printer slides back into
+    //    the dark. Its hover point is found in the world (towards where the
+    //    camera watched the print from), then expressed on the bed, which
+    //    carries the mug.
+    printer.root.position.set(0, PRINTER_Y, 0);
+    stage.updateMatrixWorld(true);
+    printer.bedSurface.getWorldPosition(bedWorld);
+    revealDir.set(85, 46, wide ? 140 : 190).sub(bedWorld).setY(0).normalize();
+    hover.copy(bedWorld).addScaledVector(revealDir, REVEAL_FORWARD).setY(bedWorld.y + REVEAL_RISE);
+    // Part way up while it rises; it stays there in the world while the printer slides away.
+    hover.sub(bedWorld).multiplyScalar(reveal.rise).add(bedWorld);
+    // The printer comes back as the mug goes down to the table beside it.
+    const away = smoothstep(reveal.rise) * (1 - end.travel);
+    if (away > 0) {
+      aside.crossVectors(revealDir, UP);
+      slide.copy(revealDir).multiplyScalar(-REVEAL_SLIDE).addScaledVector(aside, -REVEAL_ASIDE);
+      slide.applyQuaternion(stageTurn.copy(stage.quaternion).invert()).multiplyScalar(away);
+      printer.root.position.add(slide);
+      stage.updateMatrixWorld(true);
+    }
+    printer.bedSurface.worldToLocal(hover);
+
+    // 6. The mug comes down to the table beside the printer, is filled with
     //    coffee and starts to steam, while the printer behind it blurs.
-    job.object.position.set(end.travel * 34, Math.sin(Math.PI * end.travel) * 14 - end.travel * BED_SURFACE_Y + end.bounce, end.travel * 18);
+    const stay = 1 - end.travel;
+    job.object.position.set(
+      hover.x * stay + end.travel * 34,
+      hover.y * stay + Math.sin(Math.PI * end.travel) * 6 - end.travel * BED_SURFACE_Y + end.bounce,
+      hover.z * stay + end.travel * 18,
+    );
     // Ends with a handle on each side, as seen from the camera.
-    job.object.rotation.y = smoothstep(u / 0.5) * 0.2 + mugSpin.yaw;
+    job.object.rotation.y = reveal.turn + smoothstep(u / 0.5) * 0.2 + mugSpin.yaw;
     job.setCoffee(end.pour);
     stage.updateMatrixWorld(true);
     job.syncClip();
@@ -574,7 +638,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     lineup.object.rotation.y = -stage.rotation.y + 0.15;
     lineup.object.updateMatrixWorld();
     lineup.setReveal((outro - 0.08) / 0.5);
-    placeCamera(u, apart, center, mugWorld, zoom, printed, outro);
+    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5);
+    // The line sits a little above the mug's middle, so the mug covers the lower half of the letters.
+    giantType.update(camera, typeCenter.copy(mugMiddle).setY(mugMiddle.y + 2.5), TYPE_BEHIND, reveal.type, wide);
     // The light follows the story, from a cool blueprint to a warm morning.
     studio.setStory(p);
     // The morning comes as the mug lands on the table.
@@ -626,6 +692,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       drawing.setTheme(theme);
       steam.setTheme(theme);
       lineup.setTheme(theme);
+      giantType.setTheme(theme);
       applyLens(theme);
       handle.invalidate();
     },
@@ -671,6 +738,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       job.dispose();
       steam.dispose();
       lineup.dispose();
+      giantType.dispose();
       composer.dispose();
       bokeh.dispose();
       studio.dispose();

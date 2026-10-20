@@ -593,6 +593,16 @@ main:focus {
   pointer-events: none;
 }
 
+/* Under the freshly printed mug, below the giant line. */
+.story__caption--reveal {
+  bottom: 7svh;
+  width: min(30rem, calc(100% - 32px));
+}
+
+:root[data-story-still] .story__caption--reveal {
+  display: none;
+}
+
 .story__caption p {
   margin: 0;
   font-size: 0.95rem;
