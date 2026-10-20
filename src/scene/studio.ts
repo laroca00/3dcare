@@ -27,7 +27,7 @@ export interface Studio {
    * The morning at the end (0..1): a wooden table fades in under everything
    * and sunlight through a window falls across it onto `target`.
    */
-  setMorning(amount: number, target: THREE.Vector3): void;
+  setMorning(amount: number, target: THREE.Vector3, sunlight?: number): void;
   dispose(): void;
 }
 
@@ -322,7 +322,7 @@ export function createStudio(
       apply(transition.current);
       return changing;
     },
-    setMorning(amount, target) {
+    setMorning(amount, target, sunlight = amount) {
       table.visible = sun.visible = amount > 0;
       tableMaterial.opacity = amount;
       const opaque = amount >= 1;
@@ -331,7 +331,8 @@ export function createStudio(
         tableMaterial.depthWrite = opaque;
         tableMaterial.needsUpdate = true;
       }
-      sun.intensity = amount * 70000;
+      sun.intensity = sunlight * 70000;
+      sun.visible = sunlight > 0;
       floorParent.worldToLocal(sun.target.position.copy(target));
       sun.position.set(sun.target.position.x - 55, sun.target.position.y + 70, sun.target.position.z - 45);
     },

@@ -15,18 +15,6 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
     <>
       <HomeStory lang={lang} t={t} />
 
-      <section className="section container" aria-labelledby="delivers">
-        <h2 id="delivers">{t.deliversTitle}</h2>
-        <dl className="delivers">
-          {t.delivers.map((item) => (
-            <div key={item.text}>
-              <dt>{item.value}</dt>
-              <dd>{item.text}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
       <section className="section container" aria-labelledby="process">
         <h2 id="process">{t.processTitle}</h2>
         <ol className="process">

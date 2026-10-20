@@ -132,7 +132,7 @@ function materials(quality: QualityLevel) {
     spool: new THREE.MeshStandardMaterial({ color: 0x1b1c1e, metalness: 0.05, roughness: 0.4 }),
     filament: new THREE.MeshStandardMaterial({ color: 0x2aa898, metalness: 0, roughness: 0.32 }),
     accent: new THREE.MeshStandardMaterial({ color: 0xf5c400, metalness: 0.05, roughness: 0.45 }),
-    screen: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.4, roughness: 0.25 }),
+    screen: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 1.9, roughness: 0.25 }),
     // Hotend parts that glow while printing.
     hotBrass: new THREE.MeshStandardMaterial({ color: 0xc8a046, metalness: 1, roughness: 0.26, emissive: 0xff5a1f, emissiveIntensity: 0 }),
     hotSock: new THREE.MeshStandardMaterial({ color: 0x8c9196, metalness: 0, roughness: 0.75, emissive: 0xff5a1f, emissiveIntensity: 0 }),

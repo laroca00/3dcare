@@ -865,6 +865,155 @@ main:focus {
   margin: 16px 0 0;
 }
 
+/* At the very end the stage fades into the page below. */
+.story__fade {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  opacity: var(--fade, 0);
+  pointer-events: none;
+}
+
+/* Which of the four steps of making a model the story is showing. */
+.story__step {
+  position: absolute;
+  top: 84px;
+  left: max(var(--gutter, 16px), calc((100% - 1120px) / 2 + var(--gutter, 16px)));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: calc(1 - var(--fade, 0));
+  pointer-events: none;
+}
+
+.story__step-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.story__step-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  transition: background-color 0.3s ease;
+}
+
+.story__step-dots .is-done {
+  background: var(--teal);
+}
+
+.story__step-name {
+  animation: story-step-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes story-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.story--stills .story__step,
+:root[data-story-still] .story__step,
+:root[data-story-still] .story__fade {
+  display: none;
+}
+
+/* The close: the project's numbers come in one by one over the tools on the table. */
+.story__beat.story__beat--outro {
+  min-height: 170svh;
+  max-width: 40rem;
+}
+
+.story__delivers {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.story__delivers > div {
+  --t: clamp(0, (var(--reveal, 2) - 0.25 - var(--i, 0) * 0.14) * 5, 1);
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  backdrop-filter: blur(10px);
+  transform: translateY(calc((1 - var(--t)) * 24px));
+  opacity: var(--t);
+}
+
+.story__delivers svg {
+  display: block;
+  width: 26px;
+  height: 26px;
+  margin-bottom: 8px;
+  fill: none;
+  stroke: var(--teal);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.story__delivers dt {
+  font-size: 2.4rem;
+}
+
+.story__delivers dd {
+  font-size: 0.92rem;
+}
+
+.story__publish {
+  --t: clamp(0, (var(--reveal, 2) - 0.95) * 5, 1);
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-left: 3px solid var(--teal);
+  border-radius: 0 14px 14px 0;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  backdrop-filter: blur(10px);
+  transform: translateY(calc((1 - var(--t)) * 18px));
+  opacity: var(--t);
+}
+
+/* Narrow screens: two compact columns, so the tools on the table stay in view. */
+@media (max-width: 520px) {
+  .story__delivers {
+    gap: 8px;
+  }
+
+  .story__delivers > div {
+    padding: 12px;
+  }
+
+  .story__delivers dt {
+    font-size: 1.8rem;
+  }
+
+  .story__delivers dd {
+    font-size: 0.8rem;
+  }
+}
+
+.story--stills .story__delivers > div,
+.story--stills .story__publish {
+  transform: none;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story__delivers > div,
+  .story__publish {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
 /* A part's card: what it does and how to look after it. */
 /* Wide screens: on the left, where the parts leave room. */
 .story__card {

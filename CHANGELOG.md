@@ -52,6 +52,19 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
   the table and the coffee. Any scroll, tap or key press takes over.
   Visitors who simply keep scrolling get the teal mug as before.
 
+### The story is how a model is made, and it closes on the project's numbers
+- A small step indicator follows the story through the four steps of making
+  a model: specify (the opening drawing), design and print, test with users
+  (the mug on the table) and publish (the close).
+- A short closing part follows the story: the camera rises over the table
+  while the project's nine other tools are sketched in beside the mug, and
+  the numbers of what the project will deliver by 2028 come in one by one,
+  ending with how the final files will be published. The stage then fades
+  into the page. These numbers moved here from their own section below,
+  and stay plain text for screen readers and visitors without motion.
+- The glow effect now only lights real light sources, which removes a white
+  haze some camera angles caused.
+
 ### The story as one film
 - The light tells the story: a cool blueprint blue for the opening drawing,
   a neutral studio when the printer appears, a darker workshop with one

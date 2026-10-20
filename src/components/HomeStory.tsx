@@ -6,7 +6,7 @@ import type { Dictionary, Locale } from "@/i18n/config";
 import { PART_IDS, type PartId } from "@/scene/parts";
 import { initialQuality } from "@/scene/quality";
 import type { SceneHandle } from "@/scene/runScene";
-import { progressFor } from "@/scene/scrollProgress";
+import { progressFor, splitProgress } from "@/scene/scrollProgress";
 import { quadTransform } from "@/scene/quadTransform";
 import { LAYERS, slicerPanel } from "@/scene/storyMotion";
 import { SCENES, localProgress, smoothstep } from "@/scene/timeline";
@@ -32,6 +32,26 @@ const FILAMENTS = [
   { id: "coral", color: 0xff7a59 },
 ] as const;
 type FilamentId = (typeof FILAMENTS)[number]["id"];
+
+/** Line icons for the closing numbers, in the opening drawing's style (24 × 24). */
+const DELIVER_ICONS = [
+  // Ten models: a mug.
+  "M5 8h10v9a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3zM15 10h2a2 2 0 0 1 0 4h-2",
+  // One training package: a laptop.
+  "M4 6h16v10H4zM2 19h20",
+  // Trainers and professionals: two people.
+  "M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20a5 5 0 0 1 10 0M16 11a3 3 0 1 0 0-6M15 15a5 5 0 0 1 6 5",
+  // New learning centres: a house with a printer inside.
+  "M3 11l9-7 9 7v9H3zM9 20v-5h6v5",
+];
+
+/** Which of the four steps of making a model the story is showing. */
+function stepAt(story: number, outro: number) {
+  if (outro > 0.04) return 4;
+  if (story < 0.16) return 1;
+  if (story < 0.84) return 2;
+  return 3;
+}
 
 /** How long the rest of the story takes to play when the visitor presses "Print", in milliseconds. */
 const PRINT_MS = 14000;
@@ -82,6 +102,9 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const slicerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const [filament, setFilament] = useState<FilamentId>("teal");
+  const [step, setStep] = useState(1);
+  // Share of the section's scroll that the story takes; the closing part has the rest.
+  const storyShareRef = useRef(1);
   // The souvenir card, once made: its picture and an address to show and download it.
   const [souvenir, setSouvenir] = useState<{ blob: Blob; url: string } | null>(null);
   const souvenirTitleRef = useRef<HTMLHeadingElement>(null);
@@ -109,7 +132,11 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     if (fixed !== null) document.documentElement.dataset.storyStill = "1";
 
     const beats = [...section.querySelectorAll<HTMLElement>("[data-beat]")];
+    // ?outro=0.5 freezes the closing part (used to render still frames).
+    const fixedOutro = params.has("outro") ? Number(params.get("outro")) : null;
+    const outroBeat = section.querySelector<HTMLElement>("[data-outro]")!;
     let progress = fixed ?? 0;
+    let outro = fixedOutro ?? 0;
     let handle: SceneHandle | null = null;
     let visible = true;
     let cancelled = false;
@@ -120,8 +147,16 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     function measure() {
       if (fixed === null) {
         const rect = section.getBoundingClientRect();
-        progress = progressFor(rect.top, rect.height, window.innerHeight);
+        const scrollable = rect.height - window.innerHeight;
+        storyShareRef.current = scrollable > 0 ? (scrollable - outroBeat.offsetHeight) / scrollable : 1;
+        const split = splitProgress(progressFor(rect.top, rect.height, window.innerHeight), storyShareRef.current);
+        progress = split.story;
+        outro = split.outro;
       }
+      outroBeat.style.setProperty("--reveal", String(outro * 2.2));
+      // At the very end the stage fades into the page.
+      section.style.setProperty("--fade", String(smoothstep((outro - 0.8) / 0.2)));
+      setStep(stepAt(progress, outro));
       beats.forEach((beat, i) => beat.style.setProperty("--reveal", String(localProgress(progress, SCENES[i].id) * 2)));
       // The caption shows while the printer is apart, and goes before the next text scrolls in.
       const apart = localProgress(progress, "explode");
@@ -131,7 +166,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       const panel = slicerPanel(progress);
       section.style.setProperty("--slicer", String(panel));
       // At the end of the story the souvenir card can be made.
-      if (live && localProgress(progress, "use") > 0.75) section.dataset.end = "1";
+      if (live && localProgress(progress, "use") > 0.75 && outro < 0.08) section.dataset.end = "1";
       else delete section.dataset.end;
       const open = live && panel > 0.5;
       slicer.inert = !open;
@@ -180,6 +215,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           cores: navigator.hardwareConcurrency || 4,
         }),
         getProgress: () => progress,
+        getOutro: () => outro,
         labels: t.story.labels,
         isVisible: () => visible,
         frozen: fixed !== null,
@@ -308,7 +344,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   function startPrint() {
     const section = sectionRef.current!;
     const from = window.scrollY;
-    const to = section.getBoundingClientRect().top + window.scrollY + section.offsetHeight - window.innerHeight;
+    // The end of the story, just before the closing part.
+    const to = section.getBoundingClientRect().top + window.scrollY + storyShareRef.current * (section.offsetHeight - window.innerHeight);
     const start = performance.now();
     let raf = 0;
     const takeOver = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
@@ -406,6 +443,18 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         style={{ "--poster-light": `url(${POSTERS.light.src})`, "--poster-dark": `url(${POSTERS.dark.src})` } as CSSProperties}
       >
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
+        <div className="story__fade" aria-hidden="true" />
+        {/* The story is also how a model is made: which of the four steps it is showing. */}
+        <p className="story__step" aria-hidden="true">
+          <span className="story__step-dots">
+            {t.process.map((_, i) => (
+              <span key={i} className={i < step ? "is-done" : undefined} />
+            ))}
+          </span>
+          <span key={step} className="story__step-name">
+            {step}/4 · {t.process[step - 1].title}
+          </span>
+        </p>
         <svg className="story__leaders" aria-hidden="true">
           {PART_IDS.map((id) => (
             <g
@@ -539,6 +588,24 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             )}
           </div>
         ))}
+        {/* The close: what the project will deliver, while the ten tools are drawn in on the table. */}
+        <div className="story__beat story__beat--outro" data-outro>
+          <h2>{t.deliversTitle}</h2>
+          <dl className="delivers story__delivers">
+            {t.delivers.map((item, i) => (
+              <div key={item.text} style={{ "--i": i } as CSSProperties}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d={DELIVER_ICONS[i]} />
+                </svg>
+                <dt>{item.value}</dt>
+                <dd>{item.text}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="story__publish">
+            <strong>4/4 · {t.process[3].title}.</strong> {t.process[3].text}
+          </p>
+        </div>
       </div>
       {/* Outside the sticky stage, so the dialog sits above the story text and the navigation. */}
       {souvenir && (

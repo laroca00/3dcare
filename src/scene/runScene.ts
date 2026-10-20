@@ -17,6 +17,7 @@ import type { Point } from "./quadTransform";
 import { QualityController, type QualityLevel } from "./quality";
 import { STEAM_LAYER, createSteam } from "./steam";
 import { LAYERS, LAYER_HEIGHT, endingMotion, labelOpacity, nozzlePath, printProgress, screenZoom, slicerProgress } from "./storyMotion";
+import { createLineup } from "./lineup";
 import { FLOOR_LAYER, createStudio } from "./studio";
 import { localProgress, smoothstep } from "./timeline";
 
@@ -32,6 +33,8 @@ export interface SceneOptions {
   theme: Theme;
   quality: QualityLevel;
   getProgress: () => number;
+  /** 0..1 progress of the closing part after the story (0 while the story runs). */
+  getOutro?: () => number;
   labels: Record<PartId, string>;
   /** Called after each frame with where the part labels belong on screen. */
   onLabels?: (labels: LabelPosition[]) => void;
@@ -104,7 +107,7 @@ const LensShader = {
     }`,
 };
 
-/** Replaces invalid (NaN or infinite) pixels with black. */
+/** Replaces invalid (NaN or infinite) pixels with black and caps extreme highlights before the glow. */
 const FiniteShader = {
   name: "FiniteShader",
   uniforms: { tDiffuse: { value: null } },
@@ -115,7 +118,8 @@ const FiniteShader = {
     void main() {
       vec4 color = texture2D(tDiffuse, vUv);
       bool invalid = any(isnan(color)) || any(isinf(color));
-      gl_FragColor = invalid ? vec4(0.0, 0.0, 0.0, 1.0) : color;
+      // A grazing reflection can be thousands of times too bright; capped, it cannot flood the glow.
+      gl_FragColor = invalid ? vec4(0.0, 0.0, 0.0, 1.0) : vec4(min(color.rgb, vec3(4.0)), color.a);
     }`,
 };
 
@@ -124,6 +128,9 @@ const CLOSE_UP_WIDE = new THREE.Vector3(48, 26, 40);
 const CLOSE_UP_NARROW = new THREE.Vector3(60, 34, 66);
 const FOCUS_WIDE = new THREE.Vector3(-6, 7, 8);
 const FOCUS_NARROW = new THREE.Vector3(0, -3, 0);
+/** The close: where the camera ends up above the ten tools. */
+const OUTRO_WIDE = new THREE.Vector3(14, 80, 130);
+const OUTRO_NARROW = new THREE.Vector3(0, 120, 190);
 
 export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Promise<SceneHandle> {
   const quality = new QualityController(opts.quality);
@@ -150,16 +157,20 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   await yieldToMain();
   const job = createPrintJob(printer.bedSurface, opts.quality);
   const steam = createSteam(opts.theme);
+  // The closing: the project's other nine tools, sketched beside the mug.
+  const lineup = createLineup(opts.theme);
+  stage.add(lineup.object);
+  // Line drawings (the opening drawing, the tool sketches) stay out of the floor's contact shadow.
+  const lineObjects: THREE.Object3D[] = [];
+  stage.traverse((o) => {
+    if ((o as THREE.Mesh).material instanceof LineMaterial) lineObjects.push(o);
+  });
   scene.add(steam.object);
   camera.layers.enable(STEAM_LAYER);
   camera.layers.enable(FLOOR_LAYER);
   // The blur's depth pass looks through this camera, which leaves the steam and the floor out.
   const depthCamera = new THREE.PerspectiveCamera();
-  // The opening line drawing stays out of the floor's contact shadow.
-  const lineObjects: THREE.Object3D[] = [];
-  stage.traverse((o) => {
-    if ((o as THREE.Mesh).material instanceof LineMaterial) lineObjects.push(o);
-  });
+
 
   // Lens: depth of field (the last scene, and the part in focus while the
   // printer is apart), a soft glow on the brightest highlights at full
@@ -177,7 +188,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   if (opts.quality === 2) {
     // A stray invalid pixel would otherwise spread through the glow as black blocks.
     const finite = new ShaderPass(FiniteShader);
-    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.45, 0.5, 1);
+    // Only light sources glow (the hot nozzle, the screen), not bright reflections.
+    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.4, 0.32, 1.4);
     composer.addPass(finite);
     composer.addPass(bloom);
     glowPasses.push(finite, bloom);
@@ -207,6 +219,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     composer.setSize(w, h);
     drawing.setResolution(w, h);
     job.setResolution(w, h);
+    lineup.setResolution(w, h);
     camera.aspect = w / h;
     // Wide screens keep the text on the left and the printer on the right.
     wide = camera.aspect > 1.1;
@@ -283,7 +296,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const orbitOffset = new THREE.Vector3();
   const UP = new THREE.Vector3(0, 1, 0);
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number) {
+  const outroLook = new THREE.Vector3();
+  const outroView = new THREE.Vector3();
+
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -302,6 +318,16 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     camera.position.lerp(closeUp, push);
     mugFocus.copy(mug).add(wide ? FOCUS_WIDE : FOCUS_NARROW);
     lookAt.copy(home).lerp(mugFocus, push);
+    // At the close the camera rises and pulls back over the ten tools on the table.
+    if (outro > 0) {
+      const ease = smoothstep(outro / 0.45);
+      lineup.object.localToWorld(outroLook.set(30, 4, -8));
+      // On wide screens the tools sit to the right of the numbers.
+      if (wide) outroLook.x -= 26;
+      outroView.copy(outroLook).add(wide ? OUTRO_WIDE : OUTRO_NARROW);
+      camera.position.lerp(outroView, ease);
+      lookAt.lerp(outroLook, ease);
+    }
     // Before printing, the camera moves in to the printer's screen.
     if (zoom > 0) {
       const ease = smoothstep(zoom);
@@ -542,11 +568,19 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     job.syncClip();
     job.object.getWorldPosition(mugWorld);
     const zoom = screenZoom(p);
-    placeCamera(u, apart, center, mugWorld, zoom, printed);
+    const outro = opts.getOutro?.() ?? 0;
+    // The tools stand in two rows on the table, starting at the mug.
+    stage.worldToLocal(lineup.object.position.copy(mugWorld));
+    lineup.object.rotation.y = -stage.rotation.y + 0.15;
+    lineup.object.updateMatrixWorld();
+    lineup.setReveal((outro - 0.08) / 0.5);
+    placeCamera(u, apart, center, mugWorld, zoom, printed, outro);
     // The light follows the story, from a cool blueprint to a warm morning.
     studio.setStory(p);
     // The morning comes as the mug lands on the table.
-    studio.setMorning(smoothstep((u - 0.3) / 0.4), mugWorld);
+    // At the close the sunbeam fades, so it does not glare as the camera rises.
+    const morning = smoothstep((u - 0.3) / 0.4);
+    studio.setMorning(morning, mugWorld, morning * (1 - smoothstep(outro / 0.25)));
     mugTop.copy(mugWorld).y += LAYERS * LAYER_HEIGHT;
     steam.update(mugTop, end.steam, now / 1000);
     const steaming = end.steam > 0 && (opts.isVisible?.() ?? true);
@@ -560,7 +594,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const focusing = focusAmount !== focusTarget;
     const mugBlur = smoothstep(u / 0.6);
     if (inFocus) inFocus.object.localToWorld(partFocus.copy(inFocus.center));
-    const aperture = Math.max(mugBlur * 0.0004, focusAmount * 0.00022);
+    // At the close everything comes into focus for the overview.
+    const aperture = Math.max(mugBlur * 0.0004 * (1 - smoothstep(outro / 0.3)), focusAmount * 0.00022);
 
     studio.renderShadow(lineObjects);
     if (quality.level > 0) {
@@ -590,6 +625,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       studio.setTheme(theme);
       drawing.setTheme(theme);
       steam.setTheme(theme);
+      lineup.setTheme(theme);
       applyLens(theme);
       handle.invalidate();
     },
@@ -634,6 +670,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       drawing.dispose();
       job.dispose();
       steam.dispose();
+      lineup.dispose();
       composer.dispose();
       bokeh.dispose();
       studio.dispose();
