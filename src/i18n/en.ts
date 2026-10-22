@@ -164,6 +164,8 @@ export const en = {
       { title: "Publish", text: "The final files are released here with print settings, safety notes and adaptation tips." },
     ],
     galleryTitle: "In everyday life",
+    galleryLead: "Simple printed tools for eating, drinking, opening a door: the small moments the project is about.",
+    galleryHeader: { left: "Everyday life", scenes: "scenes", right: "Illustrative pictures" },
     galleryNote: "The pictures are illustrative: they do not show the project's real users or its final models.",
     partnersTitle: "Seven organisations from six countries",
     partnersLink: "Meet the partners",

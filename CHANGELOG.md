@@ -11,8 +11,13 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 - The home page now shows nine pictures of printed aids in everyday life
   right after the story: the mug, morning coffee, a key turner, a spoon
   tried out with a therapist, a plate guard, students at a printer, layer
-  lines, filament and a trainer with a group. Each has a caption and a
-  description for screen readers, in English and Turkish.
+  lines, filament and a trainer with a group.
+- Laid out like an editorial table: a large title, then rows split by
+  dashed lines, each with a numbered topic, a title and one sentence about
+  the project on the left and its picture on the right. As a row scrolls
+  in, its picture grows in from the top right corner and the photo settles
+  from a slight zoom (still for visitors who prefer reduced motion).
+- Each picture has a description for screen readers, in English and Turkish.
 - A note under the gallery says the pictures are illustrative and do not
   show the project's real users or its final models.
 

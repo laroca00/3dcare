@@ -16,7 +16,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
     <>
       <HomeStory lang={lang} t={t} />
 
-      <Gallery lang={lang} title={t.galleryTitle} note={t.galleryNote} />
+      <Gallery lang={lang} t={t} />
 
       <section className="section container" aria-labelledby="process">
         <h2 id="process">{t.processTitle}</h2>

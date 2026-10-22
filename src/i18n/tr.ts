@@ -166,6 +166,8 @@ export const tr: typeof en = {
       { title: "Yayımla", text: "Son dosyalar baskı ayarları, güvenlik notları ve uyarlama önerileriyle burada yayımlanıyor." },
     ],
     galleryTitle: "Gündelik hayatta",
+    galleryLead: "Yemek, içmek, bir kapıyı açmak için basit baskı araçlar: projenin derdi bu küçük anlar.",
+    galleryHeader: { left: "Gündelik hayat", scenes: "sahne", right: "Temsilî görseller" },
     galleryNote: "Görseller temsilîdir; projenin gerçek kullanıcılarını ya da son modellerini göstermez.",
     partnersTitle: "Altı ülkeden yedi kurum",
     partnersLink: "Ortaklarla tanışın",
