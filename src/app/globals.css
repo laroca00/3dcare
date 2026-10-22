@@ -2331,14 +2331,28 @@ main:focus {
    the box shuts while what it holds is listed, then its pictures come out
    as a strip that slides past (positions are set from script). */
 .story__beat.story__beat--package {
-  min-height: 660svh;
   justify-content: flex-start;
 }
 
-/* Its words stay beside the box while it shuts and opens. */
-.story:not(.story--stills) .story__beat--package .story__text {
+/* Each scene's words arrive with it and stay on screen while it plays. */
+.story:not(.story--stills) .story__beat:not(.story__beat--intro) {
+  justify-content: flex-start;
+  padding-top: var(--text-top);
+}
+
+.story:not(.story--stills) .story__beat:not(.story__beat--intro, .story__beat--caption) .story__text {
   position: sticky;
-  top: max(12svh, 136px);
+  top: var(--text-top);
+}
+
+.story {
+  --text-top: max(12svh, 136px);
+}
+
+@media (min-width: 900px) {
+  .story {
+    --text-top: 28svh;
+  }
 }
 
 .story[data-package] .story__beats {

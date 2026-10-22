@@ -16,8 +16,8 @@ test("sceneAt clamps progress outside 0..1", () => {
   assert.equal(sceneAt(-0.5), "draw");
   assert.equal(sceneAt(1.7), "use");
   assert.equal(sceneAt(1), "use");
-  assert.equal(sceneAt(0.25), "explode");
-  assert.equal(sceneAt(0.4), "reveal");
+  assert.equal(sceneAt(0.15), "explode");
+  assert.equal(sceneAt(0.35), "reveal");
   assert.equal(sceneAt(0.6), "layers");
   assert.equal(sceneAt(0.8), "package");
 });

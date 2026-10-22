@@ -43,7 +43,8 @@ export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
     workshop: { ...DARK_STUDIO, background: 0x0b0e10, glow: 0x0c2b2b, glowStrength: 0.7, key: 0xf4f7ff, keyIntensity: 4.6, fill: 0.16, env: 0.5 },
     printing: { ...DARK_STUDIO, background: 0x121514, glow: 0x183530, key: 0xfff0dd, fill: 0.28 },
     // The printer goes into the dark; one light and a strong rim on the mug.
-    hero: { ...DARK_STUDIO, background: 0x060809, glow: 0x0b2826, glowStrength: 0.6, keyIntensity: 3.2, rimIntensity: 5.5, fill: 0.1, env: 0.4 },
+    // Deep ink blue with a violet glow, so the teal mug and line stand out.
+    hero: { ...DARK_STUDIO, background: 0x050a18, glow: 0x3a2580, glowStrength: 1, keyIntensity: 3.2, rimIntensity: 5.5, fill: 0.1, env: 0.4 },
     // Seen through a thermal camera, everything round the warm mug is cold.
     thermal: { ...DARK_STUDIO, background: 0x08051a, glow: 0x2a0e4a, glowStrength: 0.8, keyIntensity: 1.2, rimIntensity: 1.5, fill: 0.1, env: 0.2 },
     // Warm and dim, with sunlight filtering through leaves.
@@ -56,7 +57,7 @@ export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
     studio: LIGHT_STUDIO,
     workshop: { ...LIGHT_STUDIO, background: 0xeceeed, glow: 0xd5dbd8, keyIntensity: 3.3, fill: 0.75 },
     printing: { ...LIGHT_STUDIO, background: 0xf6f5f1, glow: 0xe6e0d5, key: 0xfff6ea },
-    hero: { ...LIGHT_STUDIO, background: 0xd9dfdc, glow: 0xf7f9f8, glowStrength: 1, keyIntensity: 2.9, fill: 0.55, env: 0.75 },
+    hero: { ...LIGHT_STUDIO, background: 0xdfe3f2, glow: 0xfff1d6, glowStrength: 1, keyIntensity: 2.9, fill: 0.55, env: 0.75 },
     thermal: { ...LIGHT_STUDIO, background: 0xe6e1f0, glow: 0xd4c8ea, keyIntensity: 1.6, fill: 0.6, env: 0.5 },
     // A cream room in daylight.
     material: { ...LIGHT_STUDIO, background: 0xf3ead8, glow: 0xfff7e6, key: 0xfff1dc, keyIntensity: 2.8, fill: 0.95 },

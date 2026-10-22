@@ -2,22 +2,42 @@
 
 export type SceneId = "draw" | "meet" | "explode" | "print" | "reveal" | "heat" | "plan" | "layers" | "material" | "package" | "use";
 
-export const SCENES: readonly { id: SceneId; start: number; end: number }[] = [
-  { id: "draw", start: 0, end: 0.075 },
-  { id: "meet", start: 0.075, end: 0.165 },
-  { id: "explode", start: 0.165, end: 0.26 },
-  { id: "print", start: 0.26, end: 0.366 },
+/**
+ * How much scrolling each scene gets, in svh (screen heights / 100). The
+ * story's text beats are made exactly this tall, so each text arrives with
+ * its scene. The moments that matter most get the most room.
+ */
+export const SCENE_SVH: readonly [SceneId, number][] = [
+  ["draw", 160],
+  ["meet", 200],
+  ["explode", 260],
+  ["print", 320],
   // The printed mug takes over from the printer.
-  { id: "reveal", start: 0.366, end: 0.441 },
+  ["reveal", 380],
   // Four looks at the fresh mug: its heat, its plan, its layers, its material.
-  { id: "heat", start: 0.441, end: 0.504 },
-  { id: "plan", start: 0.504, end: 0.567 },
-  { id: "layers", start: 0.567, end: 0.63 },
-  { id: "material", start: 0.63, end: 0.696 },
+  ["heat", 240],
+  ["plan", 280],
+  ["layers", 240],
+  ["material", 220],
   // The open model package: the mug goes into it, and what comes with every model comes out.
-  { id: "package", start: 0.696, end: 0.91 },
-  { id: "use", start: 0.91, end: 1 },
+  ["package", 660],
+  ["use", 260],
 ];
+
+/**
+ * The scenes on the 0..1 timeline. The story's scroll ends one screen before
+ * its last beat does (the stage is a screen tall), so the last scene's share
+ * is a screen shorter than its beat.
+ */
+export const SCENES: readonly { id: SceneId; start: number; end: number }[] = (() => {
+  const total = SCENE_SVH.reduce((sum, [, svh]) => sum + svh, 0) - 100;
+  let at = 0;
+  return SCENE_SVH.map(([id, svh], i) => {
+    const start = at;
+    at = i === SCENE_SVH.length - 1 ? 1 : at + svh / total;
+    return { id, start, end: at };
+  });
+})();
 
 export const clamp01 = (t: number) => Math.min(Math.max(t, 0), 1);
 

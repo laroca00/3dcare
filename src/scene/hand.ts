@@ -23,11 +23,17 @@ const CLOSED = [1.25, 1.5, 1.05];
 /** Bones that only hold the hand open a little while it reaches. */
 const OPEN = 0.15;
 
-/** Where the fist closes round each handle, on the mug's +x side (cm), and how tight. */
-const GRIPS: Record<MugShapeId, { x: number; y: number; tight: number }> = {
-  double: { x: 7.3, y: 4.6, tight: 1 },
-  single: { x: 7.3, y: 4.6, tight: 1 },
-  tgrip: { x: 7.6, y: 5.2, tight: 0.85 },
+/**
+ * Where the fist closes round each handle, on the mug's +x side (cm), and how
+ * far each finger (index, middle, ring, little) bends, as a share of CLOSED.
+ * Found by measuring the posed bones: every finger ends up wrapped round the
+ * bar, touching it (bar radius plus a finger's) without going into it or the
+ * mug's wall.
+ */
+const GRIPS: Record<MugShapeId, { x: number; y: number; z: number; bend: readonly number[] }> = {
+  double: { x: 7.15, y: 4.65, z: 0, bend: [0.6, 0.9, 0.8, 0.5] },
+  single: { x: 7.15, y: 4.65, z: 0, bend: [0.6, 0.9, 0.8, 0.5] },
+  tgrip: { x: 7.2, y: 5.2, z: -1.2, bend: [0.6, 0.7, 0.65, 0.5] },
 };
 /** How much the forearm points towards the camera, for each cm it points to the right. */
 const TOWARD_CAMERA = 0.9;
@@ -55,14 +61,16 @@ export async function loadHand(url: string): Promise<Hand> {
   const joints = FINGERS.map((f) => [1, 2, 3].map((j) => bone(`f_${f}0${j}R`)));
   const thumb = [1, 2, 3].map((j) => bone(`thumb0${j}R`));
   const rest = new Map([...joints.flat(), ...thumb].map((b) => [b, b.rotation.x]));
-  let tight = 1;
+  let bend: readonly number[] = GRIPS.double.bend;
 
   /** Bends the fingers: 0 open, 1 closed into a fist. */
   function curl(amount: number) {
-    for (const finger of joints) finger.forEach((b, j) => (b.rotation.x = rest.get(b)! + CLOSED[j] * amount * tight));
+    joints.forEach((finger, f) => finger.forEach((b, j) => (b.rotation.x = rest.get(b)! + CLOSED[j] * amount * bend[f])));
     thumb.forEach((b, j) => (b.rotation.x = rest.get(b)! + [0.2, 0.5, 0.4][j] * amount));
   }
 
+  // The placement below is measured on the full fist.
+  bend = [1, 1, 1, 1];
   // Find the closed fist's middle and axis, then turn the model so the axis
   // stands upright, the palm faces the mug, and the fist's middle is at the origin.
   curl(1);
@@ -97,18 +105,19 @@ export async function loadHand(url: string): Promise<Hand> {
   object.visible = false;
 
   let grip = GRIPS.double;
+  bend = grip.bend;
   return {
     object,
     update(reach, closed) {
       object.visible = reach > 0.001;
       if (!object.visible) return;
       const away = (1 - smoothstep(reach)) * AWAY;
-      object.position.set(grip.x + way.x * away, grip.y + way.y * away, way.z * away);
+      object.position.set(grip.x + way.x * away, grip.y + way.y * away, grip.z + way.z * away);
       curl(OPEN + (1 - OPEN) * smoothstep(closed));
     },
     setShape(id) {
       grip = GRIPS[id];
-      tight = grip.tight;
+      bend = grip.bend;
     },
     dispose() {
       model.traverse((o) => {

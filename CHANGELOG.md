@@ -7,6 +7,19 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-22
 
+### A clearer, slower story
+- Every scene's text now arrives with its scene and stays on screen while
+  it plays; before, some texts (the 0.3 mm layers, the material) scrolled
+  past at the wrong moment and their scenes showed no words at all.
+- The scenes that matter most get more scrolling room: the printing, the
+  mug's entrance ("Just printed"), its plan and its layers.
+- "Just printed" stands on a deep ink-blue background with a violet glow
+  (a soft lavender in the light theme) instead of plain black or grey.
+- The mug looks finer: its handles are smooth round loops instead of
+  stacked blocks, and every printed layer has softly rounded edges.
+- The hand that holds the mug now wraps its fingers round the handle;
+  before, some fingers (the ring finger most) went through it.
+
 ### The open model package
 - At the end of "design and print", the printed mug lowers into a
   cardboard box marked with the 3D Care sign and "Open model · Free". The

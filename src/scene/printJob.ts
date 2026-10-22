@@ -179,10 +179,21 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
 
   const ringShape = new THREE.Shape().absarc(0, 0, MUG_RADIUS + 0.2, 0, Math.PI * 2, false);
   ringShape.holes.push(new THREE.Path().absarc(0, 0, MUG_RADIUS - 0.2, 0, Math.PI * 2, true));
-  const ring = new THREE.ExtrudeGeometry(ringShape, { depth: thickness, bevelEnabled: false, curveSegments: segments });
+  // Each layer is a bead with softly rounded edges, as extruded plastic is.
+  const bead = Math.min(0.04, thickness / 4);
+  const ring = new THREE.ExtrudeGeometry(ringShape, {
+    depth: thickness - bead * 2,
+    bevelEnabled: true,
+    bevelThickness: bead,
+    bevelSize: bead * 0.75,
+    bevelSegments: quality === 2 ? 3 : 1,
+    curveSegments: segments,
+  });
+  ring.translate(0, 0, bead);
   ring.rotateX(-Math.PI / 2);
   const disc = new THREE.CylinderGeometry(MUG_RADIUS + 0.2, MUG_RADIUS + 0.2, thickness, segments).translate(0, thickness / 2, 0);
-  const block = new THREE.BoxGeometry(1, thickness, 1).translate(0, thickness / 2, 0);
+  // Handle slices are ovals (a unit disc scaled per slice), so the stacked layers make a round tube.
+  const block = new THREE.CylinderGeometry(0.5, 0.5, thickness * 0.94, quality === 2 ? 28 : 16).translate(0, thickness / 2, 0);
 
   // One instanced mesh per shape; instance i is layer i, so `count` reveals layers bottom-up.
   const walls = new THREE.InstancedMesh(ring, filament, LAYERS);
@@ -202,7 +213,8 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
     handleLayers = [];
     for (const b of blocks) {
       for (const side of sides) {
-        m.compose(blockAt.set(side * b.x, b.layer * LAYER_HEIGHT, 0), noTurn, blockSize.set(b.width, 1, b.depth));
+        const slice = b.slice ?? { from: 0, size: 1 };
+        m.compose(blockAt.set(side * b.x, (b.layer + slice.from) * LAYER_HEIGHT, 0), noTurn, blockSize.set(b.width, slice.size, b.depth));
         handle.setMatrixAt(handleLayers.length, m);
         handleLayers.push(b.layer);
       }
@@ -241,7 +253,8 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
         const b = ((i + 1) / loop) * Math.PI * 2;
         segment([Math.cos(a) * MUG_RADIUS, y, Math.sin(a) * MUG_RADIUS], [Math.cos(b) * MUG_RADIUS, y, Math.sin(b) * MUG_RADIUS]);
       }
-      for (const { x, width, depth } of blocks.filter((b) => b.layer === layer)) {
+      // One outline per layer: the first slice of it.
+      for (const { x, width, depth } of blocks.filter((b) => b.layer === layer && !b.slice?.from)) {
         for (const side of sides) {
           const x0 = side * (x - width / 2);
           const x1 = side * (x + width / 2);

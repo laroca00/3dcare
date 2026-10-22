@@ -13,7 +13,7 @@ import { quadTransform } from "@/scene/quadTransform";
 import { LAYERS, heroLooks, revealMotion, slicerPanel } from "@/scene/storyMotion";
 import { packageMotion } from "@/scene/packageMotion";
 import { packageCards } from "@/content/package";
-import { SCENES, at, localProgress, smoothstep } from "@/scene/timeline";
+import { SCENES, SCENE_SVH, at, localProgress, smoothstep } from "@/scene/timeline";
 import { readTheme, useTheme } from "@/theme/useTheme";
 import emblemEn from "@/assets/eu/co-funded-en-neg.png";
 import emblemTr from "@/assets/eu/co-funded-tr-neg.png";
@@ -86,9 +86,11 @@ function MugLayers({ color, shape }: { color: string; shape: MugShapeId }) {
     lines.push(<line key={`w${layer}`} x1={70} x2={150} y1={y} y2={y} />);
   }
   blocks.forEach((b, i) => {
+    // One line per layer: the first slice of it.
+    if (b.slice?.from) return;
     const y = 176 - b.layer * 5;
     for (const side of sides) {
-      const [x1, x2] = [b.x - b.width / 2, b.x + b.width / 2].map((x) => 110 + side * Math.max(x, 4) * 10);
+      const [x1, x2] = [b.x - b.width / 2, b.x + b.width / 2].map((x) => Math.round((110 + side * Math.max(x, 4) * 10) * 100) / 100);
       lines.push(<line key={`h${i}${side}`} x1={x1} x2={x2} y1={y} y2={y} />);
     }
   });
@@ -747,7 +749,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       </div>
 
       <div className="story__beats container">
-        <div className="story__beat story__beat--intro" data-beat>
+        <div className="story__beat story__beat--intro" data-beat style={{ minHeight: `${SCENE_SVH[0][1]}svh` }}>
           <h1 id="story-title">{t.title}</h1>
           <p className="lead">{t.lead}</p>
           <p className="actions">
@@ -767,6 +769,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             className={`story__beat${i === 1 || i === 3 ? " story__beat--caption" : ""}${SCENES[i + 1].id === "package" ? " story__beat--package" : ""}`}
             data-beat
             key={scene.title}
+            // Each text is as tall as its scene's share of the scroll, so they arrive together.
+            style={{ minHeight: `${SCENE_SVH[i + 1][1]}svh` }}
           >
             {/* Each line rises from behind its own mask as the story reaches it. */}
             <div className="story__text">
