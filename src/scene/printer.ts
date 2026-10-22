@@ -303,10 +303,12 @@ export function buildPrinter(quality: QualityLevel): Printer {
   let shown = "";
   let cursorOn = false;
   let idleFan = 0;
+  const REAL_LAYERS = 300;
   /** The print job on screen: percentage, layer count and time left (the mug takes about two hours). */
   function drawScreen(progress: number) {
     const percent = Math.round(progress * 100);
-    const layer = Math.min(Math.ceil(progress * 30), 30);
+    // The real count: a 9 cm mug in 0.3 mm layers.
+    const layer = Math.min(Math.ceil(progress * REAL_LAYERS), REAL_LAYERS);
     const minutesLeft = Math.round((1 - progress) * 120);
     const key = `${percent}|${layer}|${minutesLeft}|${cursorOn}`;
     if (key === shown) return;
@@ -329,7 +331,7 @@ export function buildPrinter(quality: QualityLevel): Printer {
     c.fillStyle = "#e3efec";
     c.font = "600 15px Inter, sans-serif";
     for (let i = 0; i < 3; i++) c.fillRect(18, 70 + i * 4, 12, 2);
-    c.fillText(`${layer} / 30`, 36, 80);
+    c.fillText(`${layer} / ${REAL_LAYERS}`, 36, 80);
     c.strokeStyle = "#e3efec";
     c.lineWidth = 1.6;
     c.beginPath();

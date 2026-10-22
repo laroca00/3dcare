@@ -14,6 +14,7 @@ import { centerAmount, explodeAmount, setExplode, spinTurn } from "./explode";
 import type { MugShapeId } from "./mugShapes";
 import type { PartId } from "./parts";
 import { TYPE_LAYER, createGiantType } from "./giantType";
+import { createMugGlow } from "./mugGlow";
 import { BOX, createPackageBox } from "./box";
 import { packageMotion } from "./packageMotion";
 import { type Hand, loadHand } from "./hand";
@@ -178,8 +179,11 @@ const REVEAL_DISTANCE_NARROW = 82;
 /** How far the mug moves aside, beside the text, while it is looked at on wide screens (cm). */
 const HERO_ASIDE = 8;
 /** In the close-up the camera is this far from the wall (cm), looking at this height on it. */
-const MACRO_DISTANCE = 2.6;
-const MACRO_HEIGHT = 4.5;
+const MACRO_DISTANCE = 6.5;
+const MACRO_HEIGHT = 7.2;
+/** In the close-up the camera stands a little above and to the side, so the rim and the mug's edge stay in the picture. */
+const MACRO_RISE = 1.6;
+const MACRO_SIDE = -2.4;
 /** Real layer height (cm), for the close-up's scale. */
 const REAL_LAYER = 0.03;
 /** At the very top the camera looks down on the desk from here (relative to where it aims). */
@@ -240,6 +244,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const desk = createDesk(PRINTER_Y, opts.theme);
   stage.add(desk.object);
   const giantType = await createGiantType(opts.giantType, opts.theme);
+  // The glow behind the mug while it is touched or held.
+  const mugGlow = createMugGlow(opts.theme);
+  scene.add(mugGlow.object);
+  let glowAmount = 0;
   // The open model package the mug goes into at the end of "design and print".
   const box = createPackageBox(opts.packageLabel ?? "");
   scene.add(box.object);
@@ -441,7 +449,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     if (looks.macro > 0) {
       const ease = smoothstep(looks.macro);
       wallPoint.copy(mug).addScaledVector(revealDir, MUG_RADIUS + 0.2).y += MACRO_HEIGHT;
-      camera.position.lerp(macroView.copy(wallPoint).addScaledVector(revealDir, MACRO_DISTANCE), ease);
+      macroView.copy(wallPoint).addScaledVector(revealDir, MACRO_DISTANCE).addScaledVector(sideways.crossVectors(revealDir, UP), MACRO_SIDE);
+      macroView.y += MACRO_RISE;
+      camera.position.lerp(macroView, ease);
       lookAt.lerp(wallPoint, ease);
     }
     // The package: the camera steps back to see the box beside the text,
@@ -628,6 +638,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     touchingMug = touching;
     canvas.dataset.mug = touching ? "1" : "";
     opts.onTouchMug?.(touchingMug || handHolding);
+    handle.invalidate();
   }
   let handHolding = false;
   function setHandHolding(holding: boolean) {
@@ -878,6 +889,12 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     if (!heroMug) setTouchingMug(false);
     // The line sits a little above the mug's middle, so the mug covers the lower half of the letters.
     giantType.update(camera, typeCenter.copy(mugMiddle).setY(mugMiddle.y + 2.5), TYPE_BEHIND, reveal.type, wide);
+    // The glow fades in while the mug is touched or held, and out again.
+    const glowTarget = (touchingMug || handHolding) && reveal.type > 0.3 ? 1 : 0;
+    glowAmount += (glowTarget - glowAmount) * (1 - Math.exp(-5 * dt));
+    if (Math.abs(glowTarget - glowAmount) < 0.003) glowAmount = glowTarget;
+    mugGlow.update(camera, mugMiddle, 7, glowAmount, now / 1000);
+    const glowing = glowAmount > 0;
     // The light follows the story, from a cool blueprint to a warm morning.
     studio.setStory(p);
     // The morning comes as the mug lands on the table.
@@ -922,7 +939,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     updateSelection(1 - smoothstep(draw / 0.3));
     updateScreen(zoom);
     updateMug(looks);
-    if (transitioning || turning || steaming || drifting || focusing || breathing) handle.invalidate();
+    if (transitioning || turning || steaming || drifting || focusing || breathing || glowing) handle.invalidate();
   }
 
   const handle: SceneHandle = {
@@ -932,6 +949,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       steam.setTheme(theme);
       lineup.setTheme(theme);
       giantType.setTheme(theme);
+      mugGlow.setTheme(theme);
       desk.setTheme(theme);
       applyLens(theme);
       handle.invalidate();
@@ -984,6 +1002,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       steam.dispose();
       lineup.dispose();
       giantType.dispose();
+      mugGlow.dispose();
       desk.dispose();
       hand?.dispose();
       box.dispose();

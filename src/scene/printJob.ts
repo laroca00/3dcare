@@ -37,7 +37,8 @@ export interface PrintJob {
 
 // The mug: a round wall with the handles chosen in the slicer (see
 // mugShapes.ts), built from the same layers a slicer would print.
-const BASE_LAYERS = 2;
+/** The base is 0.6 cm thick, however many layers that is. */
+const BASE_LAYERS = Math.round(0.6 / LAYER_HEIGHT);
 
 /**
  * The 3D Care mark (three concentric arcs opening to the right and a dot),
@@ -180,7 +181,7 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   const ringShape = new THREE.Shape().absarc(0, 0, MUG_RADIUS + 0.2, 0, Math.PI * 2, false);
   ringShape.holes.push(new THREE.Path().absarc(0, 0, MUG_RADIUS - 0.2, 0, Math.PI * 2, true));
   // Each layer is a bead with softly rounded edges, as extruded plastic is.
-  const bead = Math.min(0.04, thickness / 4);
+  const bead = thickness / 6;
   const ring = new THREE.ExtrudeGeometry(ringShape, {
     depth: thickness - bead * 2,
     bevelEnabled: true,
@@ -303,7 +304,7 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   const coffeeShape = new THREE.CylinderGeometry(MUG_RADIUS - 0.2, MUG_RADIUS - 0.2, 1, segments).translate(0, 0.5, 0);
   const coffee = new THREE.Mesh(coffeeShape, coffeeMaterial);
   const coffeeBottom = BASE_LAYERS * LAYER_HEIGHT;
-  const coffeeTop = (LAYERS - 4) * LAYER_HEIGHT;
+  const coffeeTop = LAYERS * LAYER_HEIGHT - 1.2;
   coffee.position.y = coffeeBottom;
   coffee.visible = false;
   object.add(coffee);

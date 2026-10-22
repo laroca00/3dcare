@@ -1,7 +1,7 @@
 // The mug's handles, chosen in the slicer: two loops, one loop, or a T-grip on
 // each side for a closed fist. The same 30 drawn layers as the wall, measured
 // in cm on the mug (x outwards from its axis, y up from its base).
-import { LAYER_HEIGHT, MUG_RADIUS } from "./storyMotion.ts";
+import { LAYERS, LAYER_HEIGHT, MUG_RADIUS } from "./storyMotion.ts";
 
 export type MugShapeId = "double" | "single" | "tgrip";
 export const MUG_SHAPES: readonly MugShapeId[] = ["double", "single", "tgrip"];
@@ -28,6 +28,8 @@ export interface MugShape {
 }
 
 const WALL = MUG_RADIUS + 0.2;
+/** The layer at a height on the mug (cm), so the shapes keep their size whatever the layer height. */
+const at = (cm: number) => Math.round(cm / LAYER_HEIGHT);
 const y = (layer: number) => layer * LAYER_HEIGHT;
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
 
@@ -43,13 +45,13 @@ const loopPoint = (t: number): [number, number] => [MUG_RADIUS + LOOP.out * Math
 
 /** The tube's slice at each layer: how far it spans along x, and how deep it is. */
 /** Each layer of the loop is drawn as this many thinner slices, so the curve reads smoothly. */
-const SLICES = 3;
+const SLICES = 2;
 /** Rounded to 0.01 mm, so the same numbers come out on the server and in the browser. */
 const round = (v: number) => Math.round(v * 1000) / 1000;
 
 function loopBlocks(): HandleBlock[] {
   const blocks: HandleBlock[] = [];
-  for (let layer = 0; layer < 30; layer++) for (let s = 0; s < SLICES; s++) {
+  for (let layer = 0; layer < LAYERS; layer++) for (let s = 0; s < SLICES; s++) {
     const height = (layer + (s + 0.5) / SLICES) * LAYER_HEIGHT;
     let min = Infinity;
     let max = -Infinity;
@@ -86,22 +88,22 @@ const loop: Omit<MugShape, "sides"> = {
 };
 
 /** A T-grip: a short stem from the wall at mid height and a thick upright bar to close a fist round. */
-const STEM = range(12, 17);
+const STEM = range(at(3.6), at(5.4) - 1);
 const tgrip: Omit<MugShape, "sides"> = {
-  blocks: range(5, 24).flatMap((layer) => [
+  blocks: range(at(1.5), at(7.5) - 1).flatMap((layer) => [
     ...(STEM.includes(layer) ? [{ layer, x: MUG_RADIUS + 1.4, width: 2.8, depth: 1.6 }] : []),
     { layer, x: MUG_RADIUS + 3.6, width: 1.6, depth: 2.6 },
   ]),
   outline: [
     [
-      [WALL, y(12)],
-      [MUG_RADIUS + 2.8, y(12)],
-      [MUG_RADIUS + 2.8, y(5)],
-      [MUG_RADIUS + 4.4, y(5)],
-      [MUG_RADIUS + 4.4, y(25)],
-      [MUG_RADIUS + 2.8, y(25)],
-      [MUG_RADIUS + 2.8, y(18)],
-      [WALL, y(18)],
+      [WALL, y(at(3.6))],
+      [MUG_RADIUS + 2.8, y(at(3.6))],
+      [MUG_RADIUS + 2.8, y(at(1.5))],
+      [MUG_RADIUS + 4.4, y(at(1.5))],
+      [MUG_RADIUS + 4.4, y(at(7.5))],
+      [MUG_RADIUS + 2.8, y(at(7.5))],
+      [MUG_RADIUS + 2.8, y(at(5.4))],
+      [WALL, y(at(5.4))],
     ],
   ],
   reach: MUG_RADIUS + 4.4,

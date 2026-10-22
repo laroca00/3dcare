@@ -81,21 +81,22 @@ const SCREEN_H = 420;
 function MugLayers({ color, shape }: { color: string; shape: MugShapeId }) {
   const { blocks, sides } = SHAPES[shape];
   const lines = [];
+  const step = 150 / LAYERS;
   for (let layer = 0; layer < LAYERS; layer++) {
-    const y = 176 - layer * 5;
+    const y = 176 - layer * step;
     lines.push(<line key={`w${layer}`} x1={70} x2={150} y1={y} y2={y} />);
   }
   blocks.forEach((b, i) => {
     // One line per layer: the first slice of it.
     if (b.slice?.from) return;
-    const y = 176 - b.layer * 5;
+    const y = 176 - b.layer * step;
     for (const side of sides) {
       const [x1, x2] = [b.x - b.width / 2, b.x + b.width / 2].map((x) => Math.round((110 + side * Math.max(x, 4) * 10) * 100) / 100);
       lines.push(<line key={`h${i}${side}`} x1={x1} x2={x2} y1={y} y2={y} />);
     }
   });
   return (
-    <svg className="story__screen-mug" viewBox="0 0 220 200" aria-hidden="true" stroke={color} strokeWidth="2.4" strokeLinecap="round">
+    <svg className="story__screen-mug" viewBox="0 0 220 200" aria-hidden="true" stroke={color} strokeWidth={Math.min(2.4, step * 0.55)} strokeLinecap="round">
       {lines}
     </svg>
   );
@@ -563,8 +564,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         style={{ "--poster-light": `url(${POSTERS.light.src})`, "--poster-dark": `url(${POSTERS.dark.src})` } as CSSProperties}
       >
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
-        {/* Colour floods in from the screen's edges while the visitor touches the freshly printed mug. */}
-        <div className="story__glow" aria-hidden="true" />
         {/* At the start the printer's drawing is selected, as in a design program. */}
         <div className="story__selection" ref={selectionRef} aria-hidden="true" data-file={t.story.selectionFile}>
           {["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (

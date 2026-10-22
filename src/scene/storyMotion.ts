@@ -2,8 +2,8 @@
 import { clamp01, localProgress, smoothstep } from "./timeline.ts";
 
 /** The printed mug: layer count and size in centimetres (layers are drawn thicker than real ones). */
-export const LAYERS = 30;
-export const LAYER_HEIGHT = 0.3;
+export const LAYERS = 60;
+export const LAYER_HEIGHT = 0.15;
 export const MUG_RADIUS = 4;
 
 /** Part labels fade in once the printer is more than half apart. */

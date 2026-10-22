@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { LogoMark } from "../Logo";
 import { ThemeToggle } from "../ThemeToggle";
 import { Button } from "./button";
-import { Limelight } from "./limelight-nav";
+import { Tubelight } from "./tubelight-nav";
 
 // The mobile menu (Radix dialog) loads only when it is first opened, so its
 // code stays out of every page load.
@@ -119,11 +119,11 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
             className="relative flex h-12 items-center overflow-hidden rounded-full border border-border bg-background/80 shadow-lg backdrop-blur-sm"
           >
             {/* While folded the contents are hidden from keyboard and screen readers too. */}
-            <Limelight className="flex h-12 items-center" inert={!isExpanded}>
+            <Tubelight className="flex h-12 items-center" inert={!isExpanded}>
               <m.div variants={logoVariants} className="relative z-10 flex shrink-0 items-center pl-2">
                 <Link
                   href={`/${lang}/`}
-                  data-limelight
+                  data-tubelight
                   aria-current={isHome ? "page" : undefined}
                   className="flex items-center gap-2 rounded-full px-2 py-1 text-lg font-bold tracking-tight whitespace-nowrap text-foreground no-underline hover:text-foreground"
                 >
@@ -138,9 +138,9 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
                   <m.li key={item.href} variants={itemVariants} className="relative z-10">
                     <Link
                       href={item.href}
-                      data-limelight
+                      data-tubelight
                       aria-current={isActive(item.href) ? "page" : undefined}
-                      className={cn(linkClass, "whitespace-nowrap aria-[current=page]:bg-transparent")}
+                      className={cn(linkClass, "whitespace-nowrap aria-[current=page]:bg-transparent aria-[current=page]:text-primary")}
                     >
                       {item.label}
                     </Link>
@@ -187,7 +187,7 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
                   </React.Suspense>
                 )}
               </m.div>
-            </Limelight>
+            </Tubelight>
 
             {/* The folded circle: one button that opens the bar again. */}
             <button

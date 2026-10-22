@@ -7,6 +7,21 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-22
 
+### Finer layers, a glow behind the mug, a tubelight in the menu
+- The mug is drawn with twice as many, thinner layers, so it looks
+  smoother from a distance while the print still visibly builds up. The
+  printer's screen now counts the real layers (out of 300).
+- The 0.3 mm close-up no longer fills the screen with stripes: the camera
+  stands a little further back and to the side, so the rim, the handle and
+  the mug's edge stay in the picture next to the fine layers.
+- Touching the freshly printed mug (or the hand holding it) now lights it
+  from behind: a soft glow whose colour slowly runs through the spectrum,
+  with a brighter spot circling the mug. It replaces the colour that came
+  in from the screen's edges.
+- The menu marks the current page like a tubelight: the link sits on a
+  soft pill with a small lamp glowing down from the top edge, and both
+  spring across when the page changes.
+
 ### A clearer, slower story
 - Every scene's text now arrives with its scene and stays on screen while
   it plays; before, some texts (the 0.3 mm layers, the material) scrolled
