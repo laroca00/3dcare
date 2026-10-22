@@ -7,6 +7,21 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-22
 
+### Out of the box
+- After the home story the printed mug lowers into a cardboard box with
+  the 3D Care mark on its front. The flaps fold shut and the box turns to
+  the camera while what every model comes with appears beside it: STL
+  file, print settings, safety notes, adaptation tips. Then the box opens,
+  the camera goes inside, and eight product pictures come out of it as a
+  strip of cards that slides past as the visitor scrolls: two handles,
+  about 300 layers, an old idea (two-handled cups from Troy, Greece and
+  Rome), five colours, three grips, just off the bed, 0.3 mm and material.
+- With reduced motion or without WebGL there is no box; the cards are a
+  row that scrolls sideways.
+- The gallery now shows the mug in every picture: new pictures of a
+  therapist test, a meal at the table and students lifting the mug off the
+  printer replace the ones without it.
+
 ### Gallery: in everyday life
 - The home page now shows nine pictures of printed aids in everyday life
   right after the story: the mug, morning coffee, a key turner, a spoon
