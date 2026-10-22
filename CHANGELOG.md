@@ -7,17 +7,21 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-22
 
-### Out of the box
-- After the home story the printed mug lowers into a cardboard box with
-  the 3D Care mark on its front. The flaps fold shut and the box turns to
-  the camera while what every model comes with appears beside it: STL
-  file, print settings, safety notes, adaptation tips. Then the box opens,
-  the camera goes inside, and eight product pictures come out of it as a
-  strip of cards that slides past as the visitor scrolls: two handles,
-  about 300 layers, an old idea (two-handled cups from Troy, Greece and
-  Rome), five colours, three grips, just off the bed, 0.3 mm and material.
-- With reduced motion or without WebGL there is no box; the cards are a
-  row that scrolls sideways.
+### The open model package
+- At the end of "design and print", the printed mug lowers into a
+  cardboard box marked with the 3D Care sign and "Open model · Free". The
+  flaps fold shut while what every model is published with appears beside
+  it: STL file, print settings, user guide, safety notes, adaptation tips.
+  The text says it plainly: the models are shared, not sold, free to
+  download, print, adapt and pass on.
+- Then the box opens, the camera looks inside and eight pictures come out
+  as a strip that slides past: an open file, adapted to the hand, print
+  settings included, printed at the centre, with the filament at hand,
+  checked layer by layer, greener materials, and an old idea shared again
+  (two-handled cups from Troy, Greece and Rome). Finally the mug comes back
+  out and goes on to the morning table.
+- This replaces the separate unboxing section added earlier the same day,
+  which read like a product for sale.
 - The gallery now shows the mug in every picture: new pictures of a
   therapist test, a meal at the table and students lifting the mug off the
   printer replace the ones without it.

@@ -14,6 +14,8 @@ import { centerAmount, explodeAmount, setExplode, spinTurn } from "./explode";
 import type { MugShapeId } from "./mugShapes";
 import type { PartId } from "./parts";
 import { TYPE_LAYER, createGiantType } from "./giantType";
+import { BOX, createPackageBox } from "./box";
+import { packageMotion } from "./packageMotion";
 import { type Hand, loadHand } from "./hand";
 import { createPrintJob } from "./printJob";
 import { BED_SURFACE_Y, NOZZLE_HOME, SCREEN_SIZE, buildPrinter, type PrinterPart } from "./printer";
@@ -42,6 +44,8 @@ export interface SceneOptions {
   labels: Record<PartId, string>;
   /** The line that glows behind the freshly printed mug. */
   giantType: string;
+  /** The label printed on the open model package's box. */
+  packageLabel?: string;
   /** Called after each frame with where the part labels belong on screen. */
   onLabels?: (labels: LabelPosition[]) => void;
   /** Whether the stage is on screen; the steam only keeps animating while it is. */
@@ -181,6 +185,8 @@ const REAL_LAYER = 0.03;
 /** At the very top the camera looks down on the desk from here (relative to where it aims). */
 const DESK_WIDE = new THREE.Vector3(18, 205, 92);
 const DESK_NARROW = new THREE.Vector3(6, 420, 150);
+/** How far the mug lowers into the open model package (cm). */
+const PACKAGE_DROP = 14;
 /** How far behind the mug the giant line glows. */
 const TYPE_BEHIND = 40;
 /** The close: where the camera ends up above the ten tools. */
@@ -218,6 +224,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const drawing = createDrawing(printer, opts.theme);
   await yieldToMain();
   const job = createPrintJob(printer.bedSurface, opts.quality);
+  // Everything in the printer beside the branch from its root to the mug.
+  const mugBranch = new Set<THREE.Object3D>();
+  for (let o: THREE.Object3D | null = job.object; o && o !== printer.root.parent; o = o.parent) mugBranch.add(o);
+  const besideMug = [...mugBranch].filter((o) => o !== job.object).flatMap((o) => o.children.filter((c) => !mugBranch.has(c)));
+  const hiddenForPackage: THREE.Object3D[] = [];
   // Loads alongside the rest of the set-up.
   const handLoading = opts.handUrl ? loadHand(opts.handUrl).catch(() => null) : Promise.resolve(null);
   let hand: Hand | null = null;
@@ -229,6 +240,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const desk = createDesk(PRINTER_Y, opts.theme);
   stage.add(desk.object);
   const giantType = await createGiantType(opts.giantType, opts.theme);
+  // The open model package the mug goes into at the end of "design and print".
+  const box = createPackageBox(opts.packageLabel ?? "");
+  scene.add(box.object);
   scene.add(giantType.object);
   camera.layers.enable(TYPE_LAYER);
   // Line drawings (the opening drawing, the tool sketches) stay out of the floor's contact shadow.
@@ -384,11 +398,14 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const outroView = new THREE.Vector3();
 
   const deskEye = new THREE.Vector3();
+  const boxCenter = new THREE.Vector3();
+  const boxView = new THREE.Vector3();
+  const boxAside = new THREE.Vector3();
   const sideways = new THREE.Vector3();
   const wallPoint = new THREE.Vector3();
   const macroView = new THREE.Vector3();
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number, looks: ReturnType<typeof heroLooks>) {
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number, looks: ReturnType<typeof heroLooks>, pk: ReturnType<typeof packageMotion>) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -427,6 +444,21 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       camera.position.lerp(macroView.copy(wallPoint).addScaledVector(revealDir, MACRO_DISTANCE), ease);
       lookAt.lerp(wallPoint, ease);
     }
+    // The package: the camera steps back to see the box beside the text,
+    // then looks down into it while the pictures come out.
+    if (pk.frame > 0) {
+      const ease = smoothstep(pk.frame);
+      const dive = smoothstep(pk.dive);
+      boxAside.crossVectors(revealDir, UP).multiplyScalar(wide ? 11 * (1 - dive) : 0);
+      boxView.copy(boxCenter).addScaledVector(revealDir, wide ? 70 : 105).add(boxAside).y += wide ? 34 : 48;
+      camera.position.lerp(boxView, ease);
+      lookAt.lerp(boxView.copy(boxCenter).add(boxAside), ease);
+      if (dive > 0) {
+        boxView.copy(boxCenter).addScaledVector(revealDir, 0.6).y += 28;
+        camera.position.lerp(boxView, dive);
+        lookAt.lerp(boxView.copy(boxCenter).setY(boxCenter.y - BOX.height / 2), dive);
+      }
+    }
     closeUp.copy(mug).add(wide ? CLOSE_UP_WIDE : CLOSE_UP_NARROW);
     camera.position.lerp(closeUp, push);
     mugFocus.copy(mug).add(wide ? FOCUS_WIDE : FOCUS_NARROW);
@@ -449,7 +481,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     }
     // The camera drifts a little with the mouse, keeping its aim (less when up close),
     // and floats gently while the visitor pauses.
-    const still = Math.max(zoom, smoothstep(looks.macro));
+    const still = Math.max(zoom, smoothstep(looks.macro), smoothstep(pk.dive));
     const float = breath.amount * (1 - still);
     camera.position.x += parallax.x * 3 * (1 - still) + Math.sin(breath.clock * 0.55) * 0.9 * float;
     camera.position.y += parallax.y * 2 * (1 - still) + Math.sin(breath.clock * 0.41 + 1) * 0.6 * float;
@@ -781,13 +813,15 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       stage.updateMatrixWorld(true);
     }
     printer.bedSurface.worldToLocal(hover);
+    // The package scene: the mug lowers into the box and is hidden while it is shut.
+    const pk = packageMotion(localProgress(p, "package"));
 
     // 6. The mug comes down to the table beside the printer, is filled with
     //    coffee and starts to steam, while the printer behind it blurs.
     const stay = 1 - end.travel;
     job.object.position.set(
       hover.x * stay + end.travel * 34,
-      hover.y * stay + Math.sin(Math.PI * end.travel) * 6 - end.travel * BED_SURFACE_Y + end.bounce,
+      hover.y * stay + Math.sin(Math.PI * end.travel) * 6 - end.travel * BED_SURFACE_Y + end.bounce - pk.drop * PACKAGE_DROP,
       hover.z * stay + end.travel * 18,
     );
     // Ends with a handle on each side, as seen from the camera.
@@ -798,7 +832,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // further, so the camera finds plain wall between the logo and a handle.
     // It lets go of that pose as it goes down to the table.
     const looks = heroLooks(p);
-    const facingCamera = Math.max(smoothstep(looks.hero), smoothstep((r - 0.55) / 0.15) * (1 - smoothstep(u / 0.4)));
+    const facingCamera = Math.max(smoothstep(looks.hero), smoothstep(pk.box), smoothstep((r - 0.55) / 0.15) * (1 - smoothstep(u / 0.4)));
     if (facingCamera > 0) {
       stage.updateMatrixWorld(true);
       job.object.getWorldQuaternion(mugTurn);
@@ -814,6 +848,24 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     stage.updateMatrixWorld(true);
     job.syncClip();
     job.object.getWorldPosition(mugWorld);
+    job.object.visible = !(pk.close > 0.999 && pk.open < 0.001);
+    // The box stands under the mug's hovering place, its label turning to the camera.
+    box.object.position.copy(mugWorld).y += (pk.drop - 1) * PACKAGE_DROP;
+    boxCenter.copy(box.object.position).y += BOX.height / 2;
+    box.object.rotation.y = Math.atan2(revealDir.x, revealDir.z) + (1 - pk.turn) * 0.6;
+    box.update(pk.close, pk.open, pk.box);
+    // The printer waits off to the side; it stays out of the package's
+    // picture, all but the branch that carries the mug.
+    // Only parts that were showing are hidden, and only they come back.
+    const printerHidden = pk.frame >= 0.5;
+    if (printerHidden && !hiddenForPackage.length) {
+      for (const o of besideMug) if (o.visible) hiddenForPackage.push(o);
+    }
+    if (printerHidden) for (const o of hiddenForPackage) o.visible = false;
+    else if (hiddenForPackage.length) {
+      for (const o of hiddenForPackage) o.visible = true;
+      hiddenForPackage.length = 0;
+    }
     const zoom = screenZoom(p);
     const outro = opts.getOutro?.() ?? 0;
     // The tools stand in two rows on the table, starting at the mug.
@@ -821,7 +873,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     lineup.object.rotation.y = -stage.rotation.y + 0.15;
     lineup.object.updateMatrixWorld();
     lineup.setReveal((outro - 0.08) / 0.5);
-    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8, looks);
+    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8, looks, pk);
     heroMug = reveal.type > 0.6 && !opts.frozen;
     if (!heroMug) setTouchingMug(false);
     // The line sits a little above the mug's middle, so the mug covers the lower half of the letters.
@@ -934,6 +986,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       giantType.dispose();
       desk.dispose();
       hand?.dispose();
+      box.dispose();
       composer.dispose();
       bokeh.dispose();
       studio.dispose();

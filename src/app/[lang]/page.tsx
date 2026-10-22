@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Gallery } from "@/components/Gallery";
 import { HomeStory } from "@/components/HomeStory";
-import { Unboxing } from "@/components/Unboxing";
 import { NewsList } from "@/components/NewsList";
 import { posts } from "@/content/news";
 import { partners } from "@/content/partners";
@@ -16,8 +15,6 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   return (
     <>
       <HomeStory lang={lang} t={t} />
-
-      <Unboxing lang={lang} t={t} />
 
       <Gallery lang={lang} t={t} />
 

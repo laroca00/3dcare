@@ -17,7 +17,7 @@ const TARGET = "src/assets/story";
 const EDGE = process.env.EDGE_PATH ?? "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 // The poster (top of the page, frame 0), then one representative moment per
 // scene: drawing, studio, exploded with labels, printing, the mug taking over,
-// its heat, its plan, its layers, its material, in use.
+// its heat, its plan, its layers, its material, the open package, in use.
 const MOMENTS = [
   0,
   at("draw", 0.43),
@@ -29,6 +29,7 @@ const MOMENTS = [
   at("plan", 0.8),
   at("layers", 0.55),
   at("material", 0.55),
+  at("package", 0.26),
   at("use", 0.85),
 ];
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".woff2": "font/woff2" };

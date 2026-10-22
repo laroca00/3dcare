@@ -19,7 +19,7 @@ export type GalleryItem = {
 
 /**
  * Illustrative pictures of the printed mug in everyday life, shown on the
- * home page after the unboxing. They are not the project's real users or
+ * home page after the story. They are not the project's real users or
  * models. Full-size originals are kept locally in design/gallery/ (not in
  * the repository).
  */

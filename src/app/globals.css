@@ -2327,123 +2327,95 @@ main:focus {
   font-size: 0.85rem;
 }
 
-/* Unboxing after the home story: a tall section with a sticky stage. The
-   mug goes into its box (3D, on the canvas) beside what every model comes
-   with, then the box opens and the pictures come out as a strip of cards
-   that slides past. Without the live scene it is a plain sideways row. */
-.unbox {
-  position: relative;
-  --card-h: min(56svh, 520px);
+/* The open model package at the end of "design and print". Its beat is long:
+   the box shuts while what it holds is listed, then its pictures come out
+   as a strip that slides past (positions are set from script). */
+.story__beat.story__beat--package {
+  min-height: 660svh;
+  justify-content: flex-start;
 }
 
-.unbox[data-mode="live"] {
-  height: 600svh;
-}
-
-.unbox[data-mode="live"] .unbox__stage {
+/* Its words stay beside the box while it shuts and opens. */
+.story:not(.story--stills) .story__beat--package .story__text {
   position: sticky;
-  top: 0;
-  height: 100svh;
-  overflow: hidden;
+  top: max(12svh, 136px);
 }
 
-.unbox__canvas {
-  display: none;
+.story[data-package] .story__beats {
+  opacity: 0;
 }
 
-.unbox[data-mode="live"] .unbox__canvas {
-  display: block;
+.story__package-contents {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: calc(1 - var(--cards, 0));
-}
-
-.unbox__intro {
-  padding-top: 12svh;
-}
-
-.unbox[data-mode="live"] .unbox__intro {
-  position: absolute;
-  inset: 0;
-  opacity: var(--intro, 1);
+  right: max(var(--gutter), calc((100vw - 1120px) / 2 + var(--gutter)));
+  bottom: 12svh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   pointer-events: none;
 }
 
-.unbox__kicker {
-  margin: 0 0 12px;
-  color: var(--teal);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.unbox__intro h2 {
-  margin: 0;
-  max-width: 11ch;
-  font-size: clamp(2.2rem, 6vw, 4.8rem);
-  line-height: 0.95;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
-}
-
-/* What the box holds, appearing one after another as it closes. */
-.unbox__contents {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 10px;
-  margin: 24px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.unbox__contents li {
+.story__package-contents li {
+  --t: clamp(0, var(--pk-contents, 0) * 6 - var(--i), 1);
   padding: 6px 12px;
   border: 1px dashed currentColor;
   border-radius: 999px;
-  color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: var(--ink);
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  opacity: var(--t);
+  transform: translateY(calc((1 - var(--t)) * 10px));
 }
 
-.unbox[data-mode="live"] .unbox__contents li {
-  opacity: clamp(0, var(--contents, 0) * 5 - var(--i), 1);
-  transform: translateY(calc((1 - clamp(0, var(--contents, 0) * 5 - var(--i), 1)) * 10px));
-}
-
-@media (min-width: 900px) {
-  .unbox[data-mode="live"] .unbox__contents {
-    position: absolute;
-    right: max(var(--gutter), calc((100vw - 1120px) / 2 + var(--gutter)));
-    bottom: 14svh;
-    flex-direction: column;
-    align-items: flex-end;
+@media (max-width: 899px) {
+  .story__package-contents {
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: 6svh;
+    flex-flow: row wrap;
+    justify-content: center;
   }
 }
 
-.unbox__cards {
-  padding-block: 32px 8svh;
+.story--stills .story__package-contents,
+:root[data-story-still] .story__package-contents {
+  display: none;
 }
 
-.unbox[data-mode="live"] .unbox__cards {
+/* The pictures rise out of the open box and settle into a row. */
+.story__package-cards {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0;
-  opacity: var(--cards, 0);
-  /* The cards rise out of the open box and settle into a row. */
-  transform: translateY(calc((1 - var(--cards, 0)) * 30svh)) scale(calc(0.55 + 0.45 * var(--cards, 0)));
+  overflow: hidden;
+  opacity: var(--pk-cards, 0);
+  transform: translateY(calc((1 - var(--pk-cards, 0)) * 30svh)) scale(calc(0.55 + 0.45 * var(--pk-cards, 0)));
   pointer-events: none;
 }
 
-.unbox__cards-title {
-  margin-block: 0 16px;
+/* The stage dims behind the pictures. */
+.story__package-cards::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  background: var(--paper);
+}
+
+.story__package-title {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto 16px;
+  padding-inline: var(--gutter);
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 600;
@@ -2451,16 +2423,8 @@ main:focus {
   text-transform: uppercase;
 }
 
-.unbox__viewport {
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-}
-
-.unbox[data-mode="live"] .unbox__viewport {
-  overflow: visible;
-}
-
-.unbox__strip {
+.story__package-strip {
+  --card-h: min(52svh, 500px);
   display: flex;
   gap: 20px;
   width: max-content;
@@ -2470,15 +2434,11 @@ main:focus {
   will-change: transform;
 }
 
-.unbox__card {
-  scroll-snap-align: start;
-}
-
-.unbox__card figure {
+.story__package-strip figure {
   margin: 0;
 }
 
-.unbox__card img {
+.story__package-strip img {
   display: block;
   height: var(--card-h);
   width: calc(var(--card-h) * var(--ratio));
@@ -2488,21 +2448,41 @@ main:focus {
   background: var(--plate);
 }
 
-.unbox__card figcaption {
+.story__package-strip figcaption {
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin-top: 10px;
 }
 
-.unbox__card strong {
+.story__package-strip strong {
   font-size: 1.05rem;
 }
 
-.unbox__card span {
+.story__package-strip span {
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* Still frames: the pictures are a row that scrolls sideways under the text. */
+.story__package-row {
+  margin-top: 24px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.story__package-row .story__package-title {
+  padding: 0;
+}
+
+.story__package-row .story__package-strip {
+  --card-h: 280px;
+  padding: 0;
+}
+
+.story__package-row li {
+  scroll-snap-align: start;
 }

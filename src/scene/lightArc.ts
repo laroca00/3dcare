@@ -84,6 +84,9 @@ const KEYS: readonly [number, Mood][] = [
   [at("layers", 0.85), "hero"],
   [at("material", 0.2), "material"],
   [at("material", 0.85), "material"],
+  // The package opens in a calm studio.
+  [at("package", 0.12), "studio"],
+  [at("package", 0.9), "studio"],
   [at("use", 0.7), "morning"],
 ];
 

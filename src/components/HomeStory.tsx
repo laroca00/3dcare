@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { type CSSProperties, type RefObject, useEffect, useRef, useState } from "react";
 import type { Dictionary, Locale } from "@/i18n/config";
 import { PART_IDS, type PartId } from "@/scene/parts";
 import { MUG_SHAPES, SHAPES, mugWidth, type MugShapeId } from "@/scene/mugShapes";
@@ -10,6 +11,8 @@ import type { SceneHandle } from "@/scene/runScene";
 import { progressFor, splitProgress } from "@/scene/scrollProgress";
 import { quadTransform } from "@/scene/quadTransform";
 import { LAYERS, heroLooks, revealMotion, slicerPanel } from "@/scene/storyMotion";
+import { packageMotion } from "@/scene/packageMotion";
+import { packageCards } from "@/content/package";
 import { SCENES, at, localProgress, smoothstep } from "@/scene/timeline";
 import { readTheme, useTheme } from "@/theme/useTheme";
 import emblemEn from "@/assets/eu/co-funded-en-neg.png";
@@ -96,6 +99,25 @@ function MugLayers({ color, shape }: { color: string; shape: MugShapeId }) {
   );
 }
 
+/** The package's pictures, each with a title and a short line. */
+function PackageStrip({ lang, stripRef }: { lang: Locale; stripRef?: RefObject<HTMLOListElement | null> }) {
+  return (
+    <ol className="story__package-strip" ref={stripRef}>
+      {packageCards.map((card) => (
+        <li key={card.image.src} style={{ "--ratio": card.image.width / card.image.height } as CSSProperties}>
+          <figure>
+            <Image src={card.image} alt={card.alt[lang]} sizes="(min-width: 900px) 50vw, 90vw" />
+            <figcaption>
+              <strong>{card.title[lang]}</strong>
+              <span>{card.note[lang]}</span>
+            </figcaption>
+          </figure>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function canRenderWebGL() {
   try {
     return Boolean(document.createElement("canvas").getContext("webgl2"));
@@ -124,6 +146,9 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const selectionRef = useRef<HTMLDivElement>(null);
   const planRef = useRef<SVGSVGElement>(null);
   const scaleRef = useRef<HTMLDivElement>(null);
+  const packageStripRef = useRef<HTMLOListElement>(null);
+  // The package's pictures load once the story gets near them.
+  const [packageNear, setPackageNear] = useState(false);
   const [filament, setFilament] = useState<FilamentId>("teal");
   const [shape, setShape] = useState<MugShapeId>("double");
   const shapeRef = useRef<MugShapeId>("double");
@@ -202,6 +227,19 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       const looks = heroLooks(progress);
       section.style.setProperty("--thermal", String(looks.thermal));
       section.style.setProperty("--leaves", String(looks.material));
+      // The open model package: what it holds is listed while it is shut, then
+      // its pictures come out and slide past.
+      const pk = packageMotion(localProgress(progress, "package"));
+      section.style.setProperty("--pk-contents", String(pk.contents));
+      section.style.setProperty("--pk-cards", String(pk.cards));
+      if (progress > at("material", 0)) setPackageNear(true);
+      const strip = packageStripRef.current;
+      if (strip) {
+        const travel = Math.max(strip.scrollWidth - window.innerWidth, 0);
+        strip.style.transform = `translateX(${-pk.slide * travel}px)`;
+      }
+      if (live && pk.cards > 0.5) section.dataset.package = "1";
+      else delete section.dataset.package;
       // The slicer panel opens before printing; it can be used only while it shows.
       const panel = slicerPanel(progress);
       section.style.setProperty("--slicer", String(panel));
@@ -258,6 +296,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         getOutro: () => outro,
         labels: t.story.labels,
         giantType: t.story.scenes[4].title,
+        packageLabel: t.story.packageLabel,
         handUrl: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/3d/first-person-hands.glb`,
         isVisible: () => visible,
         frozen: fixed !== null,
@@ -372,7 +411,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       handle?.dispose();
       sceneRef.current = null;
     };
-  }, [t.story.labels, t.story.scenes]);
+  }, [t.story.labels, t.story.scenes, t.story.packageLabel]);
 
   // The open card: the scene focuses on its part, its label stays lit, Escape closes it.
   useEffect(() => {
@@ -553,6 +592,20 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           <span>{t.story.thermal.hot}</span>
           <span>{t.story.thermal.cold}</span>
         </p>
+        {/* The open model package: what it holds, then its pictures as a strip that slides past. */}
+        <ul className="story__package-contents" aria-hidden="true">
+          {t.story.packageContents.map((item, i) => (
+            <li key={item} style={{ "--i": i } as CSSProperties}>
+              {item}
+            </li>
+          ))}
+        </ul>
+        {mode === "live" && packageNear && (
+          <div className="story__package-cards" aria-hidden="true">
+            <p className="story__package-title">{t.story.packageCardsTitle}</p>
+            <PackageStrip lang={lang} stripRef={packageStripRef} />
+          </div>
+        )}
         {/* Leaf shadows drift across the material's room. */}
         <div className="story__leaves" aria-hidden="true">
           <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -710,13 +763,24 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         </div>
         {rest.map((scene, i) => (
           // The taken-apart scene and the mug's entrance show their text on the stage instead.
-          <div className={`story__beat${i === 1 || i === 3 ? " story__beat--caption" : ""}`} data-beat key={scene.title}>
+          <div
+            className={`story__beat${i === 1 || i === 3 ? " story__beat--caption" : ""}${SCENES[i + 1].id === "package" ? " story__beat--package" : ""}`}
+            data-beat
+            key={scene.title}
+          >
             {/* Each line rises from behind its own mask as the story reaches it. */}
             <div className="story__text">
               <RevealText as="h2" text={scene.title} />
               <RevealText as="p" text={scene.text} first={2} />
             </div>
             {stillFrame(i + 1)}
+            {/* The package's pictures: a sideways row for still frames, and for screen readers. */}
+            {SCENES[i + 1].id === "package" && (
+              <div className={mode === "live" ? "visually-hidden" : "story__package-row"}>
+                <p className="story__package-title">{t.story.packageCardsTitle}</p>
+                <PackageStrip lang={lang} />
+              </div>
+            )}
             {i === 1 && (
               <>
                 <h3 className="visually-hidden">{t.story.partsListTitle}</h3>
