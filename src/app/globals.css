@@ -2151,3 +2151,42 @@ main:focus {
     transform: translate(14px, -26px);
   }
 }
+
+/* Gallery on the home page: pictures of printed aids in everyday life, in
+   columns that keep each picture's own shape. */
+.gallery {
+  columns: 3 280px;
+  column-gap: 20px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gallery li {
+  break-inside: avoid;
+  margin-bottom: 20px;
+}
+
+.gallery figure {
+  margin: 0;
+}
+
+.gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  background: var(--plate);
+}
+
+.gallery figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.gallery__note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

@@ -163,6 +163,8 @@ export const en = {
       { title: "Test with users", text: "Adults with disabilities and their therapists try each model in two testing cycles, in Lithuania and Türkiye." },
       { title: "Publish", text: "The final files are released here with print settings, safety notes and adaptation tips." },
     ],
+    galleryTitle: "In everyday life",
+    galleryNote: "The pictures are illustrative: they do not show the project's real users or its final models.",
     partnersTitle: "Seven organisations from six countries",
     partnersLink: "Meet the partners",
     newsTitle: "Latest news",

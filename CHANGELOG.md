@@ -5,6 +5,17 @@ Fikirler Derneği) under WP5, Activity 5.1 (Dissemination of Project Results
 and Stakeholder Outreach). Every change is also recorded in the commit history
 of this repository: https://github.com/laroca00/3dcare/commits/main
 
+## 2026-10-22
+
+### Gallery: in everyday life
+- The home page now shows nine pictures of printed aids in everyday life
+  right after the story: the mug, morning coffee, a key turner, a spoon
+  tried out with a therapist, a plate guard, students at a printer, layer
+  lines, filament and a trainer with a group. Each has a caption and a
+  description for screen readers, in English and Turkish.
+- A note under the gallery says the pictures are illustrative and do not
+  show the project's real users or its final models.
+
 ## 2026-10-20
 
 ### A hand reaches for the mug

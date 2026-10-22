@@ -165,6 +165,8 @@ export const tr: typeof en = {
       { title: "Kullanıcılarla test et", text: "Engelli yetişkinler ve terapistleri her modeli Litvanya ve Türkiye'de iki test döngüsünde deniyor." },
       { title: "Yayımla", text: "Son dosyalar baskı ayarları, güvenlik notları ve uyarlama önerileriyle burada yayımlanıyor." },
     ],
+    galleryTitle: "Gündelik hayatta",
+    galleryNote: "Görseller temsilîdir; projenin gerçek kullanıcılarını ya da son modellerini göstermez.",
     partnersTitle: "Altı ülkeden yedi kurum",
     partnersLink: "Ortaklarla tanışın",
     newsTitle: "Son haberler",
