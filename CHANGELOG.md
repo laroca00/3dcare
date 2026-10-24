@@ -7,6 +7,11 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### A printed surface on the mug
+- The mug's plastic has the fine grain of a real print: a texture that runs
+  along the layers with tiny specks across it, so its satin sheen breaks
+  up as a printed PETG mug's does. Made in code, no extra download.
+
 ### Skin on the hand
 - The hand that holds the mug has real skin detail: fine pores and creases
   that catch the light, slight colour variation and an uneven sheen, all

@@ -169,14 +169,68 @@ function addLooks(material: THREE.MeshStandardMaterial, uniforms: Record<"uTherm
   };
 }
 
+/**
+ * The printed plastic's surface, made in code: a fine grain that runs along
+ * the layers (the nozzle's path) with tiny specks across it, as a normal map
+ * and a roughness map, so the mug's sheen breaks up as a real print's does.
+ */
+function printedSurface() {
+  const N = 128;
+  const rand = (i: number) => {
+    const x = Math.sin(i * 12.9898) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const height = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) {
+    // Along the layer the grain changes slowly; across it quickly.
+    const row = rand(y * 7.1) * 0.6;
+    for (let x = 0; x < N; x++) {
+      const along = Math.sin((x / N) * Math.PI * 2 * 6 + row * 9) * 0.25;
+      height[y * N + x] = row + along + rand(y * N + x) * 0.18;
+    }
+  }
+  const h = (x: number, y: number) => height[((y + N) % N) * N + ((x + N) % N)];
+  const make = (paint: (d: Uint8ClampedArray, i: number, x: number, y: number) => void) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = N;
+    const c = canvas.getContext("2d")!;
+    const image = c.createImageData(N, N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) paint(image.data, (y * N + x) * 4, x, y);
+    c.putImageData(image, 0, 0);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    // The wall's UVs are in cm: one tile every 2 cm.
+    texture.repeat.set(0.5, 0.5);
+    return texture;
+  };
+  const normalMap = make((d, i, x, y) => {
+    const dx = (h(x + 1, y) - h(x - 1, y)) * 1.6;
+    const dy = (h(x, y + 1) - h(x, y - 1)) * 1.6;
+    const len = Math.hypot(dx, dy, 1);
+    d[i] = (-dx / len) * 127 + 128;
+    d[i + 1] = (dy / len) * 127 + 128;
+    d[i + 2] = (1 / len) * 127 + 128;
+    d[i + 3] = 255;
+  });
+  const roughnessMap = make((d, i, x, y) => {
+    d[i] = d[i + 1] = d[i + 2] = 200 + (h(x, y) - 0.5) * 80;
+    d[i + 3] = 255;
+  });
+  return { normalMap, roughnessMap };
+}
+
 export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel): PrintJob {
   const object = new THREE.Group();
   bedSurface.add(object);
 
   // PETG: a satin plastic with a thin glossy skin and a soft sheen along its layers.
+  const surface = printedSurface();
   const filament = new THREE.MeshPhysicalMaterial({
     color: 0x2aa898,
-    roughness: 0.38,
+    normalMap: surface.normalMap,
+    normalScale: new THREE.Vector2(0.12, 0.12),
+    roughnessMap: surface.roughnessMap,
+    roughness: 0.48,
     metalness: 0,
     clearcoat: quality === 2 ? 0.45 : 0.25,
     clearcoatRoughness: 0.32,
@@ -380,6 +434,8 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
     dispose() {
       [ring, disc, block, coffeeShape, logoShape, previewGeometry].forEach((g) => g.dispose());
       [filament, current, coffeeMaterial, logoMaterial, previewMaterial].forEach((mat) => mat.dispose());
+      surface.normalMap.dispose();
+      surface.roughnessMap.dispose();
       [walls, bases, handle].forEach((mesh) => mesh.dispose());
     },
   };
