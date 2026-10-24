@@ -4,6 +4,7 @@ import { type DeskItem, createDesk } from "./desk";
 import { createDrawing } from "./drawing";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { TAARenderPass } from "three/addons/postprocessing/TAARenderPass.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
@@ -307,7 +308,13 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const bokeh = new BokehPass(scene, depthCamera, { focus: 100, aperture: 0, maxblur: 0.012 });
   const focusUniforms = bokeh.uniforms as Record<"focus" | "aperture" | "maxblur", THREE.IUniform<number>>;
   const lens = new ShaderPass(LensShader);
-  composer.addPass(new RenderPass(scene, camera));
+  // At full quality the scene is drawn through a temporal anti-aliasing pass:
+  // while anything moves it renders normally (with MSAA); once the picture
+  // holds still, it blends 32 slightly shifted renders over the next frames,
+  // so thin lines and edges come out clean.
+  const taa = opts.quality === 2 ? new TAARenderPass(scene, camera) : null;
+  if (taa) taa.sampleLevel = 1;
+  composer.addPass(taa ?? new RenderPass(scene, camera));
   composer.addPass(bokeh);
   const glowPasses: Pass[] = [];
   if (opts.quality === 2) {
@@ -840,8 +847,18 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const INTRO_MS = 2200;
   let last = 0;
 
+  // Frames asked for from outside (scrolling, the pointer, a running
+  // transition) mean the picture changed; frames the anti-aliasing asks for
+  // to finish its blend do not.
+  let dirty = true;
+  let stillFrames = 0;
+  const TAA_SAMPLES = 32;
+
   function frame(now: number) {
     raf = 0;
+    stillFrames = dirty ? 0 : stillFrames + 1;
+    dirty = false;
+    if (taa) taa.accumulate = stillFrames >= 1 && quality.level === 2;
     // Only consecutive frames say something about the device's speed.
     if (last && now - last < 100) {
       const before = quality.level;
@@ -1071,6 +1088,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     updateScreen(zoom);
     updateMug(looks);
     if (transitioning || turning || steaming || drifting || focusing || breathing || glowing || growing || deskMoving) handle.invalidate();
+    // Once still, keep drawing until the anti-aliasing blend is complete.
+    else if (taa && quality.level === 2 && (taa as unknown as { accumulateIndex: number }).accumulateIndex < TAA_SAMPLES && !raf) raf = requestAnimationFrame(frame);
   }
 
   const handle: SceneHandle = {
@@ -1120,6 +1139,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       handle.invalidate();
     },
     invalidate() {
+      dirty = true;
       if (!raf) raf = requestAnimationFrame(frame);
     },
     dispose() {

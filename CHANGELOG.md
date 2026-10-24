@@ -7,6 +7,13 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### Sharper still pictures
+- At full quality, whenever the 3D picture holds still it is refined over
+  the next frames from 32 slightly shifted renders (temporal
+  anti-aliasing): thin lines such as the mat's grid and the drawing come
+  out clean, without jagged or shimmering edges. While anything moves it
+  renders as before.
+
 ### Sunlight through a window on the desk
 - The opening desk is lit like a photograph: sunlight comes in through a
   window from the top left, laying the frame's soft light and shade and a
