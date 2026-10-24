@@ -71,6 +71,16 @@ const LEAVES: [number, number, number, number][] = [
   [62, 22, -25, 3.2], [74, 30, 45, 2.8], [84, 40, -30, 3.2], [92, 52, 20, 3],
 ];
 
+/** The mark's three arcs (radius, order), drawn outer first. */
+const LOADER_ARCS: [number, number][] = [
+  [26, 0],
+  [18, 1],
+  [10, 2],
+];
+/** The loading screen lifts within this long, ready or not, and takes this long to go. */
+const LOADER_MAX_MS = 9000;
+const LOADER_EXIT_MS = 900;
+
 /** How long the rest of the story takes to play when the visitor presses "Print", in milliseconds. */
 const PRINT_MS = 14000;
 /** The slicer is laid out at this size, then fitted onto the printer's screen. */
@@ -165,6 +175,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const filamentRef = useRef<FilamentId>("teal");
   const [mode, setMode] = useState<Mode>("pending");
   const [ready, setReady] = useState(false);
+  const loaderRef = useRef<HTMLDivElement>(null);
+  const loaderCountRef = useRef<HTMLSpanElement>(null);
   const [still, setStill] = useState(false);
   // The part whose information card is open.
   const [selected, setSelected] = useState<PartId | null>(null);
@@ -256,6 +268,47 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       if (visible) handle?.invalidate();
     }
 
+    // The loading screen: its count eases towards how far the set-up has got,
+    // and when everything is ready it lifts away and the opening begins.
+    const loader = loaderRef.current;
+    const loaderCount = loaderCountRef.current;
+    let loadTarget = 0.04;
+    let loadShown = 0;
+    let loadRaf = 0;
+    let loaderDone = false;
+    let onLoaderGone: (() => void) | null = null;
+    const setLoad = (done: number) => {
+      loadTarget = Math.max(loadTarget, done);
+      if (!loadRaf) loadRaf = requestAnimationFrame(stepLoad);
+    };
+    function stepLoad() {
+      loadRaf = 0;
+      loadShown += (loadTarget - loadShown) * 0.12;
+      if (loadTarget - loadShown < 0.002) loadShown = loadTarget;
+      loader?.style.setProperty("--load", loadShown.toFixed(3));
+      if (loaderCount) loaderCount.textContent = String(Math.round(loadShown * 100)).padStart(3, "0");
+      if (loadShown < loadTarget) loadRaf = requestAnimationFrame(stepLoad);
+      else if (loadShown >= 1) liftLoader();
+    }
+    function liftLoader() {
+      if (loaderDone) return;
+      loaderDone = true;
+      delete document.documentElement.dataset.loading;
+      if (!loader) return onLoaderGone?.();
+      loader.dataset.done = "1";
+      setTimeout(() => {
+        loader.hidden = true;
+        onLoaderGone?.();
+      }, LOADER_EXIT_MS);
+    }
+    /** Ends the loading screen right away (still frames, no WebGL, or taking too long). */
+    const skipLoader = () => {
+      loadTarget = 1;
+      liftLoader();
+    };
+    // However the set-up goes, the screen lifts after a while.
+    const loaderTimeout = setTimeout(skipLoader, LOADER_MAX_MS);
+
     // Deciding after mount keeps server and client markup identical.
     queueMicrotask(() => {
       if (!cancelled) setMode(live ? "live" : "stills");
@@ -288,6 +341,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       INTENT.forEach((type) => window.removeEventListener(type, load));
       const { startScene } = await import("@/scene/runScene");
       if (cancelled) return;
+      setLoad(0.2);
       const started = await startScene(canvas, {
         theme: readTheme(),
         quality: initialQuality({
@@ -300,6 +354,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         labels: t.story.labels,
         giantType: t.story.scenes[4].title,
         packageLabel: t.story.packageLabel,
+        onProgress: (done) => setLoad(0.2 + done * 0.75),
         handUrl: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/3d/first-person-hands.glb`,
         isVisible: () => visible,
         frozen: fixed !== null,
@@ -393,29 +448,31 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         requestAnimationFrame(() => {
           if (cancelled) return;
           setReady(true);
-          // The canvas fades in over the poster, then the drawing grows in on it.
-          started.startIntro();
+          // The loading screen lifts, then the drawing grows in on the desk.
+          onLoaderGone = () => started.startIntro();
+          if (loaderDone) started.startIntro();
+          else setLoad(1);
           if (fixed !== null) document.documentElement.dataset.storyReady = "1";
         }),
       );
     };
 
-    if (live) {
-      // The scene's set-up stays out of the page's first seconds: it starts on
-      // the visitor's first scroll, touch or key press, or once the page has
-      // loaded and the browser is idle, so the opening plays on its own.
-      // Frozen frames load at once.
-      if (fixed !== null) void load();
-      else {
-        INTENT.forEach((type) => window.addEventListener(type, load, { passive: true, once: true }));
-        const whenIdle = () => ("requestIdleCallback" in window ? requestIdleCallback(() => void load(), { timeout: 2500 }) : setTimeout(() => void load(), 1200));
-        if (document.readyState === "complete") whenIdle();
-        else window.addEventListener("load", whenIdle, { once: true });
-      }
+    if (live && fixed === null) {
+      // The loading screen covers the page while the scene is set up, so the
+      // set-up starts at once; the page cannot scroll until it lifts.
+      document.documentElement.dataset.loading = "1";
+      setLoad(0.1);
+      void load();
+    } else {
+      if (live) void load();
+      skipLoader();
     }
 
     return () => {
       cancelled = true;
+      clearTimeout(loaderTimeout);
+      cancelAnimationFrame(loadRaf);
+      delete document.documentElement.dataset.loading;
       INTENT.forEach((type) => window.removeEventListener(type, load));
       window.removeEventListener("scroll", measure);
       window.removeEventListener("resize", measure);
@@ -570,6 +627,28 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       className={`story story--${mode}${ready ? " story--ready" : ""}${still ? " story--still" : ""}`}
       aria-labelledby="story-title"
     >
+      {/* The loading screen: the 3D Care mark is drawn on the cutting mat as the scene gets ready. */}
+      <noscript>
+        <style>{".loader{display:none}"}</style>
+      </noscript>
+      <div className="loader" ref={loaderRef} aria-hidden="true">
+        <svg className="loader__mark" viewBox="0 0 64 64">
+          {LOADER_ARCS.map(([r, i]) => (
+            <path
+              key={r}
+              pathLength={1}
+              d={`M ${32 + r * 0.7071} ${32 - r * 0.7071} A ${r} ${r} 0 1 0 ${32 + r * 0.7071} ${32 + r * 0.7071}`}
+              style={{ "--i": i } as CSSProperties}
+            />
+          ))}
+          <circle cx="32" cy="32" r="3.5" />
+        </svg>
+        <p className="loader__name">3D CARE</p>
+        <p className="loader__count">
+          <span ref={loaderCountRef}>000</span>%
+        </p>
+        <div className="loader__bar" />
+      </div>
       <div
         className="story__stage"
         style={{ "--poster-light": `url(${POSTERS.light.src})`, "--poster-dark": `url(${POSTERS.dark.src})` } as CSSProperties}

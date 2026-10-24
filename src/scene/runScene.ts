@@ -74,6 +74,8 @@ export interface SceneOptions {
   onTouchMug?: (touching: boolean) => void;
   /** Called after each frame with where the mug is on the canvas, while its plan or its layers are shown (null otherwise). */
   onMug?: (frame: MugFrame | null) => void;
+  /** Called as the scene is set up, with how far along it is (0..1). */
+  onProgress?: (done: number) => void;
   /** Where the hand that reaches for the mug is loaded from. */
   handUrl?: string;
 }
@@ -223,6 +225,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const printerBox = new THREE.Box3().setFromObject(printer.root).applyMatrix4(printer.root.matrixWorld.clone().invert());
   const printerSize = printerBox.getSize(new THREE.Vector3());
   const sizeCm: [number, number, number] = [Math.round(printerSize.x), Math.round(printerSize.z), Math.round(printerSize.y)];
+  opts.onProgress?.(0.3);
   await yieldToMain();
   const stage = new THREE.Group();
   stage.add(printer.root);
@@ -230,8 +233,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   printer.root.position.y = PRINTER_Y;
   scene.add(stage);
   const studio = createStudio(renderer, scene, opts.theme, opts.quality, stage, printer.root.position.y);
+  opts.onProgress?.(0.45);
   await yieldToMain();
   const drawing = createDrawing(printer, opts.theme);
+  opts.onProgress?.(0.55);
   await yieldToMain();
   const job = createPrintJob(printer.bedSurface, opts.quality);
   // Everything in the printer beside the branch from its root to the mug.
@@ -250,6 +255,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const desk = createDesk(PRINTER_Y, opts.theme);
   stage.add(desk.object);
   const giantType = await createGiantType(opts.giantType, opts.theme);
+  opts.onProgress?.(0.65);
   // The glow behind the mug while it is touched or held.
   const mugGlow = createMugGlow(opts.theme);
   scene.add(mugGlow.object);
@@ -1112,9 +1118,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   resize();
   // The hand joins the mug once it has loaded; the story works without it.
   hand = await handLoading;
+  opts.onProgress?.(0.8);
   if (hand) job.object.add(hand.object);
   // Compile shaders in parallel where supported, so the first frame does not stall.
   await renderer.compileAsync(scene, camera);
+  opts.onProgress?.(0.95);
   resizeObserver.observe(canvas);
   return handle;
 }

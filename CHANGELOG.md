@@ -7,6 +7,17 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### A loading screen
+- The home page now opens on a loading screen in the site's own colours:
+  the cutting mat's grid, the 3D Care mark drawn arc by arc and a count
+  from 000 to 100 % that follows the real set-up of the 3D scene (its
+  code, the printer, the studio, the drawing, the hand, the shaders), with
+  a thin teal bar along the bottom. When everything is ready it lifts away
+  like a sheet, uncovering the desk, and the printer's drawing grows in.
+- The page does not scroll while it shows. It lifts within nine seconds
+  whatever happens, never shows without script, and is skipped for
+  visitors who prefer reduced motion.
+
 ### A playful opening desk
 - The home page opens on the empty desk; a moment later the printer's
   drawing ("yazici.stl" / "printer.stl") grows in from nothing, as if a

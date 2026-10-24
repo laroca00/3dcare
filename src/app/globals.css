@@ -2505,3 +2505,126 @@ main:focus {
 .story__canvas[data-desk="1"][data-dragging] {
   cursor: grabbing;
 }
+
+/* The loading screen on the home page: the cutting mat's grid, with the
+   3D Care mark drawn arc by arc and a count, as the scene gets ready. When
+   everything is ready it lifts away like a sheet, uncovering the desk.
+   Without script it never shows; if anything hangs it goes on its own. */
+.loader {
+  --load: 0;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--teal) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--teal) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--teal) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--teal) 7%, transparent) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  background-position: center;
+  color: var(--ink);
+  transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.5s ease 0.4s;
+  /* A safety net: lifts by itself if the page's script never takes over. */
+  animation: loader-fallback 0s linear 12s forwards;
+}
+
+.loader[data-done] {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes loader-fallback {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* While it covers the page, the page does not scroll underneath. */
+:root[data-loading] {
+  overflow: hidden;
+}
+
+.loader__mark {
+  width: clamp(96px, 16vmin, 160px);
+  height: auto;
+  overflow: visible;
+  transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.loader[data-done] .loader__mark {
+  transform: scale(0.85) translateY(-20px);
+}
+
+.loader__mark path {
+  fill: none;
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  /* Each arc draws in its own share of the progress, outer first. */
+  stroke-dashoffset: calc(1 - clamp(0, (var(--load) - var(--i) * 0.2) / 0.6, 1));
+  /* An arc not yet begun would still show its round cap as a dot. */
+  opacity: clamp(0, (var(--load) - var(--i) * 0.2) * 40, 1);
+}
+
+.loader__mark path:nth-child(1) {
+  stroke: var(--ink);
+}
+
+.loader__mark path:nth-child(2) {
+  stroke: var(--teal);
+}
+
+.loader__mark path:nth-child(3) {
+  stroke: var(--violet);
+}
+
+.loader__mark circle {
+  fill: #f5c400;
+  transform-origin: 32px 32px;
+  transform: scale(clamp(0, (var(--load) - 0.85) * 6.67, 1));
+}
+
+.loader__name {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+}
+
+.loader__count {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(2.6rem, 7vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.loader__bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: calc(var(--load) * 100%);
+  background: var(--teal);
+  box-shadow: 0 0 12px var(--teal);
+}
+
+/* Visitors who prefer less motion get the still story at once, no loader. */
+@media (prefers-reduced-motion: reduce) {
+  .loader {
+    display: none;
+  }
+}
+
+:root[data-story-still] .loader {
+  display: none;
+}
