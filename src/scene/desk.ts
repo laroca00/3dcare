@@ -5,11 +5,14 @@
 import * as THREE from "three";
 import type { Theme } from "../theme/theme";
 
-/** Mat size in cm (the scene's units): wide enough for the printer with room around it. */
-const MAT_W = 130;
-const MAT_D = 90;
+/** Mat size in cm (the scene's units): large enough to fill the screen from above, like a big studio mat. */
+const MAT_W = 250;
+const MAT_D = 180;
 /** Canvas pixels per cm. */
-const PX = 8;
+const PX = 6;
+/** The mat sits right of the middle, so the wooden desk shows under the opening text on the left. */
+const MAT_X = 70;
+const MAT_Z = 10;
 
 const MAT: Record<Theme, { base: string; minor: string; major: string; text: string; mark: string }> = {
   dark: { base: "#10302b", minor: "rgba(150, 230, 210, 0.10)", major: "rgba(150, 230, 210, 0.24)", text: "rgba(170, 240, 225, 0.5)", mark: "rgba(160, 235, 220, 0.12)" },
@@ -33,7 +36,7 @@ function paintMat(canvas: HTMLCanvasElement, theme: Theme) {
   c.fillRect(0, 0, canvas.width, canvas.height);
   // The wordmark, large and faint along the bottom edge, at the right.
   c.fillStyle = style.mark;
-  c.font = `800 ${16 * PX}px "Inter Variable", Inter, system-ui, sans-serif`;
+  c.font = `800 ${34 * PX}px "Inter Variable", Inter, system-ui, sans-serif`;
   c.textBaseline = "alphabetic";
   c.textAlign = "right";
   c.fillText("3D CARE", (MAT_W - 6) * PX, (MAT_D - 6) * PX);
@@ -74,6 +77,27 @@ function paintMat(canvas: HTMLCanvasElement, theme: Theme) {
   c.stroke();
 }
 
+/** Warm oak with long, slightly wavy grain, painted once. */
+function paintWood(canvas: HTMLCanvasElement) {
+  canvas.width = 1800;
+  canvas.height = 1200;
+  const c = canvas.getContext("2d")!;
+  const g = c.createLinearGradient(0, 0, 1800, 1200);
+  g.addColorStop(0, "#8a5a32");
+  g.addColorStop(1, "#6e4424");
+  c.fillStyle = g;
+  c.fillRect(0, 0, 1800, 1200);
+  for (let i = 0; i < 420; i++) {
+    const y = (i * 2.86) % 1200;
+    const tone = (i * 37) % 7;
+    c.strokeStyle = tone < 3 ? `rgba(60, 32, 14, ${0.08 + tone * 0.03})` : `rgba(200, 150, 100, ${0.04 + (tone - 3) * 0.02})`;
+    c.lineWidth = 1 + (i % 3);
+    c.beginPath();
+    for (let x = 0; x <= 1800; x += 60) c.lineTo(x, y + Math.sin(x / 260 + i * 0.7) * 6 + Math.sin(x / 70 + i) * 1.5);
+    c.stroke();
+  }
+}
+
 /** Millimetre ticks on a steel ruler, 30 cm long. */
 function paintRuler(canvas: HTMLCanvasElement) {
   canvas.width = 1200;
@@ -103,9 +127,22 @@ export function createDesk(floorY: number, theme: Theme): Desk {
   matTexture.anisotropy = 8;
   const matMaterial = new THREE.MeshStandardMaterial({ map: matTexture, roughness: 0.92, metalness: 0 });
   const mat = new THREE.Mesh(new THREE.BoxGeometry(MAT_W, 0.3, MAT_D), matMaterial);
-  mat.position.set(12, 0.15, 10);
+  mat.position.set(MAT_X, 0.15, MAT_Z);
   mat.receiveShadow = true;
   object.add(mat);
+
+  // The wooden desk under the mat, reaching past every edge of the screen.
+  const woodCanvas = document.createElement("canvas");
+  paintWood(woodCanvas);
+  const woodTexture = new THREE.CanvasTexture(woodCanvas);
+  woodTexture.colorSpace = THREE.SRGBColorSpace;
+  woodTexture.anisotropy = 8;
+  const deskMaterial = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.7, metalness: 0 });
+  const desk = new THREE.Mesh(new THREE.PlaneGeometry(900, 600), deskMaterial);
+  desk.rotation.x = -Math.PI / 2;
+  desk.position.set(MAT_X - 120, -0.02, MAT_Z);
+  desk.receiveShadow = true;
+  object.add(desk);
 
   // A yellow pencil (the project's yellow), with a ferrule and an eraser, lying at an angle.
   const pencil = new THREE.Group();
@@ -143,7 +180,7 @@ export function createDesk(floorY: number, theme: Theme): Desk {
   for (const mesh of [body, cone, tip, ferrule, eraser, ruler]) mesh.castShadow = true;
   object.add(pencil, ruler);
 
-  const materials = [matMaterial, yellow, woodMaterial, graphite, ferruleMaterial, eraserMaterial, steel, rulerTop];
+  const materials = [matMaterial, deskMaterial, yellow, woodMaterial, graphite, ferruleMaterial, eraserMaterial, steel, rulerTop];
   let opaque = true;
 
   return {
@@ -170,6 +207,7 @@ export function createDesk(floorY: number, theme: Theme): Desk {
       });
       for (const m of materials) m.dispose();
       matTexture.dispose();
+      woodTexture.dispose();
       rulerTexture.dispose();
     },
   };

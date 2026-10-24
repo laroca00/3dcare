@@ -187,8 +187,8 @@ const MACRO_SIDE = -2.4;
 /** Real layer height (cm), for the close-up's scale. */
 const REAL_LAYER = 0.03;
 /** At the very top the camera looks down on the desk from here (relative to where it aims). */
-const DESK_WIDE = new THREE.Vector3(18, 205, 92);
-const DESK_NARROW = new THREE.Vector3(6, 420, 150);
+const DESK_WIDE = new THREE.Vector3(4, 215, 10);
+const DESK_NARROW = new THREE.Vector3(0, 400, 16);
 /** How far the mug lowers into the open model package (cm). */
 const PACKAGE_DROP = 14;
 /** How far behind the mug the giant line glows. */
@@ -772,7 +772,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       -0.7 + localProgress(p, "meet") * 1.4 + spinTurn(p) + localProgress(p, "explode") * 0.3 - localProgress(p, "print") * 0.3 + printerSpin.yaw;
     stage.rotation.x = printerSpin.pitch;
     // The mat lies square to the view while the printer's drawing stands on it at an angle.
-    desk.object.rotation.y = -stage.rotation.y;
+    // ...square to the camera looking down on it, turned a few degrees like a mat put down by hand.
+    const deskView = wide ? DESK_WIDE : DESK_NARROW;
+    desk.object.rotation.y = -stage.rotation.y + Math.atan2(deskView.x, deskView.z) - 0.08;
     setExplode(printer.parts, apart, 0.07);
     // Parts the visitor has turned, each around its own middle.
     for (const [part, turned] of partSpins) {

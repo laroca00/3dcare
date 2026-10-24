@@ -226,6 +226,9 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   layoutHandles("double");
   for (const mesh of [walls, bases, handle]) {
     mesh.castShadow = mesh.receiveShadow = true;
+    // Their bounds would be measured once, while only a few layers are printed;
+    // up close to the top of the mug they would then be wrongly left out.
+    mesh.frustumCulled = false;
     object.add(mesh);
   }
 

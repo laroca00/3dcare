@@ -5,6 +5,18 @@ Fikirler Derneği) under WP5, Activity 5.1 (Dissemination of Project Results
 and Stakeholder Outreach). Every change is also recorded in the commit history
 of this repository: https://github.com/laroca00/3dcare/commits/main
 
+## 2026-10-24
+
+### A desk that fills the screen, and a close-up that shows the mug
+- The home page now opens straight onto the desk, seen from above and
+  filling the whole screen: a large cutting mat with its grid and the
+  3D Care wordmark on a wooden desk, the printer's drawing selected on it,
+  a pencil and a ruler. From there the camera comes down as the drawing
+  becomes the printer.
+- Fixed the 0.3 mm close-up: up near the top of the mug, the mug's layers
+  disappeared and the scene looked empty. They are always drawn now, so
+  the close-up shows the mug's wall, rim and handle with the fine layers.
+
 ## 2026-10-22
 
 ### Finer layers, a glow behind the mug, a tubelight in the menu
