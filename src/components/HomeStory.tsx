@@ -730,6 +730,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         </nav>
         <div className="story__progress" aria-hidden="true" />
         <p className="story__scroll-hint" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="11" strokeDasharray="2 2.6" />
+            <path d="M8 10.5l4 4 4-4" />
+          </svg>
           <span>{t.story.scrollHint}</span>
         </p>
         <svg className="story__leaders" aria-hidden="true">
@@ -846,10 +850,13 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
               left, the lead to the right of the desk, and a frosted card at the
               bottom left with the way in. */}
           <div className="story__hero">
-            <h1 id="story-title" className="story__hero-title">{t.title}</h1>
-            <p className="story__hero-word" aria-hidden="true">
-              3D CARE
-            </p>
+            {/* The line sits over the giant wordmark, ending where the wordmark ends. */}
+            <div className="story__hero-brand">
+              <h1 id="story-title" className="story__hero-title">{t.title}</h1>
+              <p className="story__hero-word" aria-hidden="true">
+                3D CARE
+              </p>
+            </div>
             <p className="lead story__hero-lead">{t.lead}</p>
             <div className="story__hero-card">
               <p className="story__hero-kicker">{t.heroCard.kicker}</p>

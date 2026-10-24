@@ -7,6 +7,19 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### The opening, matched detail by detail
+- A lighter, honey-coloured oak desk; the mat set a little further left;
+  softer window light.
+- The project's line now sits above the giant "3D CARE", ending where the
+  wordmark ends, and the giant wordmark is larger.
+- The frosted card reads like a label: a large heading in capitals, a
+  dotted rule, a short note set to the right, then the two ways in.
+- The chapter tabs stay out of the way on the opening screen and come in
+  once the story starts; the scroll hint is a dotted circle with an arrow
+  and a short line in capitals.
+- On phones the drawing stays in view between the words at the top and
+  the card at the bottom of the first screen.
+
 ### One look, and a real cutting mat
 - The site now has one look, dark; the light theme and its switch in the
   menu are gone, and the home story's still frames exist once.

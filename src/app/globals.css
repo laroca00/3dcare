@@ -1199,7 +1199,8 @@ main:focus {
   position: absolute;
   top: 84px;
   left: max(var(--gutter, 16px), calc((100% - 1120px) / 2 + var(--gutter, 16px)));
-  opacity: calc(1 - var(--fade, 0));
+  /* Out of the way on the opening screen; it comes in once the story starts. */
+  opacity: calc((1 - var(--fade, 0)) * (1 - var(--scroll-hint, 0)));
 }
 
 .story__chapters ol {
@@ -1295,38 +1296,43 @@ main:focus {
   left: 50%;
   bottom: 3svh;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  color: color-mix(in srgb, var(--ink) 70%, transparent);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: #fff6e8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 6px rgb(40 22 8 / 0.4);
   opacity: var(--scroll-hint, 1);
   transform: translate(-50%, calc((1 - var(--scroll-hint, 1)) * 10px));
   pointer-events: none;
 }
 
-.story__scroll-hint::after {
-  content: "";
-  width: 1.5px;
-  height: 28px;
-  background: linear-gradient(currentColor, currentColor) top / 100% 40% no-repeat;
-  animation: story-scroll-hint 1.8s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+/* A dotted circle with an arrow that bobs gently. */
+.story__scroll-hint svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.story__scroll-hint path {
+  animation: story-scroll-hint 1.8s ease-in-out infinite;
 }
 
 @keyframes story-scroll-hint {
-  from {
-    background-position: 0 -12px;
-  }
-  to {
-    background-position: 0 30px;
+  50% {
+    transform: translateY(2px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .story__scroll-hint::after {
+  .story__scroll-hint path {
     animation: none;
   }
 }
@@ -2743,12 +2749,19 @@ main:focus {
 }
 
 .story__hero-title {
+  max-width: none;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: clamp(0.9rem, 1.2vw, 1.15rem);
   font-weight: 700;
   line-height: 1.3;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.story__hero-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .story__hero-word {
@@ -2778,18 +2791,22 @@ main:focus {
 }
 
 .story__hero-kicker {
-  margin: 0 0 6px;
-  font-size: 1.05rem;
+  margin: 0 0 18px;
+  font-size: clamp(1.25rem, 1.65vw, 1.55rem);
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
   text-transform: uppercase;
 }
 
+/* Under a dotted rule, a short note set to the right, as on a label. */
 .story__hero-note {
-  margin: 0 0 16px;
-  padding-bottom: 14px;
-  border-bottom: 1px dotted rgb(255 246 232 / 0.6);
-  font-size: 0.92rem;
+  margin: 0 0 18px;
+  padding-top: 16px;
+  border-top: 1px dotted rgb(255 246 232 / 0.75);
+  font-size: 0.98rem;
+  line-height: 1.4;
+  text-align: right;
 }
 
 .story__hero-card .actions {
@@ -2817,18 +2834,21 @@ main:focus {
     display: block;
   }
 
-  .story:not(.story--stills) .story__hero-title {
+  /* The brand sits at the top left; its line ends where the wordmark ends. */
+  .story:not(.story--stills) .story__hero-brand {
     position: absolute;
-    left: calc(3.4vw + 0.6vw);
-    top: calc(max(12svh, 136px) + 14px);
+    left: 3vw;
+    top: 84px;
+    align-items: flex-end;
+  }
+
+  .story:not(.story--stills) .story__hero-title {
     white-space: nowrap;
+    margin-right: 0.6vw;
   }
 
   .story:not(.story--stills) .story__hero-word {
-    position: absolute;
-    left: 3vw;
-    top: calc(max(12svh, 136px) + 38px);
-    font-size: clamp(4rem, 10.5vw, 11rem);
+    font-size: clamp(4rem, 11.5vw, 12rem);
   }
 
   .story:not(.story--stills) .story__hero-lead {
@@ -2841,8 +2861,16 @@ main:focus {
   .story:not(.story--stills) .story__hero-card {
     position: absolute;
     left: 3vw;
-    bottom: 8svh;
-    width: 25rem;
+    bottom: 3svh;
+    width: 20rem;
+    min-height: 42svh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The note and the ways in sit at the bottom of the card. */
+  .story:not(.story--stills) .story__hero-note {
+    margin-top: auto;
   }
 
   .story:not(.story--stills) .story__hero-card .btn {
@@ -2868,4 +2896,41 @@ main:focus {
   background: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+
+/* On phones the opening keeps the drawing in view: the words at the top,
+   the card at the bottom of the first screen, the desk between them. */
+@media (max-width: 899px) {
+  .story:not(.story--stills) .story__beat--intro {
+    padding-top: 84px;
+  }
+
+  .story:not(.story--stills) .story__hero {
+    min-height: calc(100svh - 84px);
+    gap: 12px;
+  }
+
+  .story:not(.story--stills) .story__hero-lead.lead {
+    font-size: 1rem;
+  }
+
+  .story:not(.story--stills) .story__hero-card {
+    margin-top: auto;
+    margin-bottom: 9svh;
+    padding: 14px 16px;
+  }
+
+  .story:not(.story--stills) .story__hero-note {
+    display: none;
+  }
+
+  .story:not(.story--stills) .story__hero-kicker {
+    margin-bottom: 12px;
+    font-size: 1.05rem;
+  }
+
+  .story:not(.story--stills) .story__hero-card .btn {
+    padding: 10px 16px;
+    font-size: 0.92rem;
+  }
 }

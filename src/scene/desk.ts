@@ -16,7 +16,7 @@ const CELL = 5.5;
 const PENCIL_SCALE = 2.2;
 const RULER_SCALE = 1.7;
 /** The mat sits right of the middle, so the wooden desk shows under the opening text on the left. */
-const MAT_X = 92;
+const MAT_X = 86;
 const MAT_Z = -42;
 
 /** Something on the desk the visitor can pick up and move. */
@@ -125,14 +125,14 @@ function paintWood(canvas: HTMLCanvasElement) {
   canvas.height = 1200;
   const c = canvas.getContext("2d")!;
   const g = c.createLinearGradient(0, 0, 1800, 1200);
-  g.addColorStop(0, "#8a5a32");
-  g.addColorStop(1, "#6e4424");
+  g.addColorStop(0, "#c9965f");
+  g.addColorStop(1, "#a8743f");
   c.fillStyle = g;
   c.fillRect(0, 0, 1800, 1200);
   for (let i = 0; i < 420; i++) {
     const y = (i * 2.86) % 1200;
     const tone = (i * 37) % 7;
-    c.strokeStyle = tone < 3 ? `rgba(60, 32, 14, ${0.08 + tone * 0.03})` : `rgba(200, 150, 100, ${0.04 + (tone - 3) * 0.02})`;
+    c.strokeStyle = tone < 3 ? `rgba(60, 32, 14, ${0.08 + tone * 0.03})` : `rgba(245, 215, 175, ${0.05 + (tone - 3) * 0.025})`;
     c.lineWidth = 1 + (i % 3);
     c.beginPath();
     for (let x = 0; x <= 1800; x += 60) c.lineTo(x, y + Math.sin(x / 260 + i * 0.7) * 6 + Math.sin(x / 70 + i) * 1.5);
