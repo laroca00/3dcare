@@ -5,6 +5,7 @@ import { createDrawing } from "./drawing";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { TAARenderPass } from "three/addons/postprocessing/TAARenderPass.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
@@ -315,6 +316,19 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const taa = opts.quality === 2 ? new TAARenderPass(scene, camera) : null;
   if (taa) taa.sampleLevel = 1;
   composer.addPass(taa ?? new RenderPass(scene, camera));
+  // Ambient occlusion on the opening desk: the soft contact shadow where
+  // things meet the wood and the mat (and each other), as in a photograph.
+  // Full quality only, and only while the desk is in view.
+  const ao = opts.quality === 2 ? new GTAOPass(scene, camera, 1, 1) : null;
+  if (ao) {
+    ao.updateGtaoMaterial({ radius: 18, distanceExponent: 1.3, thickness: 12, scale: 1.4, samples: 8 });
+    ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 4, rings: 2, samples: 8 });
+    // Soft by nature, so half resolution is enough.
+    const fullSize = ao.setSize.bind(ao);
+    ao.setSize = (w: number, h: number) => fullSize(Math.ceil(w / 2), Math.ceil(h / 2));
+    ao.blendIntensity = 1;
+    composer.addPass(ao);
+  }
   composer.addPass(bokeh);
   const glowPasses: Pass[] = [];
   if (opts.quality === 2) {
@@ -841,6 +855,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   }
 
   let raf = 0;
+  let firstFrameAt = 0;
+  const QUALITY_WARMUP_MS = 4000;
   let introStart = 0;
   /** The opening's drawing waits a moment after the scene appears, then grows for this long. */
   const INTRO_DELAY = 650;
@@ -860,7 +876,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     dirty = false;
     if (taa) taa.accumulate = stillFrames >= 1 && quality.level === 2;
     // Only consecutive frames say something about the device's speed.
-    if (last && now - last < 100) {
+    // The first seconds (shaders compiling, textures uploading, the opening
+    // growing in) are slow on any device, so they do not count.
+    if (!firstFrameAt) firstFrameAt = now;
+    // Nor do the anti-aliasing's refining frames, which are heavy on purpose.
+    if (last && now - last < 100 && now - firstFrameAt > QUALITY_WARMUP_MS && !taa?.accumulate) {
       const before = quality.level;
       if (quality.sample(now - last) !== before) applyPixelRatio(quality.level);
     }
@@ -1049,6 +1069,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     studio.setMorning(morning, morning > 0 ? mugWorld : deskTarget, Math.max(morning * (1 - smoothstep(outro / 0.25)), openingSun));
     // The opening is shot like a miniature: sharp in the middle, softly blurred towards the edges.
     lens.uniforms.tilt.value = (1 - smoothstep(draw / 0.35)) * (quality.level === 2 ? 1 : 0.6);
+    if (ao) ao.enabled = quality.level === 2 && draw < 0.35;
     // Its corners fall off into warm shade.
     lens.uniforms.vignette.value = LENS.dark.vignette + 0.22 * (1 - smoothstep(draw / 0.35));
     mugTop.copy(mugWorld).y += LAYERS * LAYER_HEIGHT;

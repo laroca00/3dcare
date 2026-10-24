@@ -7,6 +7,16 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### Contact shadows, and full quality that stays on
+- At full quality the opening desk gets ambient occlusion: a soft shadow
+  where the spools, the coffee bag and the tools meet the wood and the
+  mat, as in a photograph. It runs only while the desk is in view.
+- Fixed the 3D scene lowering its quality for good during its first
+  seconds (while shaders compile and textures load), which turned off the
+  glow, the reflection and the anti-aliasing even on fast computers. The
+  first four seconds, and the anti-aliasing's own refining frames, no
+  longer count.
+
 ### Photographed surfaces on the desk
 - The opening desk is now real oak veneer, from a photographed texture
   with its own grain relief and sheen, and the cutting mat has the fine
