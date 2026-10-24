@@ -28,6 +28,12 @@ export interface Studio {
    * and sunlight through a window falls across it onto `target`.
    */
   setMorning(amount: number, target: THREE.Vector3, sunlight?: number): void;
+  /**
+   * 0..1: how wide the window's sunlight spreads. At 1 (the opening desk)
+   * it comes from further away and wider, throwing the window frame's soft
+   * light and shade across the whole desk, with long soft shadows.
+   */
+  setSunSpread(spread: number): void;
   dispose(): void;
 }
 
@@ -257,17 +263,37 @@ export function createStudio(
   const pane = windowCanvas.getContext("2d")!;
   pane.fillStyle = "#000000";
   pane.fillRect(0, 0, 256, 256);
-  pane.filter = "blur(4px)";
+  // Four panes with a soft edge, a plant's leaves along one side of the
+  // window, and a slight falloff: sunlight as it really falls through glass.
+  pane.filter = "blur(6px)";
   pane.fillStyle = "#ffffff";
-  for (const [x, y] of [[40, 40], [134, 40], [40, 134], [134, 134]]) pane.fillRect(x, y, 82, 82);
+  for (const [x, y] of [[26, 26], [146, 26], [26, 146], [146, 146]]) pane.fillRect(x, y, 84, 84);
+  pane.filter = "blur(9px)";
+  pane.fillStyle = "#000000";
+  for (let i = 0; i < 9; i++) {
+    const cx = 26 + (i % 3) * 22 + (i * 7) % 11;
+    const cy = 150 + Math.floor(i / 3) * 34;
+    pane.beginPath();
+    pane.ellipse(cx, cy, 20, 8, -0.7 + (i % 4) * 0.35, 0, Math.PI * 2);
+    pane.fill();
+  }
+  pane.filter = "none";
+  const falloff = pane.createRadialGradient(128, 128, 40, 128, 128, 180);
+  falloff.addColorStop(0, "rgba(0,0,0,0)");
+  falloff.addColorStop(1, "rgba(0,0,0,0.6)");
+  pane.fillStyle = falloff;
+  pane.fillRect(0, 0, 256, 256);
   const windowTexture = new THREE.CanvasTexture(windowCanvas);
   const sun = new THREE.SpotLight(0xffd29a, 0, 0, 0.42, 0.35, 2);
   sun.map = windowTexture;
   sun.castShadow = quality > 0;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(2048, 2048);
+  // Soft-edged shadows, like sunlight through a window.
+  sun.shadow.radius = 6;
   sun.shadow.bias = -0.0005;
   sun.visible = false;
   floorParent.add(sun, sun.target);
+  let spread = 0;
 
   let currentTheme = theme;
   function apply(v: StudioValues) {
@@ -331,10 +357,17 @@ export function createStudio(
         tableMaterial.depthWrite = opaque;
         tableMaterial.needsUpdate = true;
       }
-      sun.intensity = sunlight * 70000;
+      // From further away the light keeps its strength on the desk.
+      sun.intensity = sunlight * 70000 * (1 + spread * 0.9) ** 2;
       sun.visible = sunlight > 0;
       floorParent.worldToLocal(sun.target.position.copy(target));
-      sun.position.set(sun.target.position.x - 55, sun.target.position.y + 70, sun.target.position.z - 45);
+      const far = 1 + spread * 0.9;
+      sun.position.set(sun.target.position.x - 55 * far, sun.target.position.y + 70 * far, sun.target.position.z - 45 * far);
+      sun.angle = 0.42 + spread * 0.3;
+      sun.penumbra = 0.35 + spread * 0.3;
+    },
+    setSunSpread(next) {
+      spread = next;
     },
     setReflection(enabled) {
       if (reflector) reflector.visible = enabled;

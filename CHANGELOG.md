@@ -7,6 +7,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### Sunlight through a window on the desk
+- The opening desk is lit like a photograph: sunlight comes in through a
+  window from the top left, laying the frame's soft light and shade and a
+  plant's leaves across the desk, every object throws a long soft shadow
+  towards the bottom right, and the corners fall off into warm shade.
+
 ### A lived-in desk
 - Three spools of filament in the project's colours (teal, violet half
   used, yellow) at the top left, snipped-off filament ends scattered on
