@@ -271,7 +271,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const lineup = createLineup(opts.theme);
   stage.add(lineup.object);
   // The opening desk under the drawing: a cutting mat, a pencil and a ruler.
-  const desk = createDesk(PRINTER_Y);
+  const desk = createDesk(PRINTER_Y, () => handle?.invalidate());
   stage.add(desk.object);
   const giantType = await createGiantType(opts.giantType, opts.theme);
   opts.onProgress?.(0.65);

@@ -119,27 +119,6 @@ function paintMat(canvas: HTMLCanvasElement) {
   c.fillText("3D CARE", W - cell * 0.8, bottom - cell * 0.6);
 }
 
-/** Warm oak with long, slightly wavy grain, painted once. */
-function paintWood(canvas: HTMLCanvasElement) {
-  canvas.width = 1800;
-  canvas.height = 1200;
-  const c = canvas.getContext("2d")!;
-  const g = c.createLinearGradient(0, 0, 1800, 1200);
-  g.addColorStop(0, "#7f5c41");
-  g.addColorStop(1, "#634630");
-  c.fillStyle = g;
-  c.fillRect(0, 0, 1800, 1200);
-  for (let i = 0; i < 420; i++) {
-    const y = (i * 2.86) % 1200;
-    const tone = (i * 37) % 7;
-    c.strokeStyle = tone < 3 ? `rgba(60, 32, 14, ${0.08 + tone * 0.03})` : `rgba(245, 215, 175, ${0.05 + (tone - 3) * 0.025})`;
-    c.lineWidth = 1 + (i % 3);
-    c.beginPath();
-    for (let x = 0; x <= 1800; x += 60) c.lineTo(x, y + Math.sin(x / 260 + i * 0.7) * 6 + Math.sin(x / 70 + i) * 1.5);
-    c.stroke();
-  }
-}
-
 /** Millimetre ticks on a steel ruler, 30 cm long. */
 function paintRuler(canvas: HTMLCanvasElement) {
   canvas.width = 1200;
@@ -158,7 +137,35 @@ function paintRuler(canvas: HTMLCanvasElement) {
   for (let cm = 1; cm < 30; cm++) c.fillText(String(cm), cm * 40, 74);
 }
 
-export function createDesk(floorY: number): Desk {
+/**
+ * Photographed surfaces for the desk (CC0, Poly Haven): "Mocha Oak Veneer"
+ * for the wood, and the fine surface of "Rubber Tiles" for the mat. They
+ * load after the desk appears; `onLoad` asks for a new frame.
+ */
+function loadSurfaces(onLoad: () => void) {
+  const base = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/textures/`;
+  const loader = new THREE.TextureLoader();
+  const load = (name: string, colour: boolean, repeat: number) => {
+    const texture = loader.load(base + name + ".webp", onLoad);
+    if (colour) texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(repeat, repeat);
+    texture.anisotropy = 8;
+    return texture;
+  };
+  return {
+    // The desk is 9 m by 6 m; one tile of veneer covers about 1.2 m.
+    oakColor: load("oak_color", true, 1),
+    oakNormal: load("oak_normal", false, 1),
+    oakRough: load("oak_rough", false, 1),
+    // The mat's own UVs are in cm: one tile of rubber surface every 18 cm.
+    matNormal: load("mat_normal", false, 1 / 18),
+    matRough: load("mat_rough", false, 1 / 18),
+  };
+}
+
+export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk {
+  const surfaces = loadSurfaces(onLoad);
   const object = new THREE.Group();
   object.position.y = floorY;
 
@@ -167,7 +174,15 @@ export function createDesk(floorY: number): Desk {
   const matTexture = new THREE.CanvasTexture(matCanvas);
   matTexture.colorSpace = THREE.SRGBColorSpace;
   matTexture.anisotropy = 8;
-  const matMaterial = new THREE.MeshStandardMaterial({ map: matTexture, roughness: 0.92, metalness: 0 });
+  // Painted colour and grid, with the real rubber's fine bumps and sheen.
+  const matMaterial = new THREE.MeshStandardMaterial({
+    map: matTexture,
+    normalMap: surfaces.matNormal,
+    normalScale: new THREE.Vector2(0.35, 0.35),
+    roughnessMap: surfaces.matRough,
+    roughness: 1,
+    metalness: 0,
+  });
   // A slab with rounded corners; its top face shows the painted mat.
   const matShape = new THREE.Shape();
   const R = 7;
@@ -192,12 +207,17 @@ export function createDesk(floorY: number): Desk {
   object.add(mat);
 
   // The wooden desk under the mat, reaching past every edge of the screen.
-  const woodCanvas = document.createElement("canvas");
-  paintWood(woodCanvas);
-  const woodTexture = new THREE.CanvasTexture(woodCanvas);
-  woodTexture.colorSpace = THREE.SRGBColorSpace;
-  woodTexture.anisotropy = 8;
-  const deskMaterial = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.7, metalness: 0 });
+  // Photographed oak veneer, warmed a little to sit with the mat.
+  const deskMaterial = new THREE.MeshStandardMaterial({
+    map: surfaces.oakColor,
+    color: 0xd9a77a,
+    normalMap: surfaces.oakNormal,
+    normalScale: new THREE.Vector2(0.6, 0.6),
+    roughnessMap: surfaces.oakRough,
+    roughness: 0.9,
+    metalness: 0,
+  });
+  for (const t of [surfaces.oakColor, surfaces.oakNormal, surfaces.oakRough]) t.repeat.set(900 / 120, 600 / 120);
   const desk = new THREE.Mesh(new THREE.PlaneGeometry(900, 600), deskMaterial);
   desk.rotation.x = -Math.PI / 2;
   desk.position.set(MAT_X - 120, -0.02, MAT_Z);
@@ -599,7 +619,7 @@ export function createDesk(floorY: number): Desk {
       });
       for (const m of materials) m.dispose();
       matTexture.dispose();
-      woodTexture.dispose();
+      Object.values(surfaces).forEach((t) => t.dispose());
       rulerTexture.dispose();
     },
   };

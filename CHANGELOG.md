@@ -7,6 +7,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### Photographed surfaces on the desk
+- The opening desk is now real oak veneer, from a photographed texture
+  with its own grain relief and sheen, and the cutting mat has the fine
+  surface of real rubber. Both textures are free (CC0) from Poly Haven:
+  "Mocha Oak Veneer" and "Rubber Tiles". Together they add about 120 KB.
+
 ### Leaves in the window light
 - The sunlight on the opening desk now carries the shadow of a plant on
   the windowsill: its leaves sway gently while the scene rests and lean
