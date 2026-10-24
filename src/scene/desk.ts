@@ -3,6 +3,7 @@
 // project's wordmark is printed large along the mat's edge, as mats carry
 // their maker's name. Everything is painted on canvases; no image files.
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { Theme } from "../theme/theme";
 
 /** Mat size in cm (the scene's units): large enough to fill the screen from above, like a big studio mat. */
@@ -164,6 +165,61 @@ function loadSurfaces(onLoad: () => void) {
   };
 }
 
+/**
+ * Photo-scanned objects on the desk (CC0, Poly Haven): a used pencil, a
+ * blue pen and an eraser from "Stationery Supplies", a pair of pliers for
+ * cleaning up prints, and a small potted succulent on the wood. They load
+ * after the desk appears; `onLoad` asks for a new frame.
+ */
+function loadScans(parent: THREE.Object3D, onLoad: () => void) {
+  const base = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/models/`;
+  const loader = new GLTFLoader();
+  /** Desk objects are drawn a little larger than life, like the rest of the desk. */
+  const SCALE = 100 * 1.7;
+  const place = (o: THREE.Object3D, x: number, z: number, turn: number, lift = 0) => {
+    o.position.set(x, lift, z);
+    o.rotation.y = turn;
+    o.scale.setScalar(SCALE);
+    o.traverse((m) => {
+      if ((m as THREE.Mesh).isMesh) m.castShadow = m.receiveShadow = true;
+    });
+    parent.add(o);
+  };
+  const layDown = (o: THREE.Object3D) => {
+    // Each piece is modelled lying along x; it rests on the desk.
+    const box = new THREE.Box3().setFromObject(o);
+    o.position.y -= box.min.y;
+    return o;
+  };
+  loader.load(base + "stationery_supplies/stationery_supplies.gltf", (gltf) => {
+    const pick = (name: string) => {
+      const node = gltf.scene.getObjectByName(name)!;
+      node.position.set(0, 0, 0);
+      const holder = new THREE.Group();
+      holder.add(layDown(node));
+      return holder;
+    };
+    place(pick("stationery_supplies_pencil_used"), -44, 40, 0.95, 0.3);
+    place(pick("stationery_supplies_pen_blue"), -30, 50, 1.2, 0.3);
+    place(pick("stationery_supplies_eraser"), -18, 54, -0.35, 0.3);
+    onLoad();
+  });
+  loader.load(base + "pliers/pliers.gltf", (gltf) => {
+    const pliers = new THREE.Group();
+    pliers.add(layDown(gltf.scene));
+    place(pliers, 24, 54, -0.4);
+    onLoad();
+  });
+  loader.load(base + "potted_plant_04/potted_plant_04.gltf", (gltf) => {
+    // Only the pot, the soil and the plant; not the scanned ground under it.
+    gltf.scene.getObjectByName("potted_plant_04_ground")?.removeFromParent();
+    const plant = new THREE.Group();
+    plant.add(layDown(gltf.scene));
+    place(plant, 104, -50, 0.6);
+    onLoad();
+  });
+}
+
 export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk {
   const surfaces = loadSurfaces(onLoad);
   const object = new THREE.Group();
@@ -299,22 +355,6 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
   knife.rotation.y = 0.62;
   knife.position.set(50, 0.3 + 0.65 * S * 1.35, 46);
 
-  // A second pencil, dark and freshly sharpened, on the wood at the bottom left, with an eraser beside it.
-  const darkPencil = new THREE.Group();
-  const darkBody = material({ color: 0x23303a, roughness: 0.5 });
-  const darkPencilBody = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 16, 6), darkBody);
-  const darkCone = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.42, 2.2, 6), woodMaterial);
-  darkCone.position.y = 9.1;
-  const darkTip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 6), graphite);
-  darkTip.position.y = 10.45;
-  darkPencil.add(darkPencilBody, darkCone, darkTip);
-  darkPencil.scale.setScalar(S);
-  darkPencil.rotation.set(0, 0.95, Math.PI / 2);
-  darkPencil.position.set(-40, 0.42 * S, 44);
-  const eraserBlock = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.1, 4.6), material({ color: 0xf2efe8, roughness: 0.85 }));
-  eraserBlock.scale.setScalar(S);
-  eraserBlock.rotation.y = -0.35;
-  eraserBlock.position.set(-20, 0.55 * S, 50);
 
   // Spools of filament on the wood at the top left, in the project's three
   // colours: cardboard flanges with cut-out windows, the filament wound
@@ -513,7 +553,8 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
   cube.rotation.y = 0.5;
   cube.position.set(66, 0.3 + S, -40);
 
-  const extrasOnDesk = [knife, darkPencil, eraserBlock, spool, violetSpool, yellowSpool, strandMesh, scraps, caliper, note, coffee, cube];
+  loadScans(object, onLoad);
+  const extrasOnDesk = [knife, spool, violetSpool, yellowSpool, strandMesh, scraps, caliper, note, coffee, cube];
   for (const o of extrasOnDesk) {
     o.traverse((m) => {
       if ((m as THREE.Mesh).isMesh) m.castShadow = m.receiveShadow = true;

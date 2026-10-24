@@ -7,6 +7,16 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### Photo-scanned objects on the desk
+- A used pencil, a blue pen, an eraser, a pair of pliers for cleaning up
+  prints and a small potted succulent on the opening desk are now real
+  photo-scanned objects (free, CC0, from Poly Haven: "Stationery
+  Supplies", "Pliers" and "Potted Plant 04"), with their own textures;
+  about 780 KB together. They replace the drawn dark pencil and eraser.
+- Fixed a dark smudge on the mat under the printer's drawing: the printer's
+  still-transparent solid parts were throwing contact shadows and
+  occlusion before it became solid.
+
 ### Contact shadows, and full quality that stays on
 - At full quality the opening desk gets ambient occlusion: a soft shadow
   where the spools, the coffee bag and the tools meet the wood and the

@@ -327,6 +327,15 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const fullSize = ao.setSize.bind(ao);
     ao.setSize = (w: number, h: number) => fullSize(Math.ceil(w / 2), Math.ceil(h / 2));
     ao.blendIntensity = 1;
+    // The drawing's lines are wide meshes the occlusion would read as surfaces; they stay out of it.
+    const occlude = ao.render.bind(ao);
+    ao.render = (...args: Parameters<GTAOPass["render"]>) => {
+      // So is the printer while it is only a drawing (its solid parts are still transparent).
+      const shown = [...lineObjects, ...(printerCastsShadow ? [] : [printer.root])].filter((o) => o.visible);
+      for (const o of shown) o.visible = false;
+      occlude(...args);
+      for (const o of shown) o.visible = true;
+    };
     composer.addPass(ao);
   }
   composer.addPass(bokeh);
@@ -855,6 +864,12 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   }
 
   let raf = 0;
+  // The printer's meshes that cast shadows once it is solid.
+  const printerShadowCasters: THREE.Object3D[] = [];
+  printer.root.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh && o.castShadow) printerShadowCasters.push(o);
+  });
+  let printerCastsShadow = true;
   let firstFrameAt = 0;
   const QUALITY_WARMUP_MS = 4000;
   let introStart = 0;
@@ -911,7 +926,15 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       setDeskHover(null);
     }
     const deskMoving = desk.update(dt);
-    drawing.setReveal(DRAWING_START + (1 - DRAWING_START) * smoothstep(draw / 0.6), smoothstep((draw - 0.55) / 0.45));
+    const solid = smoothstep((draw - 0.55) / 0.45);
+    drawing.setReveal(DRAWING_START + (1 - DRAWING_START) * smoothstep(draw / 0.6), solid);
+    // While the printer is still only a drawing, its (transparent) solid
+    // parts must not throw shadows: shadow maps ignore transparency.
+    const printerCasts = solid > 0.4;
+    if (printerCasts !== printerCastsShadow) {
+      printerCastsShadow = printerCasts;
+      for (const m of printerShadowCasters) m.castShadow = printerCasts;
+    }
     desk.setAmount(1 - smoothstep((draw - 0.5) / 0.45));
 
     // 2–3. Turn, then take apart.
@@ -1088,7 +1111,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // At the close everything comes into focus for the overview.
     const aperture = Math.max(mugBlur * 0.0004 * (1 - smoothstep(outro / 0.3)), focusAmount * 0.00022);
 
-    studio.renderShadow(noContactShadow);
+    // Nor in the contact shadow on the floor.
+    studio.renderShadow(printerCastsShadow ? noContactShadow : [...noContactShadow, printer.root]);
     if (quality.level > 0) {
       bokeh.enabled = aperture > 0.000004;
       if (bokeh.enabled) {
