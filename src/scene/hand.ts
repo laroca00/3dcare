@@ -4,7 +4,6 @@
 // finger bones, then placed so that the middle of the closed fist sits on the
 // handle's upright bar.
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { MugShapeId } from "./mugShapes";
 import { smoothstep } from "./timeline";
 
@@ -122,6 +121,8 @@ function skinMaps() {
 }
 
 export async function loadHand(url: string): Promise<Hand> {
+  // The loader comes in its own file, only when the hand is needed.
+  const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
   const gltf = await new GLTFLoader().loadAsync(url);
   const model = gltf.scene;
   const skin = skinMaps();

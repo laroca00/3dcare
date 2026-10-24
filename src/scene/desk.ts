@@ -3,7 +3,6 @@
 // project's wordmark is printed large along the mat's edge, as mats carry
 // their maker's name. Everything is painted on canvases; no image files.
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { Theme } from "../theme/theme";
 
 /** Mat size in cm (the scene's units): large enough to fill the screen from above, like a big studio mat. */
@@ -171,7 +170,9 @@ function loadSurfaces(onLoad: () => void) {
  * cleaning up prints, and a small potted succulent on the wood. They load
  * after the desk appears; `onLoad` asks for a new frame.
  */
-function loadScans(parent: THREE.Object3D, onLoad: () => void) {
+async function loadScans(parent: THREE.Object3D, onLoad: () => void) {
+  // The loader comes in its own file, only when the desk needs it.
+  const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
   const base = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/models/`;
   const loader = new GLTFLoader();
   /** Desk objects are drawn a little larger than life, like the rest of the desk. */
@@ -553,7 +554,7 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
   cube.rotation.y = 0.5;
   cube.position.set(66, 0.3 + S, -40);
 
-  loadScans(object, onLoad);
+  void loadScans(object, onLoad);
   const extrasOnDesk = [knife, spool, violetSpool, yellowSpool, strandMesh, scraps, caliper, note, coffee, cube];
   for (const o of extrasOnDesk) {
     o.traverse((m) => {

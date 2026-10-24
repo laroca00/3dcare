@@ -7,6 +7,15 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### Fixes on the mug and on phones
+- Fixed thin light lines showing through the mug's wall and handles: the
+  gaps between printed layers let the background through. The layers now
+  all but touch, a core closes the wall from inside, and the handle's
+  slices overlap.
+- On phones, the mug's plan and the "3D CARE" wordmark built from circles
+  no longer fall over the scene's text: the camera lifts while the plan
+  shows, so the mug sits lower.
+
 ### A printed surface on the mug
 - The mug's plastic has the fine grain of a real print: a texture that runs
   along the layers with tiny specks across it, so its satin sheen breaks

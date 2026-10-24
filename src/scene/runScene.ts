@@ -204,6 +204,8 @@ const REVEAL_DISTANCE_WIDE = 54;
 const REVEAL_DISTANCE_NARROW = 82;
 /** How far the mug moves aside, beside the text, while it is looked at on wide screens (cm). */
 const HERO_ASIDE = 8;
+/** How far the camera lifts on narrow screens while the plan and its wordmark show (cm). */
+const PLAN_LIFT_NARROW = 9;
 /** In the close-up the camera is this far from the wall (cm), looking at this height on it. */
 const MACRO_DISTANCE = 6.5;
 const MACRO_HEIGHT = 7.2;
@@ -508,6 +510,14 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       sideways.crossVectors(revealDir, UP).multiplyScalar(HERO_ASIDE * smoothstep(looks.hero));
       camera.position.add(sideways);
       lookAt.add(sideways);
+    }
+    // On narrow screens the text fills the top, so while the plan shows (the
+    // wordmark gathers above the mug) the camera lifts its aim and the mug
+    // with its wordmark sits lower, clear of the words.
+    if (!wide && looks.plan > 0) {
+      const lift = smoothstep(looks.plan) * PLAN_LIFT_NARROW;
+      camera.position.y += lift;
+      lookAt.y += lift;
     }
     // Up close on its wall, where the real layers show.
     if (looks.macro > 0) {

@@ -242,7 +242,8 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   addLooks(filament, looks);
   const current = new THREE.MeshStandardMaterial({ color: 0xf5c400, emissive: 0x6b4e00, roughness: 0.4 });
   const segments = quality === 2 ? 64 : 32;
-  const thickness = LAYER_HEIGHT * 0.9;
+  // Layers all but touch; their rounded edges still leave a groove between them.
+  const thickness = LAYER_HEIGHT * 0.97;
 
   const ringShape = new THREE.Shape().absarc(0, 0, MUG_RADIUS + 0.2, 0, Math.PI * 2, false);
   ringShape.holes.push(new THREE.Path().absarc(0, 0, MUG_RADIUS - 0.2, 0, Math.PI * 2, true));
@@ -260,10 +261,17 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   ring.rotateX(-Math.PI / 2);
   const disc = new THREE.CylinderGeometry(MUG_RADIUS + 0.2, MUG_RADIUS + 0.2, thickness, segments).translate(0, thickness / 2, 0);
   // Handle slices are ovals (a unit disc scaled per slice), so the stacked layers make a round tube.
-  const block = new THREE.CylinderGeometry(0.5, 0.5, thickness * 0.94, quality === 2 ? 28 : 16).translate(0, thickness / 2, 0);
+  const block = new THREE.CylinderGeometry(0.5, 0.5, LAYER_HEIGHT * 1.04, quality === 2 ? 28 : 16).translate(0, thickness / 2, 0);
 
   // One instanced mesh per shape; instance i is layer i, so `count` reveals layers bottom-up.
   const walls = new THREE.InstancedMesh(ring, filament, LAYERS);
+  // A core inside the wall, a little thinner than the layers, so that no
+  // light shows through the grooves between them. It grows with the print.
+  const coreGeometry = new THREE.CylinderGeometry(MUG_RADIUS + 0.1, MUG_RADIUS + 0.1, 1, segments, 1, true).translate(0, 0.5, 0);
+  const coreInner = new THREE.CylinderGeometry(MUG_RADIUS - 0.1, MUG_RADIUS - 0.1, 1, segments, 1, true).translate(0, 0.5, 0);
+  const core = new THREE.Mesh(coreGeometry, filament);
+  const coreBack = new THREE.Mesh(coreInner, filament);
+  object.add(core, coreBack);
   const bases = new THREE.InstancedMesh(disc, filament, BASE_LAYERS);
   // Room for the largest set of handle blocks; instances go bottom layer first.
   const handle = new THREE.InstancedMesh(block, filament, Math.max(...MUG_SHAPES.map((id) => SHAPES[id].blocks.length * SHAPES[id].sides.length)));
@@ -385,6 +393,10 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
       const { layer } = nozzlePath(t);
       const done = t <= 0 ? 0 : t >= 1 ? LAYERS : layer;
       walls.count = done;
+      // The core reaches up to just below the top printed layer.
+      const coreHeight = Math.max(done - 0.6, 0) * LAYER_HEIGHT;
+      core.visible = coreBack.visible = coreHeight > 0;
+      core.scale.y = coreBack.scale.y = Math.max(coreHeight, 0.001);
       bases.count = Math.min(done, BASE_LAYERS);
       handle.count = handleLayers.filter((l) => l < done).length;
       currentLayer.visible = t > 0 && t < 1;
@@ -432,7 +444,7 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
       coffee.scale.y = Math.max(t, 0.01) * (coffeeTop - coffeeBottom);
     },
     dispose() {
-      [ring, disc, block, coffeeShape, logoShape, previewGeometry].forEach((g) => g.dispose());
+      [ring, disc, block, coffeeShape, logoShape, previewGeometry, coreGeometry, coreInner].forEach((g) => g.dispose());
       [filament, current, coffeeMaterial, logoMaterial, previewMaterial].forEach((mat) => mat.dispose());
       surface.normalMap.dispose();
       surface.roughnessMap.dispose();
