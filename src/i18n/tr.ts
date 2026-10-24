@@ -16,7 +16,6 @@ export const tr: typeof en = {
     partners: "Ortaklar",
     contact: "İletişim",
     language: "English",
-    themeLabel: "Koyu mod",
     skip: "İçeriğe geç",
     menu: "Ana menü",
     close: "Kapat",

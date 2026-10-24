@@ -8,7 +8,6 @@ import { Menu } from "lucide-react";
 import type { Dictionary, Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 import { LogoMark } from "../Logo";
-import { ThemeToggle } from "../ThemeToggle";
 import { Button } from "./button";
 import { Tubelight } from "./tubelight-nav";
 
@@ -152,7 +151,6 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
               </ul>
 
               <m.div variants={itemVariants} className="flex items-center gap-1 pr-1 pl-2">
-                <ThemeToggle label={t.themeLabel} />
                 <Button
                   ref={menuButton}
                   variant="ghost"

@@ -5,7 +5,6 @@ import { PageViews } from "@/components/PageViews";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getDictionary, hasLocale, locales } from "@/i18n/config";
 import { shareImage } from "@/site";
-import { themeInitScript } from "@/theme/theme";
 import { FontFaces } from "../FontFaces";
 import "../globals.css";
 
@@ -40,10 +39,9 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
   const t = getDictionary(lang);
 
   return (
-    // The pre-paint script sets data-theme before React hydrates.
-    <html lang={lang} suppressHydrationWarning>
+    // The site has one look: dark.
+    <html lang={lang} data-theme="dark">
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <FontFaces extended={lang === "tr"} />
       </head>
       <body>

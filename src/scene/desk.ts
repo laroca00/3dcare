@@ -9,18 +9,15 @@ import type { Theme } from "../theme/theme";
 const MAT_W = 250;
 const MAT_D = 180;
 /** Canvas pixels per cm. */
-const PX = 6;
+const PX = 8;
+/** One square of the mat's grid, in cm: large, so the mat reads as if seen up close. */
+const CELL = 5.5;
 /** The pencil and the ruler are drawn large, so they read from above and invite a touch. */
 const PENCIL_SCALE = 2.2;
 const RULER_SCALE = 1.7;
 /** The mat sits right of the middle, so the wooden desk shows under the opening text on the left. */
 const MAT_X = 92;
 const MAT_Z = -42;
-
-const MAT: Record<Theme, { base: string; minor: string; major: string; text: string; mark: string }> = {
-  dark: { base: "#10302b", minor: "rgba(150, 230, 210, 0.10)", major: "rgba(150, 230, 210, 0.24)", text: "rgba(170, 240, 225, 0.5)", mark: "rgba(160, 235, 220, 0.12)" },
-  light: { base: "#c9d8d1", minor: "rgba(0, 80, 70, 0.10)", major: "rgba(0, 80, 70, 0.24)", text: "rgba(0, 80, 70, 0.55)", mark: "rgba(0, 90, 80, 0.12)" },
-};
 
 /** Something on the desk the visitor can pick up and move. */
 export interface DeskItem {
@@ -47,54 +44,79 @@ export interface Desk {
   dispose(): void;
 }
 
-function paintMat(canvas: HTMLCanvasElement, theme: Theme) {
-  const style = MAT[theme];
+/**
+ * A self-healing cutting mat, as studios use: deep green with a faint
+ * mottled texture, a cream grid of large squares, millimetre ticks and
+ * numbers along the bottom and left edges, and rounded corners. The grid is
+ * drawn large, so from the opening camera it reads like a mat seen up close.
+ */
+function paintMat(canvas: HTMLCanvasElement) {
   canvas.width = MAT_W * PX;
   canvas.height = MAT_D * PX;
   const c = canvas.getContext("2d")!;
-  c.fillStyle = style.base;
-  c.fillRect(0, 0, canvas.width, canvas.height);
-  // The wordmark, large and faint along the bottom edge, at the right.
-  c.fillStyle = style.mark;
-  c.font = `800 ${34 * PX}px "Inter Variable", Inter, system-ui, sans-serif`;
-  c.textBaseline = "alphabetic";
-  c.textAlign = "right";
-  c.fillText("3D CARE", (MAT_W - 6) * PX, (MAT_D - 6) * PX);
-  c.textAlign = "left";
-  // A 1 cm grid, every fifth line stronger, numbered along two edges.
-  const margin = 3;
-  for (let cm = margin; cm <= MAT_W - margin; cm++) {
-    const major = (cm - margin) % 5 === 0;
-    c.strokeStyle = major ? style.major : style.minor;
-    c.lineWidth = major ? 1.6 : 1;
-    c.beginPath();
-    c.moveTo(cm * PX, margin * PX);
-    c.lineTo(cm * PX, (MAT_D - margin) * PX);
-    c.stroke();
+  const W = canvas.width;
+  const H = canvas.height;
+  c.fillStyle = "#344a31";
+  c.fillRect(0, 0, W, H);
+  // A faint mottle, like the mat's rubbery surface.
+  for (let i = 0; i < 9000; i++) {
+    const x = (i * 7919) % W;
+    const y = (i * 104729) % H;
+    const tone = (i * 37) % 11;
+    c.fillStyle = tone < 5 ? `rgba(10, 30, 16, ${0.04 + tone * 0.008})` : `rgba(180, 210, 170, ${0.02 + (tone - 5) * 0.005})`;
+    c.fillRect(x, y, 2 + (i % 4), 2 + ((i >> 2) % 3));
   }
-  for (let cm = margin; cm <= MAT_D - margin; cm++) {
-    const major = (cm - margin) % 5 === 0;
-    c.strokeStyle = major ? style.major : style.minor;
-    c.lineWidth = major ? 1.6 : 1;
-    c.beginPath();
-    c.moveTo(margin * PX, cm * PX);
-    c.lineTo((MAT_W - margin) * PX, cm * PX);
-    c.stroke();
-  }
-  c.fillStyle = style.text;
-  c.font = `600 ${1.3 * PX}px "Inter Variable", Inter, system-ui, sans-serif`;
-  c.textAlign = "center";
-  for (let cm = 10; cm <= MAT_W - 2 * margin; cm += 10) c.fillText(String(cm), (cm + margin) * PX, 2.2 * PX);
-  c.textAlign = "right";
-  c.textBaseline = "middle";
-  for (let cm = 10; cm <= MAT_D - 2 * margin; cm += 10) c.fillText(String(cm), 2.6 * PX, (cm + margin) * PX);
-  // A 45° guide in one corner, as on real mats.
-  c.strokeStyle = style.major;
-  c.lineWidth = 1.6;
+  // The grid: one square every CELL cm, inside a margin left for the numbers.
+  const cell = CELL * PX;
+  const left = 3.4 * cell * 0.5;
+  const bottom = H - 3.4 * cell * 0.5;
+  const line = "rgba(226, 228, 204, 0.5)";
+  c.strokeStyle = line;
+  c.lineWidth = Math.max(2, PX * 0.32);
   c.beginPath();
-  c.moveTo((MAT_W - margin - 30) * PX, margin * PX);
-  c.lineTo((MAT_W - margin) * PX, (margin + 30) * PX);
+  for (let x = left; x <= W - cell * 0.3; x += cell) {
+    c.moveTo(x, 0);
+    c.lineTo(x, bottom);
+  }
+  for (let y = bottom; y >= 0; y -= cell) {
+    c.moveTo(left, y);
+    c.lineTo(W, y);
+  }
   c.stroke();
+  // Ticks along the bottom and left edges, ten to a square, every fifth longer.
+  c.lineWidth = Math.max(1.5, PX * 0.22);
+  c.beginPath();
+  for (let i = 0; left + (i * cell) / 10 <= W; i++) {
+    const x = left + (i * cell) / 10;
+    const length = i % 10 === 0 ? cell * 0.32 : i % 5 === 0 ? cell * 0.22 : cell * 0.13;
+    c.moveTo(x, bottom);
+    c.lineTo(x, bottom + length);
+  }
+  for (let i = 0; bottom - (i * cell) / 10 >= 0; i++) {
+    const y = bottom - (i * cell) / 10;
+    const length = i % 10 === 0 ? cell * 0.32 : i % 5 === 0 ? cell * 0.22 : cell * 0.13;
+    c.moveTo(left, y);
+    c.lineTo(left - length, y);
+  }
+  c.stroke();
+  // Numbers: 0, 10, 20… under the bottom edge, and turned along the left edge.
+  c.fillStyle = line;
+  c.font = `500 ${cell * 0.36}px "Inter Variable", Inter, system-ui, sans-serif`;
+  c.textAlign = "center";
+  c.textBaseline = "top";
+  for (let i = 0; left + i * cell <= W - cell * 0.4; i++) c.fillText(String(i * 10), left + i * cell, bottom + cell * 0.42);
+  c.save();
+  c.translate(left - cell * 0.62, 0);
+  c.rotate(-Math.PI / 2);
+  c.textBaseline = "middle";
+  for (let i = 0; bottom - i * cell >= cell * 0.4; i++) c.fillText(String(i * 10), -(bottom - i * cell), 0);
+  c.restore();
+  // The project's wordmark, large and faint, as mats carry their maker's name.
+  c.fillStyle = "rgba(232, 236, 214, 0.07)";
+  c.font = `800 ${cell * 3.2}px "Inter Variable", Inter, system-ui, sans-serif`;
+  c.textAlign = "right";
+  c.textBaseline = "alphabetic";
+  c.fillText("3D CARE", W - cell * 0.8, bottom - cell * 0.6);
 }
 
 /** Warm oak with long, slightly wavy grain, painted once. */
@@ -136,17 +158,35 @@ function paintRuler(canvas: HTMLCanvasElement) {
   for (let cm = 1; cm < 30; cm++) c.fillText(String(cm), cm * 40, 74);
 }
 
-export function createDesk(floorY: number, theme: Theme): Desk {
+export function createDesk(floorY: number): Desk {
   const object = new THREE.Group();
   object.position.y = floorY;
 
   const matCanvas = document.createElement("canvas");
-  paintMat(matCanvas, theme);
+  paintMat(matCanvas);
   const matTexture = new THREE.CanvasTexture(matCanvas);
   matTexture.colorSpace = THREE.SRGBColorSpace;
   matTexture.anisotropy = 8;
   const matMaterial = new THREE.MeshStandardMaterial({ map: matTexture, roughness: 0.92, metalness: 0 });
-  const mat = new THREE.Mesh(new THREE.BoxGeometry(MAT_W, 0.3, MAT_D), matMaterial);
+  // A slab with rounded corners; its top face shows the painted mat.
+  const matShape = new THREE.Shape();
+  const R = 7;
+  matShape.moveTo(R, 0);
+  matShape.lineTo(MAT_W - R, 0);
+  matShape.quadraticCurveTo(MAT_W, 0, MAT_W, R);
+  matShape.lineTo(MAT_W, MAT_D - R);
+  matShape.quadraticCurveTo(MAT_W, MAT_D, MAT_W - R, MAT_D);
+  matShape.lineTo(R, MAT_D);
+  matShape.quadraticCurveTo(0, MAT_D, 0, MAT_D - R);
+  matShape.lineTo(0, R);
+  matShape.quadraticCurveTo(0, 0, R, 0);
+  const matGeometry = new THREE.ExtrudeGeometry(matShape, { depth: 0.3, bevelEnabled: false, curveSegments: 10 });
+  // Shape coordinates are in cm; the texture spans the whole mat.
+  matTexture.repeat.set(1 / MAT_W, 1 / MAT_D);
+  // Lie it flat, its far edge (the canvas's top) away from the camera, centred.
+  matGeometry.rotateX(-Math.PI / 2);
+  matGeometry.translate(-MAT_W / 2, -0.15, MAT_D / 2);
+  const mat = new THREE.Mesh(matGeometry, matMaterial);
   mat.position.set(MAT_X, 0.15, MAT_Z);
   mat.receiveShadow = true;
   object.add(mat);
@@ -310,9 +350,8 @@ export function createDesk(floorY: number, theme: Theme): Desk {
       }
       opaque = nowOpaque;
     },
-    setTheme(next) {
-      paintMat(matCanvas, next);
-      matTexture.needsUpdate = true;
+    setTheme() {
+      // The desk looks the same in every theme.
     },
     dispose() {
       object.traverse((o) => {

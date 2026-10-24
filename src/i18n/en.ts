@@ -14,7 +14,6 @@ export const en = {
     partners: "Partners",
     contact: "Contact",
     language: "Türkçe",
-    themeLabel: "Dark mode",
     skip: "Skip to content",
     menu: "Main menu",
     close: "Close",

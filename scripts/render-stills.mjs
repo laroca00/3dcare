@@ -117,7 +117,7 @@ async function capture(page, url) {
 
 try {
   const page = await connect();
-  for (const theme of ["light", "dark"]) {
+  for (const theme of ["dark"]) {
     for (const [i, moment] of MOMENTS.entries()) {
       const png = await capture(page, `http://localhost:${port}${BASE}/en/?story=${moment}&theme=${theme}`);
       const webp = join(TARGET, `${theme}-${i}.webp`);

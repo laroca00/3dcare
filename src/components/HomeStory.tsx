@@ -14,14 +14,13 @@ import { LAYERS, heroLooks, revealMotion, slicerPanel } from "@/scene/storyMotio
 import { packageMotion } from "@/scene/packageMotion";
 import { packageCards } from "@/content/package";
 import { SCENES, SCENE_SVH, at, localProgress, smoothstep } from "@/scene/timeline";
-import { readTheme, useTheme } from "@/theme/useTheme";
 import emblemEn from "@/assets/eu/co-funded-en-neg.png";
 import emblemTr from "@/assets/eu/co-funded-tr-neg.png";
 import { RevealText } from "./RevealText";
 import { WORDMARK, drawPlan, drawScale } from "./mugPlan";
 import { makeSouvenirCard } from "./souvenirCard";
 import { smoothWheel } from "./smoothWheel";
-import { POSTERS, STILLS } from "./storyStills";
+import { POSTER, STILLS } from "./storyStills";
 
 type Mode = "pending" | "live" | "stills";
 
@@ -330,8 +329,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     });
     io.observe(section);
 
-    const themeObserver = new MutationObserver(() => handle?.setTheme(readTheme()));
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     const INTENT = ["scroll", "wheel", "pointermove", "pointerdown", "touchstart", "keydown"] as const;
     let loading = false;
@@ -343,7 +340,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       if (cancelled) return;
       setLoad(0.2);
       const started = await startScene(canvas, {
-        theme: readTheme(),
+        theme: "dark",
         quality: initialQuality({
           width: window.innerWidth,
           dpr: window.devicePixelRatio,
@@ -478,7 +475,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       window.removeEventListener("resize", measure);
       stopWheel();
       io.disconnect();
-      themeObserver.disconnect();
       handle?.dispose();
       sceneRef.current = null;
     };
@@ -607,15 +603,14 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   }
 
   const [first, ...rest] = t.story.scenes;
-  const theme = useTheme() ?? "light";
   // Reduced motion or no WebGL: each part of the story gets its still frame.
   const stillFrame = (i: number) =>
     mode === "stills" && (
       <img
         className="story__still"
-        src={STILLS[theme][i].src}
-        width={STILLS[theme][i].width}
-        height={STILLS[theme][i].height}
+        src={STILLS[i].src}
+        width={STILLS[i].width}
+        height={STILLS[i].height}
         alt={t.story.stillAlt[i]}
         loading={i === 0 ? "eager" : "lazy"}
       />
@@ -656,7 +651,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       </div>
       <div
         className="story__stage"
-        style={{ "--poster-light": `url(${POSTERS.light.src})`, "--poster-dark": `url(${POSTERS.dark.src})` } as CSSProperties}
+        style={{ "--poster": `url(${POSTER.src})` } as CSSProperties}
       >
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
         {/* At the start the printer's drawing is selected, as in a design program. */}

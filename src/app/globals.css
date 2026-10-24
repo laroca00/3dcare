@@ -358,17 +358,7 @@ main:focus {
    stage height, it lines up with the canvas at any width. */
 @media (min-aspect-ratio: 11/10) {
   .story__stage {
-    background: var(--poster-light) center / auto 100% no-repeat;
-  }
-
-  :root[data-theme="dark"] .story__stage {
-    background-image: var(--poster-dark);
-  }
-}
-
-@media (min-aspect-ratio: 11/10) and (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .story__stage {
-    background-image: var(--poster-dark);
+    background: var(--poster) center / auto 100% no-repeat;
   }
 }
 

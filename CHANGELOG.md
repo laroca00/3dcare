@@ -7,6 +7,14 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### One look, and a real cutting mat
+- The site now has one look, dark; the light theme and its switch in the
+  menu are gone, and the home story's still frames exist once.
+- The opening's mat looks like a real studio cutting mat: olive green with
+  a faint mottled surface, rounded corners, a soft cream grid of large
+  squares, and millimetre ticks with numbers along the bottom and left
+  edges. Its large grid makes the desk read as if seen up close.
+
 ### The opening, composed like a poster
 - The opening camera looks almost straight down on the desk, with the
   printer's drawing in the middle of the picture and the mat a little
