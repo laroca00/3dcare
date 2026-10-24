@@ -21,7 +21,7 @@ const MAT_Z = -42;
 
 /** Something on the desk the visitor can pick up and move. */
 export interface DeskItem {
-  kind: "pencil" | "ruler";
+  kind: "pencil" | "ruler" | "knife";
   object: THREE.Object3D;
 }
 
@@ -238,29 +238,116 @@ export function createDesk(floorY: number): Desk {
   const rulerTop = new THREE.MeshStandardMaterial({ map: rulerTexture, roughness: 0.4, metalness: 0.6 });
   // Box faces: +x, -x, +y (top), -y, +z, -z.
   const ruler = new THREE.Mesh(new THREE.BoxGeometry(32, 0.12, 3), [steel, steel, rulerTop, steel, steel, steel]);
-  ruler.rotation.y = 0.62;
+  ruler.rotation.y = 1.42;
   ruler.scale.set(RULER_SCALE, 1.5, RULER_SCALE);
-  ruler.position.set(66, 0.39, 40);
+  ruler.position.set(92, 0.39, 2);
 
-  // Two paper clips on the wood beside the mat.
-  const clipMaterial = new THREE.MeshStandardMaterial({ color: 0xc9cdd1, roughness: 0.25, metalness: 1 });
-  const clipPoints = [
-    [0, 0], [0, 7], [1.1, 7.6], [2.2, 7], [2.2, 1], [1.4, 0.4], [0.6, 1], [0.6, 5.6], [1.6, 5.6], [1.6, 2],
-  ].map(([x, z]) => new THREE.Vector3(x, 0, z));
-  const clipCurve = new THREE.CatmullRomCurve3(clipPoints, false, "catmullrom", 0.2);
-  const clipGeometry = new THREE.TubeGeometry(clipCurve, 90, 0.09, 6, false);
-  const clips = [
-    [-62, -48, 0.5],
-    [-56, -38, -0.3],
-  ].map(([x, z, turn]) => {
-    const clip = new THREE.Mesh(clipGeometry, clipMaterial);
-    clip.scale.setScalar(1.6);
-    clip.position.set(x, 0.15, z);
-    clip.rotation.y = turn;
-    clip.castShadow = true;
-    return clip;
-  });
-  object.add(...clips);
+  // --- The rest of the desk: what a 3D printing workshop's desk holds. ---
+  const S = PENCIL_SCALE;
+  const extras: THREE.Material[] = [];
+  const material = (params: THREE.MeshStandardMaterialParameters) => {
+    const m = new THREE.MeshStandardMaterial(params);
+    extras.push(m);
+    return m;
+  };
+
+  // A snap-off utility knife, lying across the bottom right: an orange body
+  // with a grey grip, a slider on top and a segmented steel blade.
+  const knife = new THREE.Group();
+  const orange = material({ color: 0xf08a24, roughness: 0.45 });
+  const greyGrip = material({ color: 0x4a4f55, roughness: 0.8 });
+  const blade = material({ color: 0xd9dde1, roughness: 0.22, metalness: 1 });
+  const bladeLines = material({ color: 0x7d838a, roughness: 0.4, metalness: 0.8 });
+  const knifeBody = new THREE.Mesh(new THREE.BoxGeometry(14, 1.3, 2.4), orange);
+  const knifeGrip = new THREE.Mesh(new THREE.BoxGeometry(6.5, 1.36, 2.46), greyGrip);
+  knifeGrip.position.x = -3.2;
+  const slider = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 1.2), greyGrip);
+  slider.position.set(2.2, 0.85, 0);
+  // The blade comes out of the front, cut at an angle; its snap-off lines are thin dark strips.
+  const bladeShape = new THREE.Shape([new THREE.Vector2(0, -0.8), new THREE.Vector2(4.2, -0.8), new THREE.Vector2(5.2, 0.8), new THREE.Vector2(0, 0.8)]);
+  const bladeMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(bladeShape, { depth: 0.08, bevelEnabled: false }), blade);
+  bladeMesh.rotation.x = -Math.PI / 2;
+  bladeMesh.position.set(7, 0.2, 0.15);
+  knife.add(knifeBody, knifeGrip, slider, bladeMesh);
+  for (let i = 0; i < 4; i++) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 1.7), bladeLines);
+    line.position.set(7.9 + i * 1, 0.27, 0.05);
+    line.rotation.y = -0.55;
+    knife.add(line);
+  }
+  knife.scale.setScalar(S * 1.35);
+  knife.rotation.y = 0.62;
+  knife.position.set(50, 0.3 + 0.65 * S * 1.35, 46);
+
+  // A second pencil, dark and freshly sharpened, on the wood at the bottom left, with an eraser beside it.
+  const darkPencil = new THREE.Group();
+  const darkBody = material({ color: 0x23303a, roughness: 0.5 });
+  const darkPencilBody = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 16, 6), darkBody);
+  const darkCone = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.42, 2.2, 6), woodMaterial);
+  darkCone.position.y = 9.1;
+  const darkTip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 6), graphite);
+  darkTip.position.y = 10.45;
+  darkPencil.add(darkPencilBody, darkCone, darkTip);
+  darkPencil.scale.setScalar(S);
+  darkPencil.rotation.set(0, 0.95, Math.PI / 2);
+  darkPencil.position.set(-40, 0.42 * S, 44);
+  const eraserBlock = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.1, 4.6), material({ color: 0xf2efe8, roughness: 0.85 }));
+  eraserBlock.scale.setScalar(S);
+  eraserBlock.rotation.y = -0.35;
+  eraserBlock.position.set(-20, 0.55 * S, 50);
+
+  // A spool of teal filament on the wood at the top left: cardboard flanges
+  // with cut-out windows, the filament wound inside, and a loose end that
+  // curls out across the desk.
+  const teal = material({ color: 0x2aa898, roughness: 0.42 });
+  const card = material({ color: 0xbe9364, roughness: 0.9 });
+  const flangeShape = new THREE.Shape().absarc(0, 0, 10, 0, Math.PI * 2, false);
+  flangeShape.holes.push(new THREE.Path().absarc(0, 0, 2.6, 0, Math.PI * 2, true));
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + 0.4;
+    flangeShape.holes.push(new THREE.Path().absarc(Math.cos(a) * 6.4, Math.sin(a) * 6.4, 1.7, 0, Math.PI * 2, true));
+  }
+  const flangeGeometry = new THREE.ExtrudeGeometry(flangeShape, { depth: 0.25, bevelEnabled: false, curveSegments: 24 });
+  flangeGeometry.rotateX(-Math.PI / 2);
+  const spool = new THREE.Group();
+  const bottomFlange = new THREE.Mesh(flangeGeometry, card);
+  const topFlange = new THREE.Mesh(flangeGeometry, card);
+  topFlange.position.y = 6.5;
+  const windings = new THREE.Mesh(new THREE.CylinderGeometry(9.6, 9.6, 6.2, 48, 1, true), teal);
+  windings.position.y = 3.35;
+  const filamentInside = new THREE.Mesh(new THREE.CylinderGeometry(9.4, 9.4, 6.1, 48), teal);
+  filamentInside.position.y = 3.35;
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 6.6, 24, 1, true), card);
+  hub.position.y = 3.35;
+  spool.add(bottomFlange, filamentInside, windings, hub, topFlange);
+  spool.scale.setScalar(0.85);
+  spool.position.set(-92, 0, -30);
+  // The loose end: 1.75 mm filament, drawn at the desk's scale.
+  const strand = new THREE.CatmullRomCurve3(
+    [
+      [-84, 3, -27],
+      [-70, 0.4, -24],
+      [-64, 0.4, -28],
+      [-56, 0.4, -30],
+      [-50, 0.4, -24],
+      [-54, 0.4, -18],
+      [-46, 0.4, -14],
+    ].map(([x, y, z]) => new THREE.Vector3(x, y, z)),
+  );
+  const strandMesh = new THREE.Mesh(new THREE.TubeGeometry(strand, 80, 0.2, 6, false), teal);
+
+  // A calibration cube, the first thing every new printer prints, on the mat's edge.
+  const cube = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), teal);
+  cube.scale.setScalar(S);
+  cube.rotation.y = 0.5;
+  cube.position.set(86, 0.3 + S, -52);
+
+  for (const o of [knife, darkPencil, eraserBlock, spool, strandMesh, cube]) {
+    o.traverse((m) => {
+      if ((m as THREE.Mesh).isMesh) m.castShadow = m.receiveShadow = true;
+    });
+  }
+  object.add(knife, darkPencil, eraserBlock, spool, strandMesh, cube);
 
   for (const mesh of [body, cone, tip, ferrule, eraser, ruler]) mesh.castShadow = true;
   object.add(pencil, ruler);
@@ -274,6 +361,7 @@ export function createDesk(floorY: number): Desk {
   const items: DeskItem[] = [
     { kind: "pencil", object: pencil },
     { kind: "ruler", object: ruler },
+    { kind: "knife", object: knife },
   ];
   const rest = new Map(items.map((i) => [i, i.object.position.y]));
   const lift = new Map(items.map((i) => [i, 0]));
@@ -292,7 +380,7 @@ export function createDesk(floorY: number): Desk {
     return { x: (tipWorld.x + MAT_W / 2) * PX, y: (tipWorld.z + MAT_D / 2) * PX };
   }
 
-  const materials = [grip, clipMaterial, matMaterial, deskMaterial, yellow, woodMaterial, graphite, ferruleMaterial, eraserMaterial, steel, rulerTop];
+  const materials = [grip, ...extras, matMaterial, deskMaterial, yellow, woodMaterial, graphite, ferruleMaterial, eraserMaterial, steel, rulerTop];
   let opaque = true;
 
   return {

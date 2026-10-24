@@ -7,6 +7,16 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### A fuller workshop desk
+- The opening desk now holds what a 3D printing workshop's desk holds: a
+  spool of teal filament with cardboard flanges at the top left, its loose
+  end curling across the wood; an orange snap-off utility knife across the
+  bottom right, with a grey grip, a slider and a segmented blade; a dark,
+  freshly sharpened pencil and an eraser at the bottom left; a teal
+  calibration cube on the far corner of the mat. The ruler moves to the
+  mat's right edge, and the paper clips are gone.
+- The knife can be picked up and moved like the pencil and the ruler.
+
 ### The opening, matched detail by detail
 - A lighter, honey-coloured oak desk; the mat set a little further left;
   softer window light.
