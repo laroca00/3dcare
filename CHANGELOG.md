@@ -7,6 +7,13 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### A lived-in desk
+- Three spools of filament in the project's colours (teal, violet half
+  used, yellow) at the top left, snipped-off filament ends scattered on
+  the wood, a digital caliper beside the ruler, a sticky note with a pencil
+  sketch of a two-handled mug, and a bag of coffee at the bottom right.
+- The main pencil is natural wood, the oak and the mat a touch softer.
+
 ### A fuller, warmer desk
 - The opening has its own light now: soft, warm afternoon light instead
   of the cool blueprint light the drawing scene uses, so the desk reads

@@ -56,7 +56,7 @@ function paintMat(canvas: HTMLCanvasElement) {
   const c = canvas.getContext("2d")!;
   const W = canvas.width;
   const H = canvas.height;
-  c.fillStyle = "#4f6249";
+  c.fillStyle = "#57674f";
   c.fillRect(0, 0, W, H);
   // A faint mottle, like the mat's rubbery surface.
   for (let i = 0; i < 9000; i++) {
@@ -125,8 +125,8 @@ function paintWood(canvas: HTMLCanvasElement) {
   canvas.height = 1200;
   const c = canvas.getContext("2d")!;
   const g = c.createLinearGradient(0, 0, 1800, 1200);
-  g.addColorStop(0, "#86593a");
-  g.addColorStop(1, "#6a4429");
+  g.addColorStop(0, "#7f5c41");
+  g.addColorStop(1, "#634630");
   c.fillStyle = g;
   c.fillRect(0, 0, 1800, 1200);
   for (let i = 0; i < 420; i++) {
@@ -206,7 +206,7 @@ export function createDesk(floorY: number): Desk {
 
   // A yellow pencil (the project's yellow), with a ferrule and an eraser, lying at an angle.
   const pencil = new THREE.Group();
-  const yellow = new THREE.MeshStandardMaterial({ color: 0xf5c400, roughness: 0.45 });
+  const yellow = new THREE.MeshStandardMaterial({ color: 0xe6cfa6, roughness: 0.55 });
   const woodMaterial = new THREE.MeshStandardMaterial({ color: 0xe2b98a, roughness: 0.8 });
   const graphite = new THREE.MeshStandardMaterial({ color: 0x2b2d30, roughness: 0.4, metalness: 0.3 });
   const ferruleMaterial = new THREE.MeshStandardMaterial({ color: 0xc8ccd0, roughness: 0.3, metalness: 1 });
@@ -296,10 +296,13 @@ export function createDesk(floorY: number): Desk {
   eraserBlock.rotation.y = -0.35;
   eraserBlock.position.set(-20, 0.55 * S, 50);
 
-  // A spool of teal filament on the wood at the top left: cardboard flanges
-  // with cut-out windows, the filament wound inside, and a loose end that
-  // curls out across the desk.
+  // Spools of filament on the wood at the top left, in the project's three
+  // colours: cardboard flanges with cut-out windows, the filament wound
+  // inside (the violet one half used), and a loose teal end that curls out
+  // across the desk.
   const teal = material({ color: 0x2aa898, roughness: 0.42 });
+  const violet = material({ color: 0x6f52c9, roughness: 0.42 });
+  const yellowFilament = material({ color: 0xf5c400, roughness: 0.42 });
   const card = material({ color: 0xbe9364, roughness: 0.9 });
   const flangeShape = new THREE.Shape().absarc(0, 0, 10, 0, Math.PI * 2, false);
   flangeShape.holes.push(new THREE.Path().absarc(0, 0, 2.6, 0, Math.PI * 2, true));
@@ -309,19 +312,30 @@ export function createDesk(floorY: number): Desk {
   }
   const flangeGeometry = new THREE.ExtrudeGeometry(flangeShape, { depth: 0.25, bevelEnabled: false, curveSegments: 24 });
   flangeGeometry.rotateX(-Math.PI / 2);
-  const spool = new THREE.Group();
-  const bottomFlange = new THREE.Mesh(flangeGeometry, card);
-  const topFlange = new THREE.Mesh(flangeGeometry, card);
-  topFlange.position.y = 6.5;
-  const windings = new THREE.Mesh(new THREE.CylinderGeometry(9.6, 9.6, 6.2, 48, 1, true), teal);
-  windings.position.y = 3.35;
-  const filamentInside = new THREE.Mesh(new THREE.CylinderGeometry(9.4, 9.4, 6.1, 48), teal);
-  filamentInside.position.y = 3.35;
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 6.6, 24, 1, true), card);
-  hub.position.y = 3.35;
-  spool.add(bottomFlange, filamentInside, windings, hub, topFlange);
+  const hubGeometry = new THREE.CylinderGeometry(2.6, 2.6, 6.6, 24, 1, true);
+  /** A spool lying flat; `full` 0..1 is how much filament is left on it. */
+  function makeSpool(colour: THREE.Material, full: number) {
+    const spool = new THREE.Group();
+    const bottom = new THREE.Mesh(flangeGeometry, card);
+    const top = new THREE.Mesh(flangeGeometry, card);
+    top.position.y = 6.5;
+    const radius = 3.2 + 6.4 * full;
+    const wound = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 6.1, 48), colour);
+    wound.position.y = 3.35;
+    const hub = new THREE.Mesh(hubGeometry, card);
+    hub.position.y = 3.35;
+    spool.add(bottom, wound, hub, top);
+    return spool;
+  }
+  const spool = makeSpool(teal, 1);
   spool.scale.setScalar(0.85);
   spool.position.set(-92, 0, -30);
+  const violetSpool = makeSpool(violet, 0.45);
+  violetSpool.scale.setScalar(0.85);
+  violetSpool.position.set(-114, 0, -18);
+  const yellowSpool = makeSpool(yellowFilament, 0.8);
+  yellowSpool.scale.setScalar(0.85);
+  yellowSpool.position.set(-128, 0, -42);
   // The loose end: 1.75 mm filament, drawn at the desk's scale.
   const strand = new THREE.CatmullRomCurve3(
     [
@@ -336,18 +350,156 @@ export function createDesk(floorY: number): Desk {
   );
   const strandMesh = new THREE.Mesh(new THREE.TubeGeometry(strand, 80, 0.2, 6, false), teal);
 
+  // Snipped-off filament ends scattered on the wood, as on any printing desk.
+  const scraps = new THREE.Group();
+  const scrapColours = [violet, yellowFilament, teal, violet, yellowFilament];
+  const scrapPlaces: [number, number, number, number][] = [
+    [-66, -6, 0.4, 4.5],
+    [-60, 4, 1.9, 3.2],
+    [-74, 10, 2.6, 5.2],
+    [-52, -2, 1.1, 2.6],
+    [-80, -14, 0.2, 3.6],
+  ];
+  scrapPlaces.forEach(([x, z, turn, length], i) => {
+    const bend = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-length / 2, 0, 0), new THREE.Vector3(0, 0, length * 0.25), new THREE.Vector3(length / 2, 0, 0));
+    const scrap = new THREE.Mesh(new THREE.TubeGeometry(bend, 16, 0.2, 6, false), scrapColours[i]);
+    scrap.position.set(x, 0.22, z);
+    scrap.rotation.y = turn;
+    scraps.add(scrap);
+  });
+
+  // A digital caliper on the mat: a steel beam with fixed and sliding jaws
+  // and a dark display, for measuring the parts a design is made to fit.
+  const caliper = new THREE.Group();
+  const steelBright = material({ color: 0xcfd4d8, roughness: 0.25, metalness: 1 });
+  const dark = material({ color: 0x1d2226, roughness: 0.55 });
+  const lcd = material({ color: 0x9fb1a0, roughness: 0.3, emissive: 0x1a221b });
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(22, 0.35, 1.6), steelBright);
+  const fixedJaw = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.35, 5), steelBright);
+  fixedJaw.position.set(-10.4, 0, 2.6);
+  const slideBody = new THREE.Mesh(new THREE.BoxGeometry(6.5, 1.1, 3.4), dark);
+  slideBody.position.set(-4.2, 0.5, 0.4);
+  const display = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.1, 1.6), lcd);
+  display.position.set(-4.2, 1.08, 0.3);
+  const slideJaw = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.35, 4.6), steelBright);
+  slideJaw.position.set(-7.6, 0, 2.6);
+  caliper.add(beam, fixedJaw, slideBody, display, slideJaw);
+  caliper.scale.setScalar(S * 0.6);
+  caliper.rotation.y = -1.5;
+  caliper.position.set(112, 0.3 + 0.2 * S, -18);
+
+  // A square sticky note on the mat with a pencil sketch of a mug's handle,
+  // the first idea of a design.
+  const noteCanvas = document.createElement("canvas");
+  noteCanvas.width = noteCanvas.height = 512;
+  const n = noteCanvas.getContext("2d")!;
+  n.fillStyle = "#f7e8a2";
+  n.fillRect(0, 0, 512, 512);
+  n.strokeStyle = "rgba(90, 80, 40, 0.14)";
+  n.lineWidth = 2;
+  for (let y = 60; y < 512; y += 40) {
+    n.beginPath();
+    n.moveTo(24, y);
+    n.lineTo(488, y);
+    n.stroke();
+  }
+  n.strokeStyle = "rgba(40, 40, 44, 0.85)";
+  n.lineWidth = 6;
+  n.lineCap = "round";
+  n.lineJoin = "round";
+  n.beginPath();
+  // The mug's body, a handle on each side, and a few construction strokes.
+  n.moveTo(170, 150);
+  n.lineTo(176, 380);
+  n.quadraticCurveTo(250, 404, 330, 380);
+  n.lineTo(338, 150);
+  n.moveTo(160, 150);
+  n.quadraticCurveTo(252, 130, 348, 150);
+  n.moveTo(338, 200);
+  n.bezierCurveTo(430, 196, 432, 330, 334, 330);
+  n.moveTo(170, 200);
+  n.bezierCurveTo(82, 196, 80, 330, 174, 330);
+  n.stroke();
+  n.lineWidth = 3;
+  n.setLineDash([10, 10]);
+  n.beginPath();
+  n.moveTo(254, 110);
+  n.lineTo(254, 420);
+  n.stroke();
+  n.setLineDash([]);
+  n.font = "600 30px Inter, system-ui, sans-serif";
+  n.fillStyle = "rgba(40, 40, 44, 0.8)";
+  n.fillText("Ø 84", 214, 460);
+  const noteTexture = new THREE.CanvasTexture(noteCanvas);
+  noteTexture.colorSpace = THREE.SRGBColorSpace;
+  noteTexture.anisotropy = 8;
+  const noteMaterial = material({ map: noteTexture, roughness: 0.9 });
+  const note = new THREE.Mesh(new THREE.BoxGeometry(14, 0.08, 14), [noteMaterial, noteMaterial, noteMaterial, noteMaterial, noteMaterial, noteMaterial]);
+  note.rotation.y = 0.22;
+  note.position.set(-14, 0.36, 46);
+
+  // A bag of coffee on the wood, kraft paper with a dark label and a
+  // folded top: the morning the story ends with is waiting.
+  const coffeeCanvas = document.createElement("canvas");
+  coffeeCanvas.width = 400;
+  coffeeCanvas.height = 600;
+  const k = coffeeCanvas.getContext("2d")!;
+  k.fillStyle = "#b98f62";
+  k.fillRect(0, 0, 400, 600);
+  for (let i = 0; i < 900; i++) {
+    k.fillStyle = `rgba(${i % 2 ? "90,60,30" : "235,205,160"},${((i * 13) % 7) / 100})`;
+    k.fillRect((i * 151) % 400, (i * 263) % 600, 2 + (i % 5), 1);
+  }
+  // The folded top, darker.
+  k.fillStyle = "rgba(70, 45, 25, 0.25)";
+  k.fillRect(0, 0, 400, 70);
+  k.fillStyle = "#2a1d16";
+  k.fillRect(48, 210, 304, 240);
+  // A coffee bean drawn on the label.
+  k.fillStyle = "#c79a5b";
+  k.beginPath();
+  k.ellipse(200, 300, 40, 56, 0.4, 0, Math.PI * 2);
+  k.fill();
+  k.strokeStyle = "#2a1d16";
+  k.lineWidth = 7;
+  k.beginPath();
+  k.moveTo(185, 255);
+  k.bezierCurveTo(222, 285, 176, 318, 214, 346);
+  k.stroke();
+  k.fillStyle = "#e9dcc5";
+  k.font = "700 30px Inter, system-ui, sans-serif";
+  k.textAlign = "center";
+  k.fillText("· 250 g ·", 200, 410);
+  const coffeeTexture = new THREE.CanvasTexture(coffeeCanvas);
+  coffeeTexture.colorSpace = THREE.SRGBColorSpace;
+  coffeeTexture.anisotropy = 8;
+  const kraft = material({ color: 0xb98f62, roughness: 0.95 });
+  const coffeeFront = material({ map: coffeeTexture, roughness: 0.92 });
+  // Lying flat: the top face (+y) carries the label.
+  const coffee = new THREE.Mesh(new THREE.BoxGeometry(12, 4.5, 19, 4, 1, 4), [kraft, kraft, coffeeFront, kraft, kraft, kraft]);
+  // A soft, pillowy bag rather than a box: round the top a little.
+  const bag = coffee.geometry.getAttribute("position");
+  for (let i = 0; i < bag.count; i++) {
+    const y = bag.getY(i);
+    if (y > 0) bag.setY(i, y - (Math.abs(bag.getX(i)) / 6) ** 2 * 1.1 - (Math.abs(bag.getZ(i)) / 9.5) ** 4 * 0.8);
+  }
+  coffee.geometry.computeVertexNormals();
+  coffee.rotation.y = 0.5;
+  coffee.position.set(94, 2.25, 60);
+
   // A calibration cube, the first thing every new printer prints, on the mat's edge.
   const cube = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), teal);
   cube.scale.setScalar(S);
   cube.rotation.y = 0.5;
-  cube.position.set(86, 0.3 + S, -52);
+  cube.position.set(66, 0.3 + S, -40);
 
-  for (const o of [knife, darkPencil, eraserBlock, spool, strandMesh, cube]) {
+  const extrasOnDesk = [knife, darkPencil, eraserBlock, spool, violetSpool, yellowSpool, strandMesh, scraps, caliper, note, coffee, cube];
+  for (const o of extrasOnDesk) {
     o.traverse((m) => {
       if ((m as THREE.Mesh).isMesh) m.castShadow = m.receiveShadow = true;
     });
   }
-  object.add(knife, darkPencil, eraserBlock, spool, strandMesh, cube);
+  object.add(...extrasOnDesk);
 
   for (const mesh of [body, cone, tip, ferrule, eraser, ruler]) mesh.castShadow = true;
   object.add(pencil, ruler);
