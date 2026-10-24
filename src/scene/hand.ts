@@ -40,20 +40,110 @@ const TOWARD_CAMERA = 0.9;
 /** How far away the hand starts (cm). */
 const AWAY = 40;
 
+/**
+ * Skin detail, made in code and tiled over the hand: a height field of fine
+ * pores and creases turned into a normal map, slight blotches of colour, and
+ * a roughness that varies with them, so the skin catches the light unevenly
+ * as real skin does.
+ */
+function skinMaps() {
+  const N = 256;
+  // Smooth value noise on a wrapping grid, so the texture tiles seamlessly.
+  const noise = (cell: number, seed: number) => {
+    const grid = Array.from({ length: cell * cell }, (_, i) => {
+      const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+      return x - Math.floor(x);
+    });
+    return (x: number, y: number) => {
+      const gx = (x / N) * cell;
+      const gy = (y / N) * cell;
+      const x0 = Math.floor(gx);
+      const y0 = Math.floor(gy);
+      const fx = gx - x0;
+      const fy = gy - y0;
+      const at = (i: number, j: number) => grid[((j % cell) * cell + (i % cell)) % grid.length];
+      const sx = fx * fx * (3 - 2 * fx);
+      const sy = fy * fy * (3 - 2 * fy);
+      const top = at(x0, y0) * (1 - sx) + at(x0 + 1, y0) * sx;
+      const bottom = at(x0, y0 + 1) * (1 - sx) + at(x0 + 1, y0 + 1) * sx;
+      return top * (1 - sy) + bottom * sy;
+    };
+  };
+  const pores = noise(64, 1);
+  const fine = noise(128, 2);
+  const creases = noise(16, 3);
+  const blotch = noise(8, 4);
+  const height = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      // Pores are small dips; creases are thin valleys where the noise crosses its middle.
+      const crease = 1 - Math.min(Math.abs(creases(x, y) - 0.5) * 10, 1);
+      height[y * N + x] = pores(x, y) * 0.5 + fine(x, y) * 0.3 - crease * 0.12;
+    }
+  }
+  const make = (paint: (data: Uint8ClampedArray, i: number, x: number, y: number) => void, colour: boolean) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = N;
+    const c = canvas.getContext("2d")!;
+    const image = c.createImageData(N, N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) paint(image.data, (y * N + x) * 4, x, y);
+    c.putImageData(image, 0, 0);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(14, 14);
+    if (colour) texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  };
+  const h = (x: number, y: number) => height[((y + N) % N) * N + ((x + N) % N)];
+  const normalMap = make((d, i, x, y) => {
+    const dx = (h(x + 1, y) - h(x - 1, y)) * 2.2;
+    const dy = (h(x, y + 1) - h(x, y - 1)) * 2.2;
+    const len = Math.hypot(dx, dy, 1);
+    d[i] = (-dx / len) * 127 + 128;
+    d[i + 1] = (dy / len) * 127 + 128;
+    d[i + 2] = (1 / len) * 127 + 128;
+    d[i + 3] = 255;
+  }, false);
+  const map = make((d, i, x, y) => {
+    // Warm, slightly uneven skin: redder blotches, a little lighter in the creases' ridges.
+    const b = blotch(x, y);
+    const v = 0.92 + h(x, y) * 0.08;
+    d[i] = Math.min(255, 255 * v);
+    d[i + 1] = Math.min(255, (232 - b * 26) * v);
+    d[i + 2] = Math.min(255, (222 - b * 34) * v);
+    d[i + 3] = 255;
+  }, true);
+  const roughnessMap = make((d, i, x, y) => {
+    const r = 150 + (pores(x, y) - 0.5) * 70 + blotch(x, y) * 30;
+    d[i] = d[i + 1] = d[i + 2] = r;
+    d[i + 3] = 255;
+  }, false);
+  return { map, normalMap, roughnessMap };
+}
+
 export async function loadHand(url: string): Promise<Hand> {
   const gltf = await new GLTFLoader().loadAsync(url);
   const model = gltf.scene;
+  const skin = skinMaps();
   const bones = new Map<string, THREE.Bone>();
   model.traverse((o) => {
     if ((o as THREE.Bone).isBone) bones.set(o.name, o as THREE.Bone);
     const mesh = o as THREE.SkinnedMesh;
     if (mesh.isSkinnedMesh) {
       mesh.castShadow = mesh.receiveShadow = true;
-      // Skin: warm, soft and slightly velvety at grazing angles, instead of grey plastic.
+      // Skin: warm, soft and slightly velvety at grazing angles, with pores and
+      // creases; the small mesh is the nails, paler and a little glossy.
       const old = mesh.material as THREE.MeshStandardMaterial;
-      mesh.material = new THREE.MeshPhysicalMaterial({
-        color: 0xd9a587,
-        roughness: 0.58,
+      const nails = mesh.geometry.getAttribute("position").count < 1000;
+      mesh.material = nails
+        ? new THREE.MeshPhysicalMaterial({ color: 0xf0c9b6, roughness: 0.35, clearcoat: 0.4, clearcoatRoughness: 0.3 })
+        : new THREE.MeshPhysicalMaterial({
+        color: 0xf0bfa0,
+        map: skin.map,
+        normalMap: skin.normalMap,
+        normalScale: new THREE.Vector2(0.18, 0.18),
+        roughnessMap: skin.roughnessMap,
+        roughness: 1,
         metalness: 0,
         sheen: 0.6,
         sheenRoughness: 0.4,

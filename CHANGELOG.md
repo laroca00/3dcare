@@ -7,6 +7,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### Skin on the hand
+- The hand that holds the mug has real skin detail: fine pores and creases
+  that catch the light, slight colour variation and an uneven sheen, all
+  made in code (no extra download). Its nails are paler and a little
+  glossy.
+
 ### Photo-scanned objects on the desk
 - A used pencil, a blue pen, an eraser, a pair of pliers for cleaning up
   prints and a small potted succulent on the opening desk are now real
