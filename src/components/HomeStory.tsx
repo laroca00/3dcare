@@ -328,6 +328,9 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           selection.style.height = `${box.height}px`;
           selection.style.opacity = String(box.opacity);
           selection.dataset.size = `${width} × ${depth} × ${height} cm`;
+          // While the drawing grows, a cursor drags its corner handle.
+          if (box.growing) selection.dataset.growing = "1";
+          else delete selection.dataset.growing;
         },
         onMug(frame) {
           // The mug's plan and the close-up's scale, drawn over the mug.
@@ -390,17 +393,25 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         requestAnimationFrame(() => {
           if (cancelled) return;
           setReady(true);
+          // The canvas fades in over the poster, then the drawing grows in on it.
+          started.startIntro();
           if (fixed !== null) document.documentElement.dataset.storyReady = "1";
         }),
       );
     };
 
     if (live) {
-      // At the top of the page the story has not started yet, so the scene can
-      // wait for the visitor's first scroll, touch or key press. This keeps its
-      // set-up work out of the page's first seconds. Frozen frames load at once.
+      // The scene's set-up stays out of the page's first seconds: it starts on
+      // the visitor's first scroll, touch or key press, or once the page has
+      // loaded and the browser is idle, so the opening plays on its own.
+      // Frozen frames load at once.
       if (fixed !== null) void load();
-      else INTENT.forEach((type) => window.addEventListener(type, load, { passive: true, once: true }));
+      else {
+        INTENT.forEach((type) => window.addEventListener(type, load, { passive: true, once: true }));
+        const whenIdle = () => ("requestIdleCallback" in window ? requestIdleCallback(() => void load(), { timeout: 2500 }) : setTimeout(() => void load(), 1200));
+        if (document.readyState === "complete") whenIdle();
+        else window.addEventListener("load", whenIdle, { once: true });
+      }
     }
 
     return () => {
@@ -569,6 +580,9 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           {["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
             <span key={handle} className={`story__handle story__handle--${handle}`} />
           ))}
+          <svg className="story__cursor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 3l14 8-6 1.6L10 19z" />
+          </svg>
         </div>
         {/* The mug's plan: outline, dimensions, and construction circles that gather into the wordmark. */}
         <svg className="story__plan" ref={planRef} aria-hidden="true">

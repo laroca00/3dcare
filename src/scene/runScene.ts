@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Theme } from "../theme/theme";
-import { createDesk } from "./desk";
+import { type DeskItem, createDesk } from "./desk";
 import { createDrawing } from "./drawing";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
@@ -26,7 +26,7 @@ import { STEAM_LAYER, createSteam } from "./steam";
 import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, endingMotion, heroLooks, labelOpacity, nozzlePath, printProgress, revealMotion, screenZoom, slicerProgress } from "./storyMotion";
 import { createLineup } from "./lineup";
 import { FLOOR_LAYER, createStudio } from "./studio";
-import { localProgress, smoothstep } from "./timeline";
+import { clamp01, localProgress, smoothstep } from "./timeline";
 
 export interface LabelPosition {
   id: PartId;
@@ -69,7 +69,7 @@ export interface SceneOptions {
    * for the selection box drawn round it at the start (null once it has gone),
    * and its size in cm (width, depth, height).
    */
-  onSelection?: (box: { x: number; y: number; width: number; height: number; opacity: number } | null, size: [number, number, number]) => void;
+  onSelection?: (box: { x: number; y: number; width: number; height: number; opacity: number; growing: boolean } | null, size: [number, number, number]) => void;
   /** Called when the pointer moves onto or off the freshly printed mug (or a finger presses it), while it stands in front of the giant line. */
   onTouchMug?: (touching: boolean) => void;
   /** Called after each frame with where the mug is on the canvas, while its plan or its layers are shown (null otherwise). */
@@ -104,6 +104,8 @@ export interface SceneHandle {
   setFilament(color: number): void;
   /** Handles chosen in the slicer: the preview and the printed mug. */
   setShape(id: MugShapeId): void;
+  /** Starts the opening (the drawing growing in); call once the canvas is on screen. */
+  startIntro(): void;
   /** Requests one frame. The scene draws only when asked or while a transition runs. */
   invalidate(): void;
   dispose(): void;
@@ -525,9 +527,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
 
   const boxCorner = new THREE.Vector3();
   /** Reports the outline of the drawing's footprint on the mat, while the selection box shows. */
-  function updateSelection(opacity: number) {
+  function updateSelection(opacity: number, grow: number) {
     if (!opts.onSelection) return;
-    if (opacity <= 0) return opts.onSelection(null, sizeCm);
+    if (opacity <= 0 || grow <= 0) return opts.onSelection(null, sizeCm);
     const { clientWidth: w, clientHeight: h } = canvas;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (let i = 0; i < 4; i++) {
@@ -540,7 +542,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       minY = Math.min(minY, y);
       maxY = Math.max(maxY, y);
     }
-    opts.onSelection({ x: minX, y: minY, width: maxX - minX, height: maxY - minY, opacity }, sizeCm);
+    // While the drawing grows, its size counts up with it.
+    const size = sizeCm.map((cm) => Math.round(cm * printer.root.scale.x)) as [number, number, number];
+    opts.onSelection({ x: minX, y: minY, width: maxX - minX, height: maxY - minY, opacity, growing: grow < 1 }, size);
   }
 
   const onScreen = (v: THREE.Vector3): Point => {
@@ -651,7 +655,53 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     opts.onTouchMug?.(touchingMug || handHolding);
   }
 
+  // At the top the pencil and the ruler on the desk can be picked up and
+  // moved: they lift a little under the pointer and more while held, and the
+  // pencil draws on the mat as it goes.
+  let deskActive = false;
+  let deskHover: DeskItem | null = null;
+  let deskHeld: { item: DeskItem; offset: THREE.Vector3 } | null = null;
+  const deskPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const deskPoint = new THREE.Vector3();
+  function aim(e: PointerEvent) {
+    const rect = canvas.getBoundingClientRect();
+    pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    raycaster.setFromCamera(pointer, camera);
+  }
+  function deskItemAt(e: PointerEvent): DeskItem | null {
+    aim(e);
+    const hit = raycaster.intersectObjects(desk.items.map((i) => i.object), true)[0];
+    return hit ? (desk.items.find((i) => i.object === hit.object || i.object.getObjectById(hit.object.id)) ?? null) : null;
+  }
+  /** Where the pointer meets the mat's top. */
+  function onDesk(e: PointerEvent) {
+    aim(e);
+    deskPlane.constant = -desk.topY();
+    return raycaster.ray.intersectPlane(deskPlane, deskPoint);
+  }
+  function setDeskHover(item: DeskItem | null) {
+    if (item === deskHover) return;
+    deskHover = item;
+    desk.setHover(item);
+    canvas.dataset.desk = item ? "1" : "";
+    handle.invalidate();
+  }
+
   function onPointerDown(e: PointerEvent) {
+    if (deskActive && e.button === 0) {
+      // The item under the pointer, or the one it was over when the cursor showed a hand.
+      const item = deskItemAt(e) ?? deskHover;
+      const at = item && onDesk(e);
+      if (item && at) {
+        const offset = item.object.getWorldPosition(new THREE.Vector3()).sub(at).setY(0);
+        deskHeld = { item, offset };
+        desk.setHeld(item);
+        canvas.setPointerCapture(e.pointerId);
+        canvas.dataset.dragging = "1";
+        handle.invalidate();
+        return;
+      }
+    }
     if (heroMug && e.button === 0 && mugAt(e)) setTouchingMug(true);
     if (!grabbable || e.button !== 0) return;
     const part = grabbable === "printer" ? partAt(e) : null;
@@ -668,6 +718,13 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     canvas.dataset.dragging = "1";
   }
   function onPointerMove(e: PointerEvent) {
+    if (deskHeld) {
+      const at = onDesk(e);
+      if (at) desk.moveTo(deskHeld.item, at.add(deskHeld.offset));
+      handle.invalidate();
+      return;
+    }
+    if (deskActive && e.pointerType === "mouse") setDeskHover(deskItemAt(e));
     if (heroMug && (e.pointerType === "mouse" || touchingMug)) setTouchingMug(mugAt(e));
     const turned = drag.spin;
     if (!turned) {
@@ -684,6 +741,14 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     handle.invalidate();
   }
   function onPointerUp(e: PointerEvent) {
+    if (deskHeld) {
+      deskHeld = null;
+      desk.setHeld(null);
+      delete canvas.dataset.dragging;
+      if (e.pointerType !== "mouse") setDeskHover(null);
+      handle.invalidate();
+      return;
+    }
     if (e.pointerType !== "mouse") setTouchingMug(false);
     if (!drag.spin) return;
     // A press without a drag is a click: it opens the part's card, or closes it on empty space.
@@ -697,6 +762,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     handle.invalidate();
   }
   function onPointerLeave() {
+    if (!deskHeld) setDeskHover(null);
     setTouchingMug(false);
     if (!drag.spin) setHovered(null);
   }
@@ -740,6 +806,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   }
 
   let raf = 0;
+  let introStart = 0;
+  /** The opening's drawing waits a moment after the scene appears, then grows for this long. */
+  const INTRO_DELAY = 650;
+  const INTRO_MS = 2200;
   let last = 0;
 
   function frame(now: number) {
@@ -760,6 +830,22 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // 1. Drawing → object. The drawing is already under way at the top of the
     //    page, matching the poster frame shown before the scene loads.
     const draw = localProgress(p, "draw");
+    // The opening: the printer's drawing grows out from its corner, as if
+    // scaled up by its selection handle. The poster frame (frozen at the very
+    // top) shows the desk alone; other frozen frames show it full size.
+    const grow = opts.frozen ? (p === 0 ? 0 : 1) : introStart ? clamp01((now - introStart) / INTRO_MS) : 0;
+    const growEase = grow >= 1 ? 1 : 1 - Math.pow(1 - grow, 3) * Math.cos(grow * 4.2);
+    printer.root.scale.setScalar(Math.max(growEase, 0.001));
+    printer.root.visible = grow > 0;
+    const growing = grow < 1 && !opts.frozen;
+    // The pencil and the ruler can be picked up while the desk is in view.
+    deskActive = draw < 0.25 && !opts.frozen;
+    if (!deskActive && (deskHover || deskHeld)) {
+      deskHeld = null;
+      desk.setHeld(null);
+      setDeskHover(null);
+    }
+    const deskMoving = desk.update(dt);
     drawing.setReveal(DRAWING_START + (1 - DRAWING_START) * smoothstep(draw / 0.6), smoothstep((draw - 0.55) / 0.45));
     desk.setAmount(1 - smoothstep((draw - 0.5) / 0.45));
 
@@ -942,10 +1028,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       renderer.render(scene, camera);
     }
     updateLabels(apart);
-    updateSelection(1 - smoothstep(draw / 0.3));
+    updateSelection(1 - smoothstep(draw / 0.3), grow);
     updateScreen(zoom);
     updateMug(looks);
-    if (transitioning || turning || steaming || drifting || focusing || breathing || glowing) handle.invalidate();
+    if (transitioning || turning || steaming || drifting || focusing || breathing || glowing || growing || deskMoving) handle.invalidate();
   }
 
   const handle: SceneHandle = {
@@ -988,6 +1074,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     },
     setSelected(id) {
       selected = printer.parts.find((part) => part.id === id) ?? null;
+      handle.invalidate();
+    },
+    startIntro() {
+      if (!introStart) introStart = performance.now() + INTRO_DELAY;
       handle.invalidate();
     },
     invalidate() {

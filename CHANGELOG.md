@@ -7,6 +7,17 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### A playful opening desk
+- The home page opens on the empty desk; a moment later the printer's
+  drawing ("yazici.stl" / "printer.stl") grows in from nothing, as if a
+  cursor were dragging its selection handle in a design program, while
+  its size counts up to 41 × 49 × 67 cm and settles.
+- The pencil and the ruler are larger. Pointing at them lifts them a
+  little; they can be picked up and moved across the mat, and the pencil
+  draws a teal line on the mat as it goes.
+- The 3D scene now also starts by itself once the page has loaded and the
+  browser is idle, so the opening plays without waiting for a scroll.
+
 ### A director's pass over the home story
 - When the mug is touched or held, the light now fills the background
   behind the giant line: colour washes in from the edges, its hue slowly

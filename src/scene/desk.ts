@@ -10,6 +10,9 @@ const MAT_W = 250;
 const MAT_D = 180;
 /** Canvas pixels per cm. */
 const PX = 6;
+/** The pencil and the ruler are drawn large, so they read from above and invite a touch. */
+const PENCIL_SCALE = 2.2;
+const RULER_SCALE = 1.7;
 /** The mat sits right of the middle, so the wooden desk shows under the opening text on the left. */
 const MAT_X = 70;
 const MAT_Z = 10;
@@ -19,8 +22,25 @@ const MAT: Record<Theme, { base: string; minor: string; major: string; text: str
   light: { base: "#c9d8d1", minor: "rgba(0, 80, 70, 0.10)", major: "rgba(0, 80, 70, 0.24)", text: "rgba(0, 80, 70, 0.55)", mark: "rgba(0, 90, 80, 0.12)" },
 };
 
+/** Something on the desk the visitor can pick up and move. */
+export interface DeskItem {
+  kind: "pencil" | "ruler";
+  object: THREE.Object3D;
+}
+
 export interface Desk {
   object: THREE.Group;
+  /** The pencil and the ruler, for pointing at and dragging. */
+  items: DeskItem[];
+  /** The item under the pointer (lifts a little) and the one being dragged (lifts more). */
+  setHover(item: DeskItem | null): void;
+  setHeld(item: DeskItem | null): void;
+  /** Moves an item to a point on the desk (world coordinates); a held pencil draws as it goes. */
+  moveTo(item: DeskItem, point: THREE.Vector3): void;
+  /** Height of the mat's top in world coordinates, for dragging on it. */
+  topY(): number;
+  /** Eases the lifts; returns true while they still need frames. */
+  update(dt: number): boolean;
   /** 0..1: the desk fades out as the drawing becomes the printer. The caller keeps it square to the view. */
   setAmount(amount: number): void;
   setTheme(theme: Theme): void;
@@ -162,7 +182,11 @@ export function createDesk(floorY: number, theme: Theme): Desk {
   eraser.position.y = -9.7;
   pencil.add(body, cone, tip, ferrule, eraser);
   pencil.rotation.set(0, 1.15, Math.PI / 2);
-  pencil.position.set(46, 0.72, 4);
+  // Large on the desk, so it reads from above and invites a touch.
+  pencil.scale.setScalar(PENCIL_SCALE);
+  pencil.position.set(58, 0.3 + 0.42 * PENCIL_SCALE, 2);
+  // The graphite tip, in the pencil's own coordinates, for drawing on the mat.
+  const tipPoint = new THREE.Vector3(0, 10.7, 0);
 
   // A 30 cm steel ruler along the front edge.
   const rulerCanvas = document.createElement("canvas");
@@ -174,17 +198,86 @@ export function createDesk(floorY: number, theme: Theme): Desk {
   const rulerTop = new THREE.MeshStandardMaterial({ map: rulerTexture, roughness: 0.4, metalness: 0.6 });
   // Box faces: +x, -x, +y (top), -y, +z, -z.
   const ruler = new THREE.Mesh(new THREE.BoxGeometry(32, 0.12, 3), [steel, steel, rulerTop, steel, steel, steel]);
-  ruler.rotation.y = -0.06;
-  ruler.position.set(16, 0.36, 46);
+  ruler.rotation.y = -0.22;
+  ruler.scale.set(RULER_SCALE, 1.5, RULER_SCALE);
+  ruler.position.set(44, 0.39, 40);
 
   for (const mesh of [body, cone, tip, ferrule, eraser, ruler]) mesh.castShadow = true;
   object.add(pencil, ruler);
 
-  const materials = [matMaterial, deskMaterial, yellow, woodMaterial, graphite, ferruleMaterial, eraserMaterial, steel, rulerTop];
+  // Invisible handles a little larger than each item, so they are easy to grab.
+  const grip = new THREE.MeshBasicMaterial({ visible: false });
+  const pencilGrip = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 22, 8), grip);
+  pencil.add(pencilGrip);
+  const rulerGrip = new THREE.Mesh(new THREE.BoxGeometry(33, 2, 5), grip);
+  ruler.add(rulerGrip);
+  const items: DeskItem[] = [
+    { kind: "pencil", object: pencil },
+    { kind: "ruler", object: ruler },
+  ];
+  const rest = new Map(items.map((i) => [i, i.object.position.y]));
+  const lift = new Map(items.map((i) => [i, 0]));
+  let hovered: DeskItem | null = null;
+  let held: DeskItem | null = null;
+  // Where the pencil's tip was on the mat's canvas, while it draws.
+  let lastTip: { x: number; y: number } | null = null;
+  const tipWorld = new THREE.Vector3();
+  const local = new THREE.Vector3();
+
+  /** The pencil's tip on the mat's canvas, in pixels. */
+  function tipOnMat() {
+    pencil.updateMatrixWorld(true);
+    pencil.localToWorld(tipWorld.copy(tipPoint));
+    mat.worldToLocal(tipWorld);
+    return { x: (tipWorld.x + MAT_W / 2) * PX, y: (tipWorld.z + MAT_D / 2) * PX };
+  }
+
+  const materials = [grip, matMaterial, deskMaterial, yellow, woodMaterial, graphite, ferruleMaterial, eraserMaterial, steel, rulerTop];
   let opaque = true;
 
   return {
     object,
+    items,
+    setHover(item) {
+      hovered = item;
+    },
+    setHeld(item) {
+      held = item;
+      lastTip = item?.kind === "pencil" ? tipOnMat() : null;
+    },
+    moveTo(item, point) {
+      object.worldToLocal(local.copy(point));
+      item.object.position.x = local.x;
+      item.object.position.z = local.z;
+      if (item !== held || item.kind !== "pencil" || !lastTip) return;
+      // A soft teal pencil line on the mat, from the last tip position to this one.
+      const now = tipOnMat();
+      const c = matCanvas.getContext("2d")!;
+      c.strokeStyle = "rgba(60, 194, 176, 0.85)";
+      c.lineWidth = 0.35 * PX;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(lastTip.x, lastTip.y);
+      c.lineTo(now.x, now.y);
+      c.stroke();
+      matTexture.needsUpdate = true;
+      lastTip = now;
+    },
+    topY() {
+      return object.position.y + 0.3;
+    },
+    update(dt) {
+      let moving = false;
+      for (const item of items) {
+        const target = item === held ? 2.4 : item === hovered ? 0.9 : 0;
+        const now = lift.get(item)!;
+        const next = Math.abs(target - now) < 0.01 ? target : now + (target - now) * (1 - Math.exp(-12 * dt));
+        lift.set(item, next);
+        item.object.position.y = rest.get(item)! + next;
+        moving ||= next !== target;
+      }
+      return moving;
+    },
     setAmount(amount) {
       object.visible = amount > 0.001;
       const nowOpaque = amount >= 1;
