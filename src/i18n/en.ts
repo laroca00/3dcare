@@ -171,6 +171,7 @@ export const en = {
       { title: "Test with users", text: "Adults with disabilities and their therapists try each model in two testing cycles, in Lithuania and Türkiye." },
       { title: "Publish", text: "The final files are released here with print settings, safety notes and adaptation tips." },
     ],
+    heroCard: { kicker: "An Erasmus+ project, 2026–2028", text: "Seven organisations from six countries, designing assistive tools anyone can print." },
     galleryTitle: "In everyday life",
     galleryLead: "Simple printed tools for eating, drinking, opening a door: the small moments the project is about.",
     galleryHeader: { left: "Everyday life", scenes: "scenes", right: "Illustrative pictures" },

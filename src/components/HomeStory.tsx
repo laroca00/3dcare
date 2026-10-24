@@ -632,22 +632,27 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         <style>{".loader{display:none}"}</style>
       </noscript>
       <div className="loader" ref={loaderRef} aria-hidden="true">
-        <svg className="loader__mark" viewBox="0 0 64 64">
-          {LOADER_ARCS.map(([r, i]) => (
-            <path
-              key={r}
-              pathLength={1}
-              d={`M ${32 + r * 0.7071} ${32 - r * 0.7071} A ${r} ${r} 0 1 0 ${32 + r * 0.7071} ${32 + r * 0.7071}`}
-              style={{ "--i": i } as CSSProperties}
-            />
+        {/* The printer's file, selected as in a design program, fills as the scene gets ready. */}
+        <div className="loader__shape" data-file={t.story.selectionFile}>
+          <div className="loader__fill" />
+          {["n", "e", "s", "w"].map((side) => (
+            <span key={side} className={`loader__handle loader__handle--${side}`} />
           ))}
-          <circle cx="32" cy="32" r="3.5" />
-        </svg>
-        <p className="loader__name">3D CARE</p>
+          <svg className="loader__mark" viewBox="0 0 64 64">
+            {LOADER_ARCS.map(([r, i]) => (
+              <path
+                key={r}
+                pathLength={1}
+                d={`M ${32 + r * 0.7071} ${32 - r * 0.7071} A ${r} ${r} 0 1 0 ${32 + r * 0.7071} ${32 + r * 0.7071}`}
+                style={{ "--i": i } as CSSProperties}
+              />
+            ))}
+            <circle cx="32" cy="32" r="3.5" />
+          </svg>
+        </div>
         <p className="loader__count">
           <span ref={loaderCountRef}>000</span>%
         </p>
-        <div className="loader__bar" />
       </div>
       <div
         className="story__stage"
@@ -842,16 +847,28 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
 
       <div className="story__beats container">
         <div className="story__beat story__beat--intro" data-beat style={{ minHeight: `${SCENE_SVH[0][1]}svh` }}>
-          <h1 id="story-title">{t.title}</h1>
-          <p className="lead">{t.lead}</p>
-          <p className="actions">
-            <Link href={`/${lang}/models/`} className="btn btn--primary">
-              {t.browse}
-            </Link>
-            <Link href={`/${lang}/training/`} className="btn btn--secondary">
-              {t.training}
-            </Link>
-          </p>
+          {/* The opening screen: a small line over a giant wordmark at the top
+              left, the lead to the right of the desk, and a frosted card at the
+              bottom left with the way in. */}
+          <div className="story__hero">
+            <h1 id="story-title" className="story__hero-title">{t.title}</h1>
+            <p className="story__hero-word" aria-hidden="true">
+              3D CARE
+            </p>
+            <p className="lead story__hero-lead">{t.lead}</p>
+            <div className="story__hero-card">
+              <p className="story__hero-kicker">{t.heroCard.kicker}</p>
+              <p className="story__hero-note">{t.heroCard.text}</p>
+              <p className="actions">
+                <Link href={`/${lang}/models/`} className="btn btn--primary">
+                  {t.browse}
+                </Link>
+                <Link href={`/${lang}/training/`} className="btn btn--secondary">
+                  {t.training}
+                </Link>
+              </p>
+            </div>
+          </div>
           {first.text && <p>{first.text}</p>}
           {stillFrame(0)}
         </div>

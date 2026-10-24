@@ -2506,36 +2506,62 @@ main:focus {
   cursor: grabbing;
 }
 
-/* The loading screen on the home page: the cutting mat's grid, with the
-   3D Care mark drawn arc by arc and a count, as the scene gets ready. When
-   everything is ready it lifts away like a sheet, uncovering the desk.
-   Without script it never shows; if anything hangs it goes on its own. */
+/* The loading screen on the home page: the cutting mat's colour with
+   construction lines, and the printer's file selected in the middle, as in a
+   design program, with bezier handles; it fills as the scene gets ready.
+   Then the screen melts into the desk, the selection standing where the
+   drawing appears. Without script it never shows; if anything hangs it
+   goes on its own. */
 .loader {
   --load: 0;
+  --mat: #10302b;
+  --line: rgb(170 240 225 / 0.16);
+  --handle: #f5c400;
+  --box: min(42vmin, 380px);
   position: fixed;
   inset: 0;
   z-index: 100;
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 18px;
-  background-color: var(--paper);
+  background-color: var(--mat);
+  /* Dashed construction lines through the selection's edges, right across the screen. */
   background-image:
-    linear-gradient(color-mix(in srgb, var(--teal) 16%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--teal) 16%, transparent) 1px, transparent 1px),
-    linear-gradient(color-mix(in srgb, var(--teal) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--teal) 7%, transparent) 1px, transparent 1px);
-  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
-  background-position: center;
-  color: var(--ink);
-  transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.5s ease 0.4s;
+    repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px),
+    repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px),
+    repeating-linear-gradient(0deg, var(--line) 0 6px, transparent 6px 12px),
+    repeating-linear-gradient(0deg, var(--line) 0 6px, transparent 6px 12px);
+  background-size: 100% 1px, 100% 1px, 1px 100%, 1px 100%;
+  background-position:
+    0 calc(50% - var(--box) / 2),
+    0 calc(50% + var(--box) / 2),
+    calc(50% - var(--box) / 2) 0,
+    calc(50% + var(--box) / 2) 0;
+  background-repeat: no-repeat;
+  color: #e3f4ef;
+  transition: opacity 0.9s ease, filter 0.9s ease;
   /* A safety net: lifts by itself if the page's script never takes over. */
   animation: loader-fallback 0s linear 12s forwards;
 }
 
+:root[data-theme="light"] .loader {
+  --mat: #c9d8d1;
+  --line: rgb(0 80 70 / 0.18);
+  color: #0d3a33;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .loader {
+    --mat: #c9d8d1;
+    --line: rgb(0 80 70 / 0.18);
+    color: #0d3a33;
+  }
+}
+
+/* It melts into the desk rather than sliding away. */
 .loader[data-done] {
-  transform: translateY(-100%);
   opacity: 0;
+  filter: blur(6px);
   pointer-events: none;
 }
 
@@ -2550,15 +2576,118 @@ main:focus {
   overflow: hidden;
 }
 
-.loader__mark {
-  width: clamp(96px, 16vmin, 160px);
-  height: auto;
-  overflow: visible;
-  transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+.loader__shape {
+  position: relative;
+  width: var(--box);
+  aspect-ratio: 1;
+  border: 1.5px dashed currentColor;
+  transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.loader[data-done] .loader__mark {
-  transform: scale(0.85) translateY(-20px);
+.loader[data-done] .loader__shape {
+  transform: scale(1.06);
+}
+
+/* The file's name, like the selection on the desk. */
+.loader__shape::before {
+  content: attr(data-file);
+  position: absolute;
+  left: -1px;
+  bottom: calc(100% + 8px);
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--violet);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* The fill sweeps round like a clock hand as the scene loads. */
+.loader__fill {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(from 0deg, color-mix(in srgb, currentColor 22%, transparent) calc(var(--load) * 360deg), transparent 0);
+}
+
+/* Bezier handles on each side: a line with a dot at each end. */
+.loader__handle {
+  position: absolute;
+  background: var(--handle);
+}
+
+.loader__handle::before,
+.loader__handle::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--handle);
+}
+
+.loader__handle--n,
+.loader__handle--s {
+  left: 25%;
+  width: 50%;
+  height: 1.5px;
+}
+
+.loader__handle--n {
+  top: -1px;
+}
+
+.loader__handle--s {
+  bottom: -1px;
+}
+
+.loader__handle--n::before,
+.loader__handle--s::before {
+  left: -4px;
+  top: -3.5px;
+}
+
+.loader__handle--n::after,
+.loader__handle--s::after {
+  right: -4px;
+  top: -3.5px;
+}
+
+.loader__handle--e,
+.loader__handle--w {
+  top: 25%;
+  width: 1.5px;
+  height: 50%;
+}
+
+.loader__handle--e {
+  right: -1px;
+}
+
+.loader__handle--w {
+  left: -1px;
+}
+
+.loader__handle--e::before,
+.loader__handle--w::before {
+  top: -4px;
+  left: -3.5px;
+}
+
+.loader__handle--e::after,
+.loader__handle--w::after {
+  bottom: -4px;
+  left: -3.5px;
+}
+
+/* The 3D Care mark in the middle, drawn arc by arc. */
+.loader__mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28%;
+  height: auto;
+  overflow: visible;
+  translate: -50% -50%;
 }
 
 .loader__mark path {
@@ -2573,15 +2702,15 @@ main:focus {
 }
 
 .loader__mark path:nth-child(1) {
-  stroke: var(--ink);
+  stroke: currentColor;
 }
 
 .loader__mark path:nth-child(2) {
-  stroke: var(--teal);
+  stroke: #3cc2b0;
 }
 
 .loader__mark path:nth-child(3) {
-  stroke: var(--violet);
+  stroke: #a48be6;
 }
 
 .loader__mark circle {
@@ -2590,32 +2719,13 @@ main:focus {
   transform: scale(clamp(0, (var(--load) - 0.85) * 6.67, 1));
 }
 
-.loader__name {
-  margin: 0;
+.loader__count {
+  margin: 22px 0 0;
   font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.32em;
-  text-indent: 0.32em;
-}
-
-.loader__count {
-  margin: 0;
-  color: var(--muted);
-  font-size: clamp(2.6rem, 7vw, 4.5rem);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.18em;
   font-variant-numeric: tabular-nums;
-}
-
-.loader__bar {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 3px;
-  width: calc(var(--load) * 100%);
-  background: var(--teal);
-  box-shadow: 0 0 12px var(--teal);
+  opacity: 0.75;
 }
 
 /* Visitors who prefer less motion get the still story at once, no loader. */
@@ -2627,4 +2737,145 @@ main:focus {
 
 :root[data-story-still] .loader {
   display: none;
+}
+
+/* The opening screen, laid out over the desk: a small line over a giant
+   wordmark at the top left, the lead to the right of the drawing, and a
+   frosted card at the bottom left. The desk looks the same in both themes,
+   so these words stay warm white with a soft shadow. */
+.story__hero {
+  --hero-ink: #fff6e8;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--hero-ink);
+  text-shadow: 0 1px 2px rgb(40 22 8 / 0.35), 0 0 30px rgb(40 22 8 / 0.35);
+}
+
+.story__hero-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.story__hero-word {
+  margin: 0;
+  font-size: clamp(4.2rem, 17vw, 13rem);
+  font-weight: 800;
+  line-height: 0.82;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+
+.story__hero-lead.lead {
+  margin: 0;
+  color: var(--hero-ink);
+  font-size: clamp(1.15rem, 1.9vw, 1.65rem);
+  line-height: 1.32;
+}
+
+.story__hero-card {
+  padding: 18px 20px 20px;
+  border: 1px solid rgb(255 246 232 / 0.28);
+  border-radius: 4px;
+  background: rgb(255 238 214 / 0.16);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  text-shadow: none;
+}
+
+.story__hero-kicker {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.story__hero-note {
+  margin: 0 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px dotted rgb(255 246 232 / 0.6);
+  font-size: 0.92rem;
+}
+
+.story__hero-card .actions {
+  margin: 0;
+}
+
+.story__hero-card .btn--secondary {
+  border-color: var(--hero-ink);
+  color: var(--hero-ink);
+}
+
+@media (min-width: 900px) {
+  .story:not(.story--stills) .story__beat--intro {
+    max-width: none;
+    padding-top: 0;
+    justify-content: flex-start;
+  }
+
+  /* Edge to edge, like a poster over the desk. */
+  .story:not(.story--stills) .story__hero {
+    position: relative;
+    width: 100vw;
+    height: 100svh;
+    margin-left: calc(50% - 50vw);
+    display: block;
+  }
+
+  .story:not(.story--stills) .story__hero-title {
+    position: absolute;
+    left: calc(3.4vw + 0.6vw);
+    top: calc(max(12svh, 136px) + 14px);
+    white-space: nowrap;
+  }
+
+  .story:not(.story--stills) .story__hero-word {
+    position: absolute;
+    left: 3vw;
+    top: calc(max(12svh, 136px) + 38px);
+    font-size: clamp(4rem, 10.5vw, 11rem);
+  }
+
+  .story:not(.story--stills) .story__hero-lead {
+    position: absolute;
+    right: 4vw;
+    top: 44%;
+    width: min(31rem, 32vw);
+  }
+
+  .story:not(.story--stills) .story__hero-card {
+    position: absolute;
+    left: 3vw;
+    bottom: 8svh;
+    width: 25rem;
+  }
+
+  .story:not(.story--stills) .story__hero-card .btn {
+    padding: 10px 16px;
+    font-size: 0.92rem;
+  }
+}
+
+/* Still frames: the opening is plain text over its picture. */
+.story--stills .story__hero {
+  color: inherit;
+  text-shadow: none;
+}
+
+.story--stills .story__hero-lead.lead,
+.story--stills .story__hero-card .btn--secondary {
+  color: inherit;
+  border-color: currentColor;
+}
+
+.story--stills .story__hero-card {
+  border-color: var(--plate);
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }

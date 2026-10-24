@@ -173,6 +173,7 @@ export const tr: typeof en = {
       { title: "Kullanıcılarla test et", text: "Engelli yetişkinler ve terapistleri her modeli Litvanya ve Türkiye'de iki test döngüsünde deniyor." },
       { title: "Yayımla", text: "Son dosyalar baskı ayarları, güvenlik notları ve uyarlama önerileriyle burada yayımlanıyor." },
     ],
+    heroCard: { kicker: "Bir Erasmus+ projesi, 2026–2028", text: "Altı ülkeden yedi kurum, herkesin basabileceği yardımcı araçlar tasarlıyor." },
     galleryTitle: "Gündelik hayatta",
     galleryLead: "Yemek, içmek, bir kapıyı açmak için basit baskı araçlar: projenin derdi bu küçük anlar.",
     galleryHeader: { left: "Gündelik hayat", scenes: "sahne", right: "Temsilî görseller" },

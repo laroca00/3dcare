@@ -127,7 +127,7 @@ const LENS: Record<Theme, { vignette: number; grain: number }> = {
 
 const LensShader = {
   name: "LensShader",
-  uniforms: { tDiffuse: { value: null }, vignette: { value: 0.3 }, grain: { value: 0.03 }, time: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, vignette: { value: 0.3 }, grain: { value: 0.03 }, time: { value: 0 }, tilt: { value: 0 } },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
     void main() {
@@ -139,15 +139,31 @@ const LensShader = {
     uniform float vignette;
     uniform float grain;
     uniform float time;
+    uniform float tilt;
     varying vec2 vUv;
     float random(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
       vec4 color = texture2D(tDiffuse, vUv);
+      // Tilt-shift: away from the middle band the picture softens, like a lens with a shallow focus.
+      float soft = tilt * smoothstep(0.26, 0.56, length((vUv - 0.5) * vec2(0.85, 1.2)));
+      if (soft > 0.01) {
+        vec2 r = vec2(soft * 0.005, soft * 0.009);
+        vec4 sum = color;
+        for (int i = 0; i < 8; i++) {
+          float a = float(i) * 0.785398;
+          sum += texture2D(tDiffuse, vUv + vec2(cos(a), sin(a)) * r);
+          sum += texture2D(tDiffuse, vUv + vec2(cos(a + 0.39), sin(a + 0.39)) * r * 0.5);
+        }
+        color = sum / 17.0;
+      }
       float edge = smoothstep(0.25, 0.85, length((vUv - 0.5) * vec2(1.0, 0.8)));
       // A touch of colour fringing towards the corners, as a real lens has.
-      vec2 shift = (vUv - 0.5) * edge * 0.0035;
-      color.r = texture2D(tDiffuse, vUv + shift).r;
-      color.b = texture2D(tDiffuse, vUv - shift).b;
+      // (Not while the picture is softened: the fringe would show on the blurred edges.)
+      if (soft <= 0.01) {
+        vec2 shift = (vUv - 0.5) * edge * 0.0035;
+        color.r = texture2D(tDiffuse, vUv + shift).r;
+        color.b = texture2D(tDiffuse, vUv - shift).b;
+      }
       color.rgb *= 1.0 - vignette * edge;
       color.rgb += (random(vUv * 1000.0 + time) - 0.5) * grain;
       gl_FragColor = color;
@@ -195,8 +211,10 @@ const MACRO_SIDE = -2.4;
 /** Real layer height (cm), for the close-up's scale. */
 const REAL_LAYER = 0.03;
 /** At the very top the camera looks down on the desk from here (relative to where it aims). */
-const DESK_WIDE = new THREE.Vector3(4, 215, 10);
-const DESK_NARROW = new THREE.Vector3(0, 400, 16);
+const DESK_WIDE = new THREE.Vector3(0, 240, 44);
+const DESK_NARROW = new THREE.Vector3(0, 330, 46);
+/** The mat lies a little turned, as if put down by hand. */
+const DESK_TURN = 0.13;
 /** How far the mug lowers into the open model package (cm). */
 const PACKAGE_DROP = 14;
 /** How far behind the mug the giant line glows. */
@@ -418,6 +436,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const outroView = new THREE.Vector3();
 
   const deskEye = new THREE.Vector3();
+  const deskTarget = new THREE.Vector3();
   const boxCenter = new THREE.Vector3();
   const boxView = new THREE.Vector3();
   const boxAside = new THREE.Vector3();
@@ -434,7 +453,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     camera.position.set(85 - near * 10, 46 - near * 6, (wide ? 140 : 190) + near * (wide ? 40 : 85));
     home.set(wide ? 20 * (1 - center) + near * 4 : near * 3, 2 - near * (wide ? 13 : 18), 0);
     // At the very top the camera looks down on the desk, then comes down as the drawing becomes the printer.
-    if (above > 0) camera.position.lerp(deskEye.copy(home).add(wide ? DESK_WIDE : DESK_NARROW), smoothstep(above));
+    // At the very top the camera looks almost straight down on the desk,
+    // with the printer's drawing in the middle of the picture.
+    if (above > 0) camera.position.lerp(deskEye.copy(deskTarget).add(wide ? DESK_WIDE : DESK_NARROW), smoothstep(above));
     // While printing, the camera swings slowly round the printer and back,
     // like a print time-lapse, coming a little closer on the way.
     const swing = Math.sin(Math.PI * printed);
@@ -450,7 +471,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     camera.position.lerp(revealView, hero);
     lookAt.copy(home).lerp(mugMiddle, hero);
     // On narrow screens the text fills the top, so the desk sits lower in the view.
-    if (!wide && above > 0) lookAt.z -= smoothstep(above) * 85;
+    if (above > 0) lookAt.lerp(deskTarget, smoothstep(above));
+    if (!wide && above > 0) lookAt.z -= smoothstep(above) * 30;
     // While the mug is looked at, it stands beside the text on wide screens.
     if (wide && looks.hero > 0) {
       sideways.crossVectors(revealDir, UP).multiplyScalar(HERO_ASIDE * smoothstep(looks.hero));
@@ -870,7 +892,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // The mat lies square to the view while the printer's drawing stands on it at an angle.
     // ...square to the camera looking down on it, turned a few degrees like a mat put down by hand.
     const deskView = wide ? DESK_WIDE : DESK_NARROW;
-    desk.object.rotation.y = -stage.rotation.y + Math.atan2(deskView.x, deskView.z) - 0.08;
+    desk.object.rotation.y = -stage.rotation.y + Math.atan2(deskView.x, deskView.z) + DESK_TURN;
+    // The middle of the printer's drawing, where the opening camera aims.
+    printer.root.getWorldPosition(deskTarget);
+    deskTarget.y += 6;
     setExplode(printer.parts, apart, 0.07);
     // Parts the visitor has turned, each around its own middle.
     for (const [part, turned] of partSpins) {
@@ -998,7 +1023,11 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // The morning comes as the mug lands on the table.
     // At the close the sunbeam fades, so it does not glare as the camera rises.
     const morning = smoothstep((u - 0.3) / 0.4);
-    studio.setMorning(morning, mugWorld, morning * (1 - smoothstep(outro / 0.25)));
+    // Warm daylight through a window falls across the opening desk too.
+    const openingSun = (1 - smoothstep(draw / 0.5)) * 1.1;
+    studio.setMorning(morning, morning > 0 ? mugWorld : deskTarget, Math.max(morning * (1 - smoothstep(outro / 0.25)), openingSun));
+    // The opening is shot like a miniature: sharp in the middle, softly blurred towards the edges.
+    lens.uniforms.tilt.value = (1 - smoothstep(draw / 0.35)) * (quality.level === 2 ? 1 : 0.6);
     mugTop.copy(mugWorld).y += LAYERS * LAYER_HEIGHT;
     steam.update(mugTop, end.steam, now / 1000);
     const steaming = end.steam > 0 && (opts.isVisible?.() ?? true);

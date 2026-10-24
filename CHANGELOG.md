@@ -7,6 +7,23 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### The opening, composed like a poster
+- The opening camera looks almost straight down on the desk, with the
+  printer's drawing in the middle of the picture and the mat a little
+  turned, as if put down by hand; the wooden desk shows on the left, with
+  two paper clips, the pencil lies across the top and the ruler across the
+  bottom right. Warm daylight through a window falls across the desk, and
+  the picture is shot like a miniature: sharp in the middle, softly blurred
+  towards the edges.
+- The opening's words are laid out over the desk: the project's line in
+  small capitals over a giant "3D CARE" at the top left, the lead to the
+  right of the drawing, and a frosted card at the bottom left with what
+  the project is and the two ways in.
+- The loading screen now has the mat's colour with construction lines
+  through the printer's file, selected in the middle with bezier handles;
+  it fills like a clock hand as the scene gets ready, then melts into the
+  desk, the selection standing where the drawing grows in.
+
 ### A loading screen
 - The home page now opens on a loading screen in the site's own colours:
   the cutting mat's grid, the 3D Care mark drawn arc by arc and a count

@@ -14,8 +14,8 @@ const PX = 6;
 const PENCIL_SCALE = 2.2;
 const RULER_SCALE = 1.7;
 /** The mat sits right of the middle, so the wooden desk shows under the opening text on the left. */
-const MAT_X = 70;
-const MAT_Z = 10;
+const MAT_X = 92;
+const MAT_Z = -42;
 
 const MAT: Record<Theme, { base: string; minor: string; major: string; text: string; mark: string }> = {
   dark: { base: "#10302b", minor: "rgba(150, 230, 210, 0.10)", major: "rgba(150, 230, 210, 0.24)", text: "rgba(170, 240, 225, 0.5)", mark: "rgba(160, 235, 220, 0.12)" },
@@ -181,10 +181,10 @@ export function createDesk(floorY: number, theme: Theme): Desk {
   const eraser = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1, 12), eraserMaterial);
   eraser.position.y = -9.7;
   pencil.add(body, cone, tip, ferrule, eraser);
-  pencil.rotation.set(0, 1.15, Math.PI / 2);
+  pencil.rotation.set(0, 2.25, Math.PI / 2);
   // Large on the desk, so it reads from above and invites a touch.
   pencil.scale.setScalar(PENCIL_SCALE);
-  pencil.position.set(58, 0.3 + 0.42 * PENCIL_SCALE, 2);
+  pencil.position.set(42, 0.3 + 0.42 * PENCIL_SCALE, -40);
   // The graphite tip, in the pencil's own coordinates, for drawing on the mat.
   const tipPoint = new THREE.Vector3(0, 10.7, 0);
 
@@ -198,9 +198,29 @@ export function createDesk(floorY: number, theme: Theme): Desk {
   const rulerTop = new THREE.MeshStandardMaterial({ map: rulerTexture, roughness: 0.4, metalness: 0.6 });
   // Box faces: +x, -x, +y (top), -y, +z, -z.
   const ruler = new THREE.Mesh(new THREE.BoxGeometry(32, 0.12, 3), [steel, steel, rulerTop, steel, steel, steel]);
-  ruler.rotation.y = -0.22;
+  ruler.rotation.y = 0.62;
   ruler.scale.set(RULER_SCALE, 1.5, RULER_SCALE);
-  ruler.position.set(44, 0.39, 40);
+  ruler.position.set(66, 0.39, 40);
+
+  // Two paper clips on the wood beside the mat.
+  const clipMaterial = new THREE.MeshStandardMaterial({ color: 0xc9cdd1, roughness: 0.25, metalness: 1 });
+  const clipPoints = [
+    [0, 0], [0, 7], [1.1, 7.6], [2.2, 7], [2.2, 1], [1.4, 0.4], [0.6, 1], [0.6, 5.6], [1.6, 5.6], [1.6, 2],
+  ].map(([x, z]) => new THREE.Vector3(x, 0, z));
+  const clipCurve = new THREE.CatmullRomCurve3(clipPoints, false, "catmullrom", 0.2);
+  const clipGeometry = new THREE.TubeGeometry(clipCurve, 90, 0.09, 6, false);
+  const clips = [
+    [-62, -48, 0.5],
+    [-56, -38, -0.3],
+  ].map(([x, z, turn]) => {
+    const clip = new THREE.Mesh(clipGeometry, clipMaterial);
+    clip.scale.setScalar(1.6);
+    clip.position.set(x, 0.15, z);
+    clip.rotation.y = turn;
+    clip.castShadow = true;
+    return clip;
+  });
+  object.add(...clips);
 
   for (const mesh of [body, cone, tip, ferrule, eraser, ruler]) mesh.castShadow = true;
   object.add(pencil, ruler);
@@ -232,7 +252,7 @@ export function createDesk(floorY: number, theme: Theme): Desk {
     return { x: (tipWorld.x + MAT_W / 2) * PX, y: (tipWorld.z + MAT_D / 2) * PX };
   }
 
-  const materials = [grip, matMaterial, deskMaterial, yellow, woodMaterial, graphite, ferruleMaterial, eraserMaterial, steel, rulerTop];
+  const materials = [grip, clipMaterial, matMaterial, deskMaterial, yellow, woodMaterial, graphite, ferruleMaterial, eraserMaterial, steel, rulerTop];
   let opaque = true;
 
   return {
