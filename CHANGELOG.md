@@ -7,6 +7,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### A fuller, warmer desk
+- The opening has its own light now: soft, warm afternoon light instead
+  of the cool blueprint light the drawing scene uses, so the desk reads
+  rich and full. The oak is a deeper brown, the mat a soft olive green,
+  and its grid lines are finer.
+
 ### A fuller workshop desk
 - The opening desk now holds what a 3D printing workshop's desk holds: a
   spool of teal filament with cardboard flanges at the top left, its loose

@@ -1024,7 +1024,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // At the close the sunbeam fades, so it does not glare as the camera rises.
     const morning = smoothstep((u - 0.3) / 0.4);
     // Warm daylight through a window falls across the opening desk too.
-    const openingSun = (1 - smoothstep(draw / 0.5)) * 0.75;
+    const openingSun = (1 - smoothstep(draw / 0.5)) * 0.55;
     studio.setMorning(morning, morning > 0 ? mugWorld : deskTarget, Math.max(morning * (1 - smoothstep(outro / 0.25)), openingSun));
     // The opening is shot like a miniature: sharp in the middle, softly blurred towards the edges.
     lens.uniforms.tilt.value = (1 - smoothstep(draw / 0.35)) * (quality.level === 2 ? 1 : 0.6);

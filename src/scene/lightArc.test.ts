@@ -5,7 +5,7 @@ import { at } from "./timeline.ts";
 
 test("each part of the story has its own light, in both themes", () => {
   for (const theme of ["dark", "light"] as const) {
-    assert.deepEqual(storyLook(theme, 0), MOODS[theme].blueprint);
+    assert.deepEqual(storyLook(theme, 0), MOODS[theme].desk);
     assert.deepEqual(storyLook(theme, at("meet", 0.9)), MOODS[theme].studio);
     assert.deepEqual(storyLook(theme, at("explode", 0.8)), MOODS[theme].workshop);
     assert.deepEqual(storyLook(theme, at("print", 0.6)), MOODS[theme].printing);

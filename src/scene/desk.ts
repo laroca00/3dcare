@@ -56,7 +56,7 @@ function paintMat(canvas: HTMLCanvasElement) {
   const c = canvas.getContext("2d")!;
   const W = canvas.width;
   const H = canvas.height;
-  c.fillStyle = "#344a31";
+  c.fillStyle = "#4f6249";
   c.fillRect(0, 0, W, H);
   // A faint mottle, like the mat's rubbery surface.
   for (let i = 0; i < 9000; i++) {
@@ -70,9 +70,9 @@ function paintMat(canvas: HTMLCanvasElement) {
   const cell = CELL * PX;
   const left = 3.4 * cell * 0.5;
   const bottom = H - 3.4 * cell * 0.5;
-  const line = "rgba(226, 228, 204, 0.5)";
+  const line = "rgba(236, 232, 206, 0.62)";
   c.strokeStyle = line;
-  c.lineWidth = Math.max(2, PX * 0.32);
+  c.lineWidth = Math.max(1.6, PX * 0.2);
   c.beginPath();
   for (let x = left; x <= W - cell * 0.3; x += cell) {
     c.moveTo(x, 0);
@@ -125,8 +125,8 @@ function paintWood(canvas: HTMLCanvasElement) {
   canvas.height = 1200;
   const c = canvas.getContext("2d")!;
   const g = c.createLinearGradient(0, 0, 1800, 1200);
-  g.addColorStop(0, "#c9965f");
-  g.addColorStop(1, "#a8743f");
+  g.addColorStop(0, "#86593a");
+  g.addColorStop(1, "#6a4429");
   c.fillStyle = g;
   c.fillRect(0, 0, 1800, 1200);
   for (let i = 0; i < 420; i++) {

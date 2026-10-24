@@ -7,7 +7,7 @@ import type { Theme } from "../theme/theme";
 import { mixStudio, type StudioValues } from "./studioMix.ts";
 import { at, smoothstep } from "./timeline.ts";
 
-export type Mood = "blueprint" | "studio" | "workshop" | "printing" | "hero" | "thermal" | "material" | "morning";
+export type Mood = "desk" | "blueprint" | "studio" | "workshop" | "printing" | "hero" | "thermal" | "material" | "morning";
 
 const DARK_STUDIO: StudioValues = {
   background: 0x101416,
@@ -37,6 +37,8 @@ const LIGHT_STUDIO: StudioValues = {
 
 export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
   dark: {
+    // The opening desk: warm afternoon light, soft fill, no cool tint.
+    desk: { ...DARK_STUDIO, background: 0x1c140d, glow: 0x3a2716, glowStrength: 0.8, key: 0xfff0de, keyIntensity: 2.3, rim: 0xffe2c4, rimIntensity: 1.2, fill: 0.32, env: 0.5, shadow: 0.8 },
     blueprint: { ...DARK_STUDIO, background: 0x0b1420, glow: 0x123352, key: 0xcfe0ff, keyIntensity: 3, rim: 0x7fbfff, fill: 0.36 },
     studio: DARK_STUDIO,
     // Darker surroundings, one strong light on the parts.
@@ -53,6 +55,7 @@ export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
     morning: { ...DARK_STUDIO, background: 0x17120e, glow: 0x4a2a12, key: 0xffcf9a, keyIntensity: 1.1, fill: 0.16 },
   },
   light: {
+    desk: { ...LIGHT_STUDIO, key: 0xffe2bf, keyIntensity: 3.4, fill: 0.6 },
     blueprint: { ...LIGHT_STUDIO, background: 0xeef3f8, glow: 0xd3e1ee, key: 0xeef4ff, fill: 1.15 },
     studio: LIGHT_STUDIO,
     workshop: { ...LIGHT_STUDIO, background: 0xeceeed, glow: 0xd5dbd8, keyIntensity: 3.3, fill: 0.75 },
@@ -67,8 +70,9 @@ export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
 
 /** Story progress at which each mood holds; between them the light blends. */
 const KEYS: readonly [number, Mood][] = [
-  [0, "blueprint"],
-  [at("draw", 0.75), "blueprint"],
+  [0, "desk"],
+  [at("draw", 0.45), "desk"],
+  [at("draw", 0.9), "blueprint"],
   [at("meet", 0.3), "studio"],
   [at("explode", 0), "studio"],
   [at("explode", 0.45), "workshop"],
