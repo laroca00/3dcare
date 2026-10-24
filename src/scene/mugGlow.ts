@@ -1,26 +1,25 @@
-// A glow behind the freshly printed mug while the visitor touches it (or a
-// hand holds it): a soft wash of colour whose hue slowly runs through the
-// spectrum, with a brighter spot circling the mug, after the "glowing
-// shadow" effect. It stands just behind the mug, facing the camera, so the
-// mug and the hand stay in front of it.
+// While the visitor touches the freshly printed mug (or a hand holds it), the
+// whole background lights up: colour washes in from the edges of the frame,
+// its hue slowly running through the spectrum, with a large soft light
+// drifting round the picture (after the "glowing shadow" effect). It is a
+// backdrop: it stands behind the giant line, filling the view, so the mug,
+// the hand and the line all stay in front of it, and the middle is left
+// darker so they read clearly.
 import * as THREE from "three";
 import type { Theme } from "../theme/theme";
 import { TYPE_LAYER } from "./giantType";
 
 export interface MugGlow {
   object: THREE.Mesh;
-  /** Places it `behind` cm beyond `center` as seen from the camera; amount 0..1, time in seconds. */
-  update(camera: THREE.Camera, center: THREE.Vector3, behind: number, amount: number, time: number): void;
+  /** Places it `behind` cm beyond `center` as seen from the camera, filling the view; amount 0..1, time in seconds. */
+  update(camera: THREE.PerspectiveCamera, center: THREE.Vector3, behind: number, amount: number, time: number): void;
   setTheme(theme: Theme): void;
   dispose(): void;
 }
 
-/** Width of the glow (cm); the mug with its handles is about 16 cm across. */
-const SIZE = 46;
-
 export function createMugGlow(theme: Theme): MugGlow {
   const material = new THREE.ShaderMaterial({
-    uniforms: { amount: { value: 0 }, time: { value: 0 }, light: { value: theme === "light" ? 1 : 0 } },
+    uniforms: { amount: { value: 0 }, time: { value: 0 }, light: { value: 0 }, aspect: { value: 1 } },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
       void main() {
@@ -31,28 +30,30 @@ export function createMugGlow(theme: Theme): MugGlow {
       uniform float amount;
       uniform float time;
       uniform float light;
+      uniform float aspect;
       varying vec2 vUv;
       vec3 hue(float h) {
         vec3 k = vec3(0.0, 2.0 / 3.0, 1.0 / 3.0);
         return clamp(abs(fract(h + k) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
       }
       void main() {
-        vec2 p = vUv - 0.5;
-        float d = length(p) * 2.0;
-        // The wash: brightest round the mug, fading out softly.
-        float wash = pow(clamp(1.0 - d, 0.0, 1.0), 1.6);
-        // The spot circles the mug once every four seconds.
-        float a = time * 6.2831853 / 4.0;
-        vec2 spot = vec2(cos(a), sin(a)) * 0.2;
-        float s = exp(-dot(p - spot, p - spot) * 34.0);
-        float h = time / 6.0;
-        vec3 colour = hue(h) * wash * 0.9 + hue(h + 0.12) * s * 1.1;
-        // On light paper the colour is softer and laid over, not added.
-        float alpha = clamp(wash * 0.85 + s, 0.0, 1.0) * amount;
-        gl_FragColor = light > 0.5 ? vec4(mix(vec3(1.0), hue(h + 0.06), 0.75), alpha * 0.7) : vec4(colour * amount, alpha);
+        vec2 p = (vUv - 0.5) * vec2(aspect, 1.0);
+        float h = time / 8.0;
+        // Colour rises towards the edges of the frame; the middle stays clear.
+        float edge = smoothstep(0.18, 0.75, length(p * vec2(0.8, 1.15)));
+        // A large soft light drifts round the picture once every nine seconds.
+        float a = time * 6.2831853 / 9.0;
+        vec2 c = vec2(cos(a) * 0.55 * aspect, sin(a) * 0.32);
+        float spot = exp(-dot(p - c, p - c) * 3.2);
+        // Two hues a third of the wheel apart, mixed across the frame.
+        vec3 tint = mix(hue(h), hue(h + 0.33), 0.5 + 0.5 * sin(atan(p.y, p.x) + time * 0.4));
+        float strength = clamp(edge * 0.75 + spot * 0.65, 0.0, 1.0) * amount;
+        gl_FragColor = light > 0.5
+          ? vec4(mix(vec3(1.0), tint, 0.55), strength * 0.55)
+          : vec4(tint * strength * 0.9, strength);
       }`,
     // Kept in the opaque list, so that with its low render order it is drawn
-    // before the mug and the hand; custom blending still lets it glow.
+    // right after the background, before the giant line and everything else.
     transparent: false,
     blending: THREE.CustomBlending,
     depthTest: false,
@@ -68,9 +69,8 @@ export function createMugGlow(theme: Theme): MugGlow {
   }
   applyTheme(theme);
 
-  const object = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE), material);
-  // Drawn after the giant line and before everything else.
-  object.renderOrder = -50;
+  const object = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+  object.renderOrder = -150;
   object.layers.set(TYPE_LAYER);
   object.frustumCulled = false;
   object.visible = false;
@@ -83,10 +83,13 @@ export function createMugGlow(theme: Theme): MugGlow {
       if (!object.visible) return;
       toCenter.copy(center).sub(camera.position).normalize();
       object.position.copy(center).addScaledVector(toCenter, behind);
+      const distance = object.position.distanceTo(camera.position);
+      const height = 2 * distance * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.15;
+      object.scale.set(height * camera.aspect, height, 1);
       object.quaternion.copy(camera.quaternion);
-      object.scale.setScalar(0.7 + 0.3 * amount);
       material.uniforms.amount.value = amount;
       material.uniforms.time.value = time;
+      material.uniforms.aspect.value = camera.aspect;
     },
     setTheme: applyTheme,
     dispose() {

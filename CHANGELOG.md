@@ -7,6 +7,19 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### A director's pass over the home story
+- When the mug is touched or held, the light now fills the background
+  behind the giant line: colour washes in from the edges, its hue slowly
+  running through the spectrum, with a large soft light drifting across;
+  the mug, the hand and the line stay clear in front of it.
+- The mug looks like real PETG: a satin surface with a thin glossy skin
+  and a soft sheen along its layers, in whatever colour was chosen. The
+  raised logo has smoother edges.
+- The hand has warm, soft skin instead of grey plastic.
+- A subtle lens finish: a touch of colour fringing towards the corners.
+- The story's words stay readable over every scene (a soft shadow in the
+  dark theme, a paper halo in the light one).
+
 ### A desk that fills the screen, and a close-up that shows the mug
 - The home page now opens straight onto the desk, seen from above and
   filling the whole screen: a large cutting mat with its grid and the

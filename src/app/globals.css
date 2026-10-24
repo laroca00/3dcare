@@ -2453,3 +2453,19 @@ main:focus {
 .story__package-row li {
   scroll-snap-align: start;
 }
+
+/* The story's words stay readable over any scene: a soft shadow in the dark
+   theme, a soft halo of paper in the light one. */
+.story:not(.story--stills) .story__beat:not(.story__beat--intro) .story__text {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.45), 0 0 24px rgb(0 0 0 / 0.55);
+}
+
+:root[data-theme="light"] .story:not(.story--stills) .story__beat:not(.story__beat--intro) .story__text {
+  text-shadow: 0 0 2px var(--paper), 0 0 22px var(--paper);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .story:not(.story--stills) .story__beat:not(.story__beat--intro) .story__text {
+    text-shadow: 0 0 2px var(--paper), 0 0 22px var(--paper);
+  }
+}

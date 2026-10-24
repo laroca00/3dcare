@@ -61,7 +61,7 @@ function logoGeometry(segments: number) {
     shapes.push(shape);
   }
   shapes.push(new THREE.Shape().absarc(0, 0, 3.5 * scale, 0, Math.PI * 2, false));
-  const geometry = new THREE.ExtrudeGeometry(shapes, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 1, curveSegments: segments });
+  const geometry = new THREE.ExtrudeGeometry(shapes, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 3, curveSegments: segments });
   // Bend the flat logo around the wall.
   const wall = MUG_RADIUS + 0.2;
   const centerY = (LAYERS * LAYER_HEIGHT) / 2;
@@ -74,6 +74,8 @@ function logoGeometry(segments: number) {
   geometry.computeVertexNormals();
   return geometry;
 }
+
+const WHITE = new THREE.Color(0xffffff);
 
 /** Real layer height in cm; the drawn layers are ten times thicker. */
 const REAL_LAYER = 0.03;
@@ -171,7 +173,17 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
   const object = new THREE.Group();
   bedSurface.add(object);
 
-  const filament = new THREE.MeshStandardMaterial({ color: 0x2aa898, roughness: 0.42, metalness: 0 });
+  // PETG: a satin plastic with a thin glossy skin and a soft sheen along its layers.
+  const filament = new THREE.MeshPhysicalMaterial({
+    color: 0x2aa898,
+    roughness: 0.38,
+    metalness: 0,
+    clearcoat: quality === 2 ? 0.45 : 0.25,
+    clearcoatRoughness: 0.32,
+    sheen: 0.5,
+    sheenRoughness: 0.55,
+    sheenColor: new THREE.Color(0x9ff5e6),
+  });
   const looks = { uThermal: { value: 0 }, uCool: { value: 0 }, uRidges: { value: 0 }, uSeal: { value: 0 } };
   addLooks(filament, looks);
   const current = new THREE.MeshStandardMaterial({ color: 0xf5c400, emissive: 0x6b4e00, roughness: 0.4 });
@@ -347,6 +359,9 @@ export function createPrintJob(bedSurface: THREE.Object3D, quality: QualityLevel
     },
     setColor(color) {
       filament.color.setHex(color);
+      // The sheen is a paler shade of the same filament.
+      filament.sheenColor.setHex(color).lerp(WHITE, 0.55);
+      logoMaterial.sheenColor.copy(filament.sheenColor);
       logoMaterial.color.setHex(color);
       previewMaterial.color.setHex(color);
       // The layer being printed stands out in yellow, or in white on a yellow mug.

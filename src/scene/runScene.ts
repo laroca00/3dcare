@@ -140,6 +140,10 @@ const LensShader = {
     void main() {
       vec4 color = texture2D(tDiffuse, vUv);
       float edge = smoothstep(0.25, 0.85, length((vUv - 0.5) * vec2(1.0, 0.8)));
+      // A touch of colour fringing towards the corners, as a real lens has.
+      vec2 shift = (vUv - 0.5) * edge * 0.0035;
+      color.r = texture2D(tDiffuse, vUv + shift).r;
+      color.b = texture2D(tDiffuse, vUv - shift).b;
       color.rgb *= 1.0 - vignette * edge;
       color.rgb += (random(vUv * 1000.0 + time) - 0.5) * grain;
       gl_FragColor = color;
@@ -895,7 +899,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const glowTarget = (touchingMug || handHolding) && reveal.type > 0.3 ? 1 : 0;
     glowAmount += (glowTarget - glowAmount) * (1 - Math.exp(-5 * dt));
     if (Math.abs(glowTarget - glowAmount) < 0.003) glowAmount = glowTarget;
-    mugGlow.update(camera, mugMiddle, 7, glowAmount, now / 1000);
+    mugGlow.update(camera, mugMiddle, TYPE_BEHIND + 30, glowAmount, now / 1000);
     const glowing = glowAmount > 0;
     // The light follows the story, from a cool blueprint to a warm morning.
     studio.setStory(p);

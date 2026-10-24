@@ -49,6 +49,19 @@ export async function loadHand(url: string): Promise<Hand> {
     const mesh = o as THREE.SkinnedMesh;
     if (mesh.isSkinnedMesh) {
       mesh.castShadow = mesh.receiveShadow = true;
+      // Skin: warm, soft and slightly velvety at grazing angles, instead of grey plastic.
+      const old = mesh.material as THREE.MeshStandardMaterial;
+      mesh.material = new THREE.MeshPhysicalMaterial({
+        color: 0xd9a587,
+        roughness: 0.58,
+        metalness: 0,
+        sheen: 0.6,
+        sheenRoughness: 0.4,
+        sheenColor: new THREE.Color(0xffc6a8),
+        clearcoat: 0.08,
+        clearcoatRoughness: 0.6,
+      });
+      old.dispose();
       // The skinned arm moves far from its bind pose, so its box would cull it wrongly.
       mesh.frustumCulled = false;
     }
