@@ -7,6 +7,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-24
 
+### Leaves in the window light
+- The sunlight on the opening desk now carries the shadow of a plant on
+  the windowsill: its leaves sway gently while the scene rests and lean
+  with the pointer, like a breeze. The window light is the main light on
+  the desk now, so its light and shade read clearly.
+
 ### Sharper still pictures
 - At full quality, whenever the 3D picture holds still it is refined over
   the next frames from 32 slightly shifted renders (temporal

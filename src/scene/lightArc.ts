@@ -38,7 +38,7 @@ const LIGHT_STUDIO: StudioValues = {
 export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
   dark: {
     // The opening desk: warm afternoon light, soft fill, no cool tint.
-    desk: { ...DARK_STUDIO, background: 0x1c140d, glow: 0x3a2716, glowStrength: 0.8, key: 0xfff0de, keyIntensity: 2.3, rim: 0xffe2c4, rimIntensity: 1.2, fill: 0.32, env: 0.5, shadow: 0.8 },
+    desk: { ...DARK_STUDIO, background: 0x1c140d, glow: 0x3a2716, glowStrength: 0.8, key: 0xfff0de, keyIntensity: 1.1, rim: 0xffe2c4, rimIntensity: 0.8, fill: 0.3, env: 0.42, shadow: 0.8 },
     blueprint: { ...DARK_STUDIO, background: 0x0b1420, glow: 0x123352, key: 0xcfe0ff, keyIntensity: 3, rim: 0x7fbfff, fill: 0.36 },
     studio: DARK_STUDIO,
     // Darker surroundings, one strong light on the parts.

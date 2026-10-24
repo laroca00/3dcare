@@ -1042,8 +1042,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const morning = smoothstep((u - 0.3) / 0.4);
     // Warm daylight through a window falls across the opening desk too.
     // Sunlight through a window falls across the opening desk, as in a photograph.
-    const openingSun = (1 - smoothstep(draw / 0.5)) * 0.6;
+    const openingSun = (1 - smoothstep(draw / 0.5)) * 1.15;
     studio.setSunSpread(morning > 0 ? 0 : 1 - smoothstep(draw / 0.5));
+    // The plant's leaves in the window sway while the scene breathes and lean with the pointer, like a breeze.
+    if (openingSun > 0) studio.setLeaves(breath.clock * 1.6, parallax.x * 0.8);
     studio.setMorning(morning, morning > 0 ? mugWorld : deskTarget, Math.max(morning * (1 - smoothstep(outro / 0.25)), openingSun));
     // The opening is shot like a miniature: sharp in the middle, softly blurred towards the edges.
     lens.uniforms.tilt.value = (1 - smoothstep(draw / 0.35)) * (quality.level === 2 ? 1 : 0.6);

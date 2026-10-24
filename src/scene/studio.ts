@@ -34,6 +34,8 @@ export interface Studio {
    * light and shade across the whole desk, with long soft shadows.
    */
   setSunSpread(spread: number): void;
+  /** Sways the plant's leaves in the window's light: time in seconds, wind -1..1 (left to right). */
+  setLeaves(time: number, wind: number): void;
   dispose(): void;
 }
 
@@ -261,28 +263,59 @@ export function createStudio(
   const windowCanvas = document.createElement("canvas");
   windowCanvas.width = windowCanvas.height = 256;
   const pane = windowCanvas.getContext("2d")!;
-  pane.fillStyle = "#000000";
-  pane.fillRect(0, 0, 256, 256);
-  // Four panes with a soft edge, a plant's leaves along one side of the
-  // window, and a slight falloff: sunlight as it really falls through glass.
-  pane.filter = "blur(6px)";
-  pane.fillStyle = "#ffffff";
-  for (const [x, y] of [[26, 26], [146, 26], [26, 146], [146, 146]]) pane.fillRect(x, y, 84, 84);
-  pane.filter = "blur(9px)";
-  pane.fillStyle = "#000000";
-  for (let i = 0; i < 9; i++) {
-    const cx = 26 + (i % 3) * 22 + (i * 7) % 11;
-    const cy = 150 + Math.floor(i / 3) * 34;
+  /** Leaves of a plant on the windowsill: x, y, length, angle and how freely each one moves. */
+  // Strung along a branch that crosses the lower left half of the window.
+  const LEAVES: [number, number, number, number, number][] = Array.from({ length: 30 }, (_, i) => {
+    const t = i / 29;
+    const side = i % 2 ? 1 : -1;
+    return [
+      8 + t * 170 + side * (10 + ((i * 7) % 9)),
+      250 - t * 150 + side * (12 + ((i * 5) % 11)),
+      26 + ((i * 11) % 13),
+      -0.6 + side * 0.9 + ((i * 3) % 7) * 0.08,
+      0.5 + ((i * 3) % 5) * 0.15,
+    ];
+  });
+  /**
+   * The window's light as the sun's cookie: four panes with soft edges, a
+   * plant's leaves along one side that sway with time and lean with the
+   * wind, and a gentle falloff, as sunlight falls through glass.
+   */
+  function paintWindow(time: number, wind: number) {
+    pane.filter = "none";
+    pane.fillStyle = "#000000";
+    pane.fillRect(0, 0, 256, 256);
+    pane.filter = "blur(6px)";
+    pane.fillStyle = "#ffffff";
+    for (const [x, y] of [[26, 26], [146, 26], [26, 146], [146, 146]]) pane.fillRect(x, y, 84, 84);
+    pane.filter = "blur(8px)";
+    pane.fillStyle = "#000000";
+    // The stem they grow from, bending a little with the wind.
+    pane.strokeStyle = "#000000";
+    pane.lineWidth = 5;
     pane.beginPath();
-    pane.ellipse(cx, cy, 20, 8, -0.7 + (i % 4) * 0.35, 0, Math.PI * 2);
-    pane.fill();
+    pane.moveTo(0, 256);
+    pane.quadraticCurveTo(90 + wind * 18, 200, 180 + wind * 26 + Math.sin(time * 0.7) * 4, 96);
+    pane.stroke();
+    for (const [x, y, length, angle, give] of LEAVES) {
+      const sway = Math.sin(time * 1.25 + x * 0.09 + y * 0.05) * 0.22 * give + wind * 0.45 * give;
+      const lean = (252 - y) / 140;
+      pane.save();
+      pane.translate(x + wind * 22 * lean + Math.sin(time * 0.8 + y) * 2.5 * give, y);
+      pane.rotate(angle + sway);
+      pane.beginPath();
+      pane.ellipse(length * 0.5, 0, length * 0.55, length * 0.24, 0, 0, Math.PI * 2);
+      pane.fill();
+      pane.restore();
+    }
+    pane.filter = "none";
+    const falloff = pane.createRadialGradient(128, 128, 40, 128, 128, 180);
+    falloff.addColorStop(0, "rgba(0,0,0,0)");
+    falloff.addColorStop(1, "rgba(0,0,0,0.6)");
+    pane.fillStyle = falloff;
+    pane.fillRect(0, 0, 256, 256);
   }
-  pane.filter = "none";
-  const falloff = pane.createRadialGradient(128, 128, 40, 128, 128, 180);
-  falloff.addColorStop(0, "rgba(0,0,0,0)");
-  falloff.addColorStop(1, "rgba(0,0,0,0.6)");
-  pane.fillStyle = falloff;
-  pane.fillRect(0, 0, 256, 256);
+  paintWindow(0, 0);
   const windowTexture = new THREE.CanvasTexture(windowCanvas);
   const sun = new THREE.SpotLight(0xffd29a, 0, 0, 0.42, 0.35, 2);
   sun.map = windowTexture;
@@ -294,6 +327,8 @@ export function createStudio(
   sun.visible = false;
   floorParent.add(sun, sun.target);
   let spread = 0;
+  let leafTime = 0;
+  let leafWind = 0;
 
   let currentTheme = theme;
   function apply(v: StudioValues) {
@@ -368,6 +403,13 @@ export function createStudio(
     },
     setSunSpread(next) {
       spread = next;
+    },
+    setLeaves(time, wind) {
+      if (Math.abs(time - leafTime) < 1e-3 && Math.abs(wind - leafWind) < 1e-3) return;
+      leafTime = time;
+      leafWind = wind;
+      paintWindow(time, wind);
+      windowTexture.needsUpdate = true;
     },
     setReflection(enabled) {
       if (reflector) reflector.visible = enabled;
