@@ -7,6 +7,15 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-27
 
+### Story titles with their own typeface and timing
+- The story's headings are now set in Instrument Serif (SIL Open Font
+  License, self-hosted next to Inter), larger and lighter, like an
+  editorial title; the body text stays in Inter.
+- The text no longer follows the scroll bar line by line. When its scene
+  starts, each line rises from behind its own mask on its own clock, one
+  after another, and the links follow; scrolling back lowers them again.
+  With reduced motion the text simply stays in place.
+
 ### A film-like colour grade
 - The 3D scenes get a colour grade, as a film look-up table would give:
   a gentle S-curve for contrast, cool teal shadows, warm highlights and

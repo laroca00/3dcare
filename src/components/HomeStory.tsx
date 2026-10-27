@@ -226,7 +226,12 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       // At the very end the stage fades into the page.
       section.style.setProperty("--fade", String(smoothstep((outro - 0.8) / 0.2)));
       setStep(stepAt(progress, outro));
-      beats.forEach((beat, i) => beat.style.setProperty("--reveal", String(localProgress(progress, SCENES[i].id) * 2)));
+      beats.forEach((beat, i) => {
+        const reveal = localProgress(progress, SCENES[i].id) * 2;
+        beat.style.setProperty("--reveal", String(reveal));
+        // Once its scene starts, the text plays in on its own clock (see .story__line).
+        beat.toggleAttribute("data-in", reveal > 0.05);
+      });
       // The caption shows while the printer is apart, and goes before the next text scrolls in.
       const apart = localProgress(progress, "explode");
       const caption = Math.min(smoothstep(apart / 0.12), 1 - smoothstep((apart - 0.88) / 0.12));
@@ -891,7 +896,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             // Each text is as tall as its scene's share of the scroll, so they arrive together.
             style={{ minHeight: `${SCENE_SVH[i + 1][1]}svh` }}
           >
-            {/* Each line rises from behind its own mask as the story reaches it. */}
+            {/* Each line rises from behind its own mask as its scene starts. */}
             <div className="story__text">
               <RevealText as="h2" text={scene.title} />
               <RevealText as="p" text={scene.text} first={2} />

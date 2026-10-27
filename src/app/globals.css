@@ -66,6 +66,8 @@
   --footer-muted: #c9d3cf;
 
   --font: "Inter Variable", "Inter Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* The story's headings, set like an editorial title. */
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   --radius: 16px;
   --gutter: 16px;
   --measure: 68ch;
@@ -792,8 +794,9 @@ main:focus {
   opacity: 1;
 }
 
-/* Story text enters with the scene: each line rises from behind its own mask,
-   one after another, in step with the scroll (--reveal is set from script). */
+/* Story text enters with the scene: once the scene starts (data-in, set from
+   script), each line rises from behind its own mask on its own clock, one
+   after another, like a film title; scrolling back lowers them again. */
 .story__line {
   display: block;
   overflow: hidden;
@@ -803,17 +806,37 @@ main:focus {
 }
 
 .story__line > span {
-  --t: clamp(0, (var(--reveal, 2) - 0.06 - var(--i, 0) * 0.08) * 6, 1);
   display: inline-block;
-  transform: translateY(calc((1 - var(--t)) * 110%));
-  opacity: calc(0.15 + 0.85 * var(--t));
+  transform-origin: 0 100%;
+  transition:
+    transform 1.1s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i, 0) * 90ms),
+    opacity 0.7s ease calc(var(--i, 0) * 90ms);
   will-change: transform;
 }
 
+.story__text h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.1rem, 3.8vw, 3rem);
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+}
+
+.story:not(.story--stills) .story__beat:not([data-in]) .story__line > span {
+  transform: translateY(110%) rotate(2deg);
+  opacity: 0.15;
+}
+
 .story__beat:not(.story__beat--intro) .actions {
-  --t: clamp(0, (var(--reveal, 2) - 0.5) * 5, 1);
-  transform: translateY(calc((1 - var(--t)) * 18px));
-  opacity: var(--t);
+  transition:
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.5s,
+    opacity 0.6s ease 0.5s;
+}
+
+/* Only once script has split the text, so the links show without it. */
+.story:not(.story--stills) .story__beat:has(.story__line):not(.story__beat--intro):not([data-in]) .actions {
+  transform: translateY(18px);
+  opacity: 0;
 }
 
 .story--stills .story__line > span,

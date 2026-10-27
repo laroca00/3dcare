@@ -4,9 +4,9 @@ import { type CSSProperties, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * Text that is split into its rendered lines, so each line can rise from
- * behind its own mask as the story scrolls (see .story__line in globals.css).
- * The lines are measured after layout and again when the width changes; until
- * then, and without script, it is plain text.
+ * behind its own mask as its scene starts (see .story__line in globals.css).
+ * The lines are measured after layout and again when the width changes or a
+ * font finishes loading; until then, and without script, it is plain text.
  */
 export function RevealText({ as: Tag, text, first = 0 }: { as: "h2" | "p"; text: string; first?: number }) {
   const ref = useRef<HTMLHeadingElement & HTMLParagraphElement>(null);
@@ -44,7 +44,15 @@ export function RevealText({ as: Tag, text, first = 0 }: { as: "h2" | "p"; text:
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
-    return () => observer.disconnect();
+    const refit = () => {
+      width = -1;
+      measure();
+    };
+    document.fonts.addEventListener("loadingdone", refit);
+    return () => {
+      observer.disconnect();
+      document.fonts.removeEventListener("loadingdone", refit);
+    };
   }, [text]);
 
   return (
