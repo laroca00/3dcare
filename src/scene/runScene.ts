@@ -269,12 +269,15 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   // Loads alongside the rest of the set-up.
   const handLoading = opts.handUrl ? loadHand(opts.handUrl).catch(() => null) : Promise.resolve(null);
   let hand: Hand | null = null;
+  await yieldToMain();
   const steam = createSteam(opts.theme);
   // The closing: the project's other nine tools, sketched beside the mug.
   const lineup = createLineup(opts.theme);
   stage.add(lineup.object);
   // The opening desk under the drawing: a cutting mat, a pencil and a ruler.
+  await yieldToMain();
   const desk = createDesk(PRINTER_Y, () => handle?.invalidate());
+  await yieldToMain();
   stage.add(desk.object);
   const giantType = await createGiantType(opts.giantType, opts.theme);
   opts.onProgress?.(0.65);
@@ -283,6 +286,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   scene.add(mugGlow.object);
   let glowAmount = 0;
   // The open model package the mug goes into at the end of "design and print".
+  await yieldToMain();
   const box = createPackageBox(opts.packageLabel ?? "");
   scene.add(box.object);
   scene.add(giantType.object);

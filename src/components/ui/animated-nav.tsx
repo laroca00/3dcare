@@ -113,8 +113,8 @@ export function AnimatedNav({ lang, items, t }: { lang: Locale; items: Item[]; t
             initial={false}
             animate={isExpanded ? "expanded" : "collapsed"}
             variants={containerVariants}
-            whileHover={!isExpanded ? { scale: 1.1 } : {}}
-            whileTap={!isExpanded ? { scale: 0.95 } : {}}
+            whileHover={!isExpanded ? { scale: 1.1 } : undefined}
+            whileTap={!isExpanded ? { scale: 0.95 } : undefined}
             className="relative flex h-12 items-center overflow-hidden rounded-full border border-border bg-background/80 shadow-lg backdrop-blur-sm"
           >
             {/* While folded the contents are hidden from keyboard and screen readers too. */}

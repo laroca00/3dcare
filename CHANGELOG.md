@@ -5,6 +5,25 @@ Fikirler Derneği) under WP5, Activity 5.1 (Dissemination of Project Results
 and Stakeholder Outreach). Every change is also recorded in the commit history
 of this repository: https://github.com/laroca00/3dcare/commits/main
 
+## 2026-10-27
+
+### Faster on phones, and easier to use with a keyboard
+- On phones and modest devices the home page shows at once, without the
+  loading screen, and the 3D scene sets itself up after the visitor's
+  first scroll or touch, in smaller steps. Measured with Lighthouse on a
+  simulated mid-range phone: performance 52 → 84–87, total blocking time
+  about 5.8 s → 0.25–0.35 s, no layout shift. Capable computers keep the
+  loading screen and the opening.
+- The 3D model loader now comes in its own file, only when the hand and
+  the desk's scanned objects are needed. The 3D budget check now counts
+  every chunk three.js is split over (199 KB of 200 KB).
+- The opening card on phones uses a plain warm tint instead of a costly
+  blur.
+- Story titles waiting for their scene are no fainter than half, so they
+  keep a readable contrast.
+- Keyboard: the menu bar itself is no longer a stop of its own, and the
+  chapter tabs show as soon as one of them has focus.
+
 ## 2026-10-24
 
 ### Fixes on the mug and on phones

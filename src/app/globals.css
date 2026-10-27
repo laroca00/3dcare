@@ -781,7 +781,8 @@ main:focus {
   justify-content: flex-start;
   padding-block: 12svh;
   max-width: 34rem;
-  opacity: calc(0.3 + 0.7 * min(var(--reveal, 1), 1));
+  /* Never fainter than half, so a waiting title still reads (contrast). */
+  opacity: calc(0.5 + 0.5 * min(var(--reveal, 1), 1));
 }
 
 .story__beat--intro {
@@ -2918,6 +2919,10 @@ main:focus {
     margin-top: auto;
     margin-bottom: 9svh;
     padding: 14px 16px;
+    /* A frosted blur is costly on phones; a warm tint reads the same here. */
+    background: rgb(70 44 24 / 0.55);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .story:not(.story--stills) .story__hero-note {
@@ -2933,4 +2938,10 @@ main:focus {
     padding: 10px 16px;
     font-size: 0.92rem;
   }
+}
+
+/* The chapter tabs stay hidden on the opening screen, but show as soon as
+   one of them has keyboard focus. */
+.story__chapters:focus-within {
+  opacity: 1;
 }

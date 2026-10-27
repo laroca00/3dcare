@@ -454,12 +454,19 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       );
     };
 
-    if (live && fixed === null) {
-      // The loading screen covers the page while the scene is set up, so the
-      // set-up starts at once; the page cannot scroll until it lifts.
+    // On a capable computer the loading screen covers the page while the
+    // scene is set up, so the set-up starts at once and the opening plays.
+    // On phones and modest devices the page shows at once instead, and the
+    // scene's heavy set-up waits for the visitor's first scroll or touch, so
+    // the page stays responsive while it loads.
+    const capable = window.innerWidth >= 900 && (navigator.hardwareConcurrency || 4) > 4;
+    if (live && fixed === null && capable) {
       document.documentElement.dataset.loading = "1";
       setLoad(0.1);
       void load();
+    } else if (live && fixed === null) {
+      skipLoader();
+      INTENT.forEach((type) => window.addEventListener(type, load, { passive: true, once: true }));
     } else {
       if (live) void load();
       skipLoader();

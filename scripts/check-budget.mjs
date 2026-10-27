@@ -10,10 +10,16 @@ const BUDGET_KB = 200;
 const outDir = process.argv[2] ?? "out";
 const chunksDir = join(outDir, "_next", "static", "chunks");
 
+// three.js may be split over several chunks; each holds some of its core
+// classes. The scene's own code and the loaders are counted with it.
+const THREE_MARKERS = ["WebGLRenderer", "BufferGeometry", "MeshStandardMaterial", "GLTFLoader", "EffectComposer"];
 const sceneChunks = readdirSync(chunksDir, { recursive: true })
   .filter((name) => String(name).endsWith(".js"))
   .map((name) => String(name).replaceAll("\\", "/"))
-  .filter((name) => readFileSync(join(chunksDir, name), "utf8").includes("WebGLRenderer"));
+  .filter((name) => {
+    const text = readFileSync(join(chunksDir, name), "utf8");
+    return THREE_MARKERS.some((marker) => text.includes(marker));
+  });
 
 if (sceneChunks.length === 0) {
   console.error("No chunk contains three.js (WebGLRenderer). Was the site built?");
