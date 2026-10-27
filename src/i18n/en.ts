@@ -82,6 +82,7 @@ export const en = {
       glowHint: { pointer: "Point at the mug", touch: "Press and hold the mug" },
       selectionFile: "printer.stl",
       packageLabel: "OPEN MODEL · FREE",
+      paperTitle: "Desktop 3D printer",
       packageContents: ["STL file", "Print settings", "User guide", "Safety notes", "Adaptation tips"],
       packageCardsTitle: "In the package",
       plan: { diameter: "Ø 8.4 cm", height: "9 cm" },

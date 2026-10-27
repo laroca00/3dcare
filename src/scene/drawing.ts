@@ -10,6 +10,11 @@ import type { Printer } from "./printer";
 export interface Drawing {
   /** lineT draws the outline; fillT fades the outline out and the real materials in. */
   setReveal(lineT: number, fillT: number): void;
+  /**
+   * 0 while the drawing is a pencil sketch lying flat on the paper (graphite,
+   * no logo arcs), 1 once it has risen into the air (the site's teal).
+   */
+  setLift(lift: number): void;
   setTheme(theme: Theme): void;
   /** Line widths are in pixels, so the lines need the canvas size. */
   setResolution(width: number, height: number): void;
@@ -23,6 +28,8 @@ const ARCS: Record<Theme, number[]> = {
   dark: [0x3cc2b0, 0x2a9d8f, 0x7c63d6],
 };
 const ACCENT = 0xf5c400;
+/** Pencil graphite, for the sketch on paper. */
+const GRAPHITE = new THREE.Color(0x34383c);
 
 /**
  * The opening "technical drawing": the printer's own edges drawn as lines,
@@ -51,6 +58,8 @@ export function createDrawing(printer: Printer, theme: Theme): Drawing {
   const segmentCount = positions.length / 6;
   const lineMaterial = new LineMaterial({ color: LINE[theme], linewidth: 1.6, transparent: true, depthWrite: false });
   const lines = new LineSegments2(geometry, lineMaterial);
+  // Drawn after the paper it lies on.
+  lines.renderOrder = 2;
   printer.root.add(lines);
 
   // Three arcs like the logo, standing behind the printer.
@@ -81,6 +90,17 @@ export function createDrawing(printer: Printer, theme: Theme): Drawing {
     }
   });
   let lastFill = -1;
+  let lift = 1;
+  let theme_ = theme;
+  const teal = new THREE.Color();
+  const applyInk = () => {
+    teal.setHex(LINE[theme_]);
+    lineMaterial.color.copy(GRAPHITE).lerp(teal, lift);
+    // A pencil line is finer than the glowing one.
+    lineMaterial.linewidth = 1.1 + 0.5 * lift;
+    // Pressed flat on the paper, the lines are drawn over it whatever their depth.
+    lineMaterial.depthTest = lift > 0.05;
+  };
 
   return {
     setReveal(lineT, fillT) {
@@ -88,10 +108,12 @@ export function createDrawing(printer: Printer, theme: Theme): Drawing {
       const outline = 1 - fillT;
       lineMaterial.opacity = outline;
       lines.visible = outline > 0.01;
+      // The logo's arcs stand up behind the printer only once it has risen.
+      const arcs = Math.min(Math.max((lift - 0.5) / 0.5, 0), 1);
       arcMaterials.forEach((m, i) => {
-        m.opacity = Math.min(Math.max(lineT * 3 - i, 0), 1) * outline;
+        m.opacity = Math.min(Math.max(lineT * 3 - i, 0), 1) * outline * arcs;
       });
-      dotMaterial.opacity = lineT * outline;
+      dotMaterial.opacity = lineT * outline * arcs;
       arcGroup.visible = outline > 0.01;
       if (fillT !== lastFill) {
         const solid = fillT >= 1;
@@ -108,8 +130,13 @@ export function createDrawing(printer: Printer, theme: Theme): Drawing {
         lastFill = fillT;
       }
     },
+    setLift(next) {
+      lift = next;
+      applyInk();
+    },
     setTheme(next) {
-      lineMaterial.color.setHex(LINE[next]);
+      theme_ = next;
+      applyInk();
       arcMaterials.forEach((m, i) => m.color.setHex(ARCS[next][i]));
     },
     setResolution(width, height) {

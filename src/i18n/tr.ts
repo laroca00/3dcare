@@ -84,6 +84,7 @@ export const tr: typeof en = {
       glowHint: { pointer: "İmleci kupanın üzerine getirin", touch: "Kupaya basılı tutun" },
       selectionFile: "yazici.stl",
       packageLabel: "AÇIK MODEL · ÜCRETSİZ",
+      paperTitle: "Masaüstü 3D yazıcı",
       packageContents: ["STL dosyası", "Baskı ayarları", "Kullanım rehberi", "Güvenlik notları", "Uyarlama önerileri"],
       packageCardsTitle: "Paketin içinden",
       plan: { diameter: "Ø 8,4 cm", height: "9 cm" },

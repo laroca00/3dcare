@@ -7,6 +7,16 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-27
 
+### From paper to printer
+- The home story now opens on a large sheet of drawing paper on the desk,
+  with a drawn border and a title block. Once the page is ready a pencil
+  line draws the printer on it in front elevation, in graphite. As the
+  visitor scrolls, the drawing stands up off the paper like a pop-up page,
+  gains its depth and turns teal, then fills in as the real printer.
+  The design-program selection box is gone.
+- Fixed an error when the desk's textures came from the browser's cache
+  before the 3D scene had finished setting up.
+
 ### Faster on phones, and easier to use with a keyboard
 - On phones and modest devices the home page shows at once, without the
   loading screen, and the 3D scene sets itself up after the visitor's

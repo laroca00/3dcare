@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { Theme } from "../theme/theme";
 import { type DeskItem, createDesk } from "./desk";
+import { createPaper } from "./paper";
 import { createDrawing } from "./drawing";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
@@ -47,6 +48,8 @@ export interface SceneOptions {
   labels: Record<PartId, string>;
   /** The line that glows behind the freshly printed mug. */
   giantType: string;
+  /** The title in the corner of the paper the printer is sketched on. */
+  paperTitle?: string;
   /** The label printed on the open model package's box. */
   packageLabel?: string;
   /** Called after each frame with where the part labels belong on screen. */
@@ -118,8 +121,6 @@ export interface SceneHandle {
 /** Lets the browser handle input and paint between the heavier set-up steps. */
 const yieldToMain = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-/** How much of the drawing shows at the very top of the page. */
-const DRAWING_START = 0.4;
 
 /** Lens finish per theme: darkened corners and a fine film grain. */
 const LENS: Record<Theme, { vignette: number; grain: number }> = {
@@ -276,7 +277,15 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   stage.add(lineup.object);
   // The opening desk under the drawing: a cutting mat, a pencil and a ruler.
   await yieldToMain();
-  const desk = createDesk(PRINTER_Y, () => handle?.invalidate());
+  // Textures can arrive (from the cache) before the scene's handle exists;
+  // until then a new frame is asked for once the handle is ready.
+  let requestFrame = () => {};
+  const desk = createDesk(PRINTER_Y, () => requestFrame());
+  // The sheet of paper the printer is sketched on: it lies behind the
+  // printer's base, under the front elevation of the printer lying on its back.
+  const paper = createPaper(opts.paperTitle ?? "");
+  paper.object.position.set(0, PRINTER_Y + 0.42, -printerSize.y / 2 + 2);
+  stage.add(paper.object);
   await yieldToMain();
   stage.add(desk.object);
   const giantType = await createGiantType(opts.giantType, opts.theme);
@@ -889,7 +898,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   let introStart = 0;
   /** The opening's drawing waits a moment after the scene appears, then grows for this long. */
   const INTRO_DELAY = 650;
-  const INTRO_MS = 2200;
+  const INTRO_MS = 2600;
   let last = 0;
 
   // Frames asked for from outside (scrolling, the pointer, a running
@@ -924,14 +933,20 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // 1. Drawing → object. The drawing is already under way at the top of the
     //    page, matching the poster frame shown before the scene loads.
     const draw = localProgress(p, "draw");
-    // The opening: the printer's drawing grows out from its corner, as if
-    // scaled up by its selection handle. The poster frame (frozen at the very
-    // top) shows the desk alone; other frozen frames show it full size.
-    const grow = opts.frozen ? (p === 0 ? 0 : 1) : introStart ? clamp01((now - introStart) / INTRO_MS) : 0;
-    const growEase = grow >= 1 ? 1 : 1 - Math.pow(1 - grow, 3) * Math.cos(grow * 4.2);
-    printer.root.scale.setScalar(Math.max(growEase, 0.001));
-    printer.root.visible = grow > 0;
-    const growing = grow < 1 && !opts.frozen;
+    // The opening: the printer is a pencil sketch on a sheet of paper. Once
+    // the page is ready the pencil draws it; as the visitor scrolls, the
+    // sketch rises off the paper into the air, turning from graphite to the
+    // site's teal, and then fills in as the real printer. Frozen frames show
+    // the finished sketch.
+    const sketch = opts.frozen ? 1 : introStart ? clamp01((now - introStart) / INTRO_MS) : 0;
+    // Lying on its back, its front facing up and its depth pressed flat, the
+    // printer reads as a front elevation drawn on the paper; it stands up
+    // like a pop-up page and gains its depth.
+    const lift = smoothstep(draw / 0.55);
+    printer.root.rotation.x = -(Math.PI / 2) * (1 - lift);
+    printer.root.scale.set(1, 1, Math.max(lift, 0.015));
+    drawing.setLift(lift);
+    const growing = sketch < 1 && !opts.frozen;
     // The pencil and the ruler can be picked up while the desk is in view.
     deskActive = draw < 0.25 && !opts.frozen;
     if (!deskActive && (deskHover || deskHeld)) {
@@ -941,7 +956,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     }
     const deskMoving = desk.update(dt);
     const solid = smoothstep((draw - 0.55) / 0.45);
-    drawing.setReveal(DRAWING_START + (1 - DRAWING_START) * smoothstep(draw / 0.6), solid);
+    // The pencil draws the whole sketch, quickly at first and slowing at the end.
+    drawing.setReveal(1 - Math.pow(1 - sketch, 2.2), solid);
     // While the printer is still only a drawing, its (transparent) solid
     // parts must not throw shadows: shadow maps ignore transparency.
     const printerCasts = solid > 0.4;
@@ -949,7 +965,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       printerCastsShadow = printerCasts;
       for (const m of printerShadowCasters) m.castShadow = printerCasts;
     }
-    desk.setAmount(1 - smoothstep((draw - 0.5) / 0.45));
+    const deskAmount = 1 - smoothstep((draw - 0.5) / 0.45);
+    desk.setAmount(deskAmount);
+    paper.setAmount(deskAmount);
 
     // 2–3. Turn, then take apart.
     const apart = explodeAmount(p);
@@ -967,9 +985,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // ...square to the camera looking down on it, turned a few degrees like a mat put down by hand.
     const deskView = wide ? DESK_WIDE : DESK_NARROW;
     desk.object.rotation.y = -stage.rotation.y + Math.atan2(deskView.x, deskView.z) + DESK_TURN;
-    // The middle of the printer's drawing, where the opening camera aims.
-    printer.root.getWorldPosition(deskTarget);
-    deskTarget.y += 6;
+    // The middle of the sketch on the paper, where the opening camera aims.
+    paper.object.getWorldPosition(deskTarget);
     setExplode(printer.parts, apart, 0.07);
     // Parts the visitor has turned, each around its own middle.
     for (const [part, turned] of partSpins) {
@@ -1145,7 +1162,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       renderer.render(scene, camera);
     }
     updateLabels(apart);
-    updateSelection(1 - smoothstep(draw / 0.3), grow);
+    // The sketch on paper needs no design-program selection box.
+    updateSelection(0, 1);
     updateScreen(zoom);
     updateMug(looks);
     if (transitioning || turning || steaming || drifting || focusing || breathing || glowing || growing || deskMoving) handle.invalidate();
@@ -1153,6 +1171,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     else if (taa && quality.level === 2 && (taa as unknown as { accumulateIndex: number }).accumulateIndex < TAA_SAMPLES && !raf) raf = requestAnimationFrame(frame);
   }
 
+  requestFrame = () => handle.invalidate();
   const handle: SceneHandle = {
     setTheme(theme) {
       studio.setTheme(theme);
@@ -1220,6 +1239,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       giantType.dispose();
       mugGlow.dispose();
       desk.dispose();
+      paper.dispose();
       hand?.dispose();
       box.dispose();
       composer.dispose();

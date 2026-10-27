@@ -351,6 +351,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         labels: t.story.labels,
         giantType: t.story.scenes[4].title,
         packageLabel: t.story.packageLabel,
+        paperTitle: t.story.paperTitle,
         onProgress: (done) => setLoad(0.2 + done * 0.75),
         handUrl: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/3d/first-person-hands.glb`,
         isVisible: () => visible,
@@ -485,7 +486,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       handle?.dispose();
       sceneRef.current = null;
     };
-  }, [t.story.labels, t.story.scenes, t.story.packageLabel]);
+  }, [t.story.labels, t.story.scenes, t.story.packageLabel, t.story.paperTitle]);
 
   // The open card: the scene focuses on its part, its label stays lit, Escape closes it.
   useEffect(() => {
