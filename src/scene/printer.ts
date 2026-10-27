@@ -61,7 +61,7 @@ export const NOZZLE_HOME = { y: GANTRY_Y - 8.4, z: FRAME_Z + 8 };
 export const SCREEN_SIZE = { width: 7.6, height: 4.2 };
 
 /** Greyscale canvas texture for bump and roughness maps. */
-function surfaceTexture(kind: "grain" | "brushed" | "layers" | "weave" | "teeth", repeat: [number, number]) {
+function surfaceTexture(kind: "brushed" | "layers" | "weave" | "teeth" | "speckle", repeat: [number, number]) {
   const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
@@ -73,12 +73,13 @@ function surfaceTexture(kind: "grain" | "brushed" | "layers" | "weave" | "teeth"
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       let v: number;
-      if (kind === "grain") v = 110 + random() * 110;
-      else if (kind === "brushed") v = 140 + rows[y] * 70 + random() * 25;
+      if (kind === "brushed") v = 140 + rows[y] * 70 + random() * 25;
       // Printed parts: rounded ridges, one per layer.
       else if (kind === "layers") v = 150 + Math.sin(((y % 4) / 4) * Math.PI) * 80 + random() * 10;
       // Braided cable sleeve.
       else if (kind === "weave") v = 120 + (((x >> 2) + (y >> 2)) % 2) * 60 + Math.sin((x + y) * 0.8) * 30;
+      // Textured PEI: a powder coat of small raised dots.
+      else if (kind === "speckle") v = random() < 0.18 ? 230 : 90 + random() * 50;
       // Toothed belt: ridges across its length.
       else v = x % 8 < 4 ? 220 : 60;
       const i = (y * size + x) * 4;
@@ -96,30 +97,45 @@ function surfaceTexture(kind: "grain" | "brushed" | "layers" | "weave" | "teeth"
 function materials(quality: QualityLevel) {
   const detail = quality > 0;
   const map = (kind: Parameters<typeof surfaceTexture>[0], repeat: [number, number]) => (detail ? surfaceTexture(kind, repeat) : null);
-  const grain = map("grain", [6, 6]);
   const brushed = map("brushed", [1, 1]);
   const layers = map("layers", [1, 10]);
   const weave = map("weave", [12, 1]);
   const teeth = map("teeth", [40, 1]);
+  const speckle = map("speckle", [10, 10]);
   return {
-    // Black anodised extrusions and plates.
-    frame: new THREE.MeshStandardMaterial({ color: 0x1b1e22, metalness: 0.65, roughness: 0.42, bumpMap: brushed, bumpScale: 0.25 }),
-    // PETG parts printed in the project's teal; the layer lines catch the light.
+    // Black anodised extrusions and plates: brushed metal under a thin satin layer,
+    // so highlights stretch along the length as on real aluminium.
+    frame: new THREE.MeshPhysicalMaterial({
+      color: 0x15181b,
+      metalness: 0.85,
+      roughness: 0.36,
+      roughnessMap: brushed,
+      anisotropy: 0.7,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.3,
+    }),
+    // PETG parts printed in the project's teal: a satin surface with a soft sheen,
+    // the layer lines catching the light.
     printed: new THREE.MeshPhysicalMaterial({
-      color: 0x0e7f72,
-      roughness: 0.55,
+      color: 0x0b6c62,
+      roughness: 0.42,
       metalness: 0,
-      clearcoat: 0.15,
-      clearcoatRoughness: 0.4,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.35,
+      sheen: 0.4,
+      sheenRoughness: 0.5,
+      sheenColor: 0x6fd8c8,
       bumpMap: layers,
       bumpScale: 0.6,
     }),
-    steel: new THREE.MeshStandardMaterial({ color: 0xd4d8dc, metalness: 1, roughness: 0.16 }),
+    // Ground and polished rods.
+    steel: new THREE.MeshStandardMaterial({ color: 0xd4d8dc, metalness: 1, roughness: 0.22 }),
     alu: new THREE.MeshStandardMaterial({ color: 0xaeb3b8, metalness: 1, roughness: 0.32, roughnessMap: brushed, bumpMap: brushed, bumpScale: 0.2 }),
     brass: new THREE.MeshStandardMaterial({ color: 0xc8a046, metalness: 1, roughness: 0.26 }),
     // Heated bed circuit board and the spring steel sheet with textured PEI.
     pcb: new THREE.MeshStandardMaterial({ color: 0x15171a, metalness: 0.2, roughness: 0.55 }),
-    pei: new THREE.MeshStandardMaterial({ color: 0x262422, roughness: 0.82, metalness: 0.05, bumpMap: grain, bumpScale: 0.12 }),
+    // The bronze textured PEI sheet most desktop printers ship with.
+    pei: new THREE.MeshStandardMaterial({ color: 0x74592f, roughness: 0.6, metalness: 0.35, roughnessMap: speckle, bumpMap: speckle, bumpScale: 0.25 }),
     gold: new THREE.MeshStandardMaterial({ color: 0xc09a52, metalness: 0.9, roughness: 0.3 }),
     plastic: new THREE.MeshStandardMaterial({ color: 0x202326, metalness: 0.05, roughness: 0.5 }),
     motor: new THREE.MeshStandardMaterial({ color: 0x141517, metalness: 0.4, roughness: 0.4 }),

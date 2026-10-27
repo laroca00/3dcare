@@ -7,6 +7,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-27
 
+### A more real printer
+- The printer's aluminium frame now has a brushed, anodised finish with a
+  thin satin layer, so its highlights stretch along the extrusions. The
+  printed teal parts have a satin sheen, and the bed carries the bronze
+  textured PEI sheet most desktop printers ship with.
+
 ### From paper to printer
 - The home story now opens on a large sheet of drawing paper on the desk,
   with a drawn border and a title block. Once the page is ready a pencil
