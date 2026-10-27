@@ -7,6 +7,11 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-27
 
+### A film-like colour grade
+- The 3D scenes get a colour grade, as a film look-up table would give:
+  a gentle S-curve for contrast, cool teal shadows, warm highlights and
+  slightly richer mid-tones.
+
 ### A more real printer
 - The printer's aluminium frame now has a brushed, anodised finish with a
   thin satin layer, so its highlights stretch along the extrusions. The

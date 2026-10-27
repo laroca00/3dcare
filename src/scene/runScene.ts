@@ -122,15 +122,15 @@ export interface SceneHandle {
 const yieldToMain = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 
-/** Lens finish per theme: darkened corners and a fine film grain. */
-const LENS: Record<Theme, { vignette: number; grain: number }> = {
-  dark: { vignette: 0.38, grain: 0.035 },
-  light: { vignette: 0.06, grain: 0.02 },
+/** Lens finish per theme: darkened corners, a fine film grain and a film-like colour grade. */
+const LENS: Record<Theme, { vignette: number; grain: number; grade: number }> = {
+  dark: { vignette: 0.38, grain: 0.035, grade: 1 },
+  light: { vignette: 0.06, grain: 0.02, grade: 0.5 },
 };
 
 const LensShader = {
   name: "LensShader",
-  uniforms: { tDiffuse: { value: null }, vignette: { value: 0.3 }, grain: { value: 0.03 }, time: { value: 0 }, tilt: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, vignette: { value: 0.3 }, grain: { value: 0.03 }, grade: { value: 1 }, time: { value: 0 }, tilt: { value: 0 } },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
     void main() {
@@ -141,6 +141,7 @@ const LensShader = {
     uniform sampler2D tDiffuse;
     uniform float vignette;
     uniform float grain;
+    uniform float grade;
     uniform float time;
     uniform float tilt;
     varying vec2 vUv;
@@ -167,6 +168,14 @@ const LensShader = {
         color.r = texture2D(tDiffuse, vUv + shift).r;
         color.b = texture2D(tDiffuse, vUv - shift).b;
       }
+      // Colour grade, as a film LUT would: a gentle S-curve for contrast, cool
+      // teal shadows, warm highlights, and richer colour in the mid-tones.
+      vec3 c = clamp(color.rgb, 0.0, 1.0);
+      float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      vec3 g = mix(c, c * c * (3.0 - 2.0 * c), 0.28);
+      g += vec3(-0.012, 0.006, 0.016) * (1.0 - l) * (1.0 - l) + vec3(0.022, 0.01, -0.014) * l * l;
+      g = mix(vec3(dot(g, vec3(0.2126, 0.7152, 0.0722))), g, 1.0 + 0.12 * l * (1.0 - l) * 4.0);
+      color.rgb = mix(color.rgb, g, grade);
       color.rgb *= 1.0 - vignette * edge;
       color.rgb += (random(vUv * 1000.0 + time) - 0.5) * grain;
       gl_FragColor = color;
@@ -369,6 +378,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   function applyLens(theme: Theme) {
     lens.uniforms.vignette.value = LENS[theme].vignette;
     lens.uniforms.grain.value = LENS[theme].grain;
+    lens.uniforms.grade.value = LENS[theme].grade;
   }
   applyLens(opts.theme);
 
