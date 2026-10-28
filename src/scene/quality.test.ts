@@ -36,3 +36,10 @@ test("quality never drops below 0 and never climbs back", () => {
   assert.equal(feed(q, 60, 40), 0);
   assert.equal(feed(q, 600, 5), 0);
 });
+
+test("a scene that starts at full quality never drops below medium", () => {
+  const q = new QualityController(2, undefined, 1);
+  feed(q, 60, 40);
+  feed(q, 60, 40);
+  assert.equal(feed(q, 60, 40), 1);
+});

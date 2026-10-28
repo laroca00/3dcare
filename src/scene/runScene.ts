@@ -238,7 +238,10 @@ const OUTRO_WIDE = new THREE.Vector3(14, 80, 130);
 const OUTRO_NARROW = new THREE.Vector3(0, 120, 190);
 
 export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Promise<SceneHandle> {
-  const quality = new QualityController(opts.quality);
+  // A scene that starts at full quality keeps its shading (shadows, contact
+  // shadows, the colour finish) on a slow frame: it gives up resolution and
+  // the glow instead, and never drops to the bare level.
+  const quality = new QualityController(opts.quality, undefined, opts.quality === 2 ? 1 : 0);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 2, powerPreference: "high-performance" });
   // Neutral tone mapping leaves the site colours (background, teal) as they are.
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -383,7 +386,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   applyLens(opts.theme);
 
   function applyPixelRatio(level: QualityLevel) {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, level === 2 ? 2 : level === 1 ? 1.5 : 1));
+    // Slowed down from full quality, resolution goes first (the anti-aliasing keeps edges clean).
+    const ratio = level === 2 ? 2 : level === 1 && opts.quality !== 2 ? 1.5 : 1;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, ratio));
     // The glow and the floor reflection are the first to go on a slow device.
     for (const pass of glowPasses) pass.enabled = level === 2;
     studio.setReflection(level === 2);
@@ -922,7 +927,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     raf = 0;
     stillFrames = dirty ? 0 : stillFrames + 1;
     dirty = false;
-    if (taa) taa.accumulate = stillFrames >= 1 && quality.level === 2;
+    if (taa) taa.accumulate = stillFrames >= 1;
     // Only consecutive frames say something about the device's speed.
     // The first seconds (shaders compiling, textures uploading, the opening
     // growing in) are slow on any device, so they do not count.
@@ -1133,7 +1138,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     studio.setMorning(morning, morning > 0 ? mugWorld : deskTarget, Math.max(morning * (1 - smoothstep(outro / 0.25)), openingSun));
     // The opening is shot like a miniature: sharp in the middle, softly blurred towards the edges.
     lens.uniforms.tilt.value = (1 - smoothstep(draw / 0.35)) * (quality.level === 2 ? 1 : 0.6);
-    if (ao) ao.enabled = quality.level === 2 && draw < 0.35;
+    if (ao) ao.enabled = draw < 0.35;
     // Its corners fall off into warm shade.
     lens.uniforms.vignette.value = LENS.dark.vignette + 0.22 * (1 - smoothstep(draw / 0.35));
     mugTop.copy(mugWorld).y += LAYERS * LAYER_HEIGHT;
@@ -1178,7 +1183,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     updateMug(looks);
     if (transitioning || turning || steaming || drifting || focusing || breathing || glowing || growing || deskMoving) handle.invalidate();
     // Once still, keep drawing until the anti-aliasing blend is complete.
-    else if (taa && quality.level === 2 && (taa as unknown as { accumulateIndex: number }).accumulateIndex < TAA_SAMPLES && !raf) raf = requestAnimationFrame(frame);
+    else if (taa && (taa as unknown as { accumulateIndex: number }).accumulateIndex < TAA_SAMPLES && !raf) raf = requestAnimationFrame(frame);
   }
 
   requestFrame = () => handle.invalidate();

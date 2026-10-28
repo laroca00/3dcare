@@ -7,6 +7,20 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 
 ## 2026-10-27
 
+### The shading stays
+- On high-resolution screens the 3D scene used to lower its quality a few
+  seconds after opening, to keep up its speed, and with it switched off the
+  soft contact shadows and, one step further, all of its shading. Now a
+  scene that starts at full quality gives up resolution and the glow first,
+  keeps its contact shadows and smoothing, and never drops to the bare level.
+
+### A closer look at the desk
+- The things on the desk are finer: the utility knife and the caliper's
+  slider are moulded with rounded edges, the caliper's display reads the
+  mug's diameter (84.00 mm), the spools show every turn of wound filament
+  and have chamfered flanges, the calibration cube shows its layer lines,
+  and the coffee bag's paper is crinkled.
+
 ### Story titles with their own typeface and timing
 - The story's headings are now set in Instrument Serif (SIL Open Font
   License, self-hosted next to Inter), larger and lighter, like an

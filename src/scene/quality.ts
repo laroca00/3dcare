@@ -9,18 +9,20 @@ const WINDOW = 60;
 
 /**
  * Lowers quality one step when the average frame time over a full window of
- * frames exceeds the budget. It never raises quality again, so the scene does
- * not flicker between levels.
+ * frames exceeds the budget, never below `floor`. It never raises quality
+ * again, so the scene does not flicker between levels.
  */
 export class QualityController {
   private current: QualityLevel;
   private readonly budgetMs: number;
+  private readonly floor: QualityLevel;
   private frames = 0;
   private total = 0;
 
-  constructor(start: QualityLevel, budgetMs = 1000 / 50) {
+  constructor(start: QualityLevel, budgetMs = 1000 / 50, floor: QualityLevel = 0) {
     this.current = start;
     this.budgetMs = budgetMs;
+    this.floor = floor;
   }
 
   get level(): QualityLevel {
@@ -31,7 +33,7 @@ export class QualityController {
     this.frames++;
     this.total += frameMs;
     if (this.frames >= WINDOW) {
-      if (this.total / this.frames > this.budgetMs && this.current > 0) {
+      if (this.total / this.frames > this.budgetMs && this.current > this.floor) {
         this.current = (this.current - 1) as QualityLevel;
       }
       this.frames = 0;
