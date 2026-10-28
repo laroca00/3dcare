@@ -3,6 +3,7 @@
 // project's wordmark is printed large along the mat's edge, as mats carry
 // their maker's name. Everything is painted on canvases; no image files.
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { Theme } from "../theme/theme";
 
 /** Mat size in cm (the scene's units): large enough to fill the screen from above, like a big studio mat. */
@@ -327,18 +328,32 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
     extras.push(m);
     return m;
   };
+  // Fine parallel grooves, for a bump map: filament wound on a spool, or a print's layer lines.
+  const groovesCanvas = document.createElement("canvas");
+  groovesCanvas.width = 4;
+  groovesCanvas.height = 64;
+  const gr = groovesCanvas.getContext("2d")!;
+  for (let y = 0; y < 64; y++) {
+    const v = Math.round(40 + 200 * Math.abs(Math.sin((y / 4) * Math.PI)));
+    gr.fillStyle = `rgb(${v},${v},${v})`;
+    gr.fillRect(0, y, 4, 1);
+  }
+  const grooves = new THREE.CanvasTexture(groovesCanvas);
+  grooves.wrapS = grooves.wrapT = THREE.RepeatWrapping;
+  grooves.repeat.set(1, 2.2);
 
   // A snap-off utility knife, lying across the bottom right: an orange body
   // with a grey grip, a slider on top and a segmented steel blade.
   const knife = new THREE.Group();
-  const orange = material({ color: 0xf08a24, roughness: 0.45 });
+  const orange = material({ color: 0xf08a24, roughness: 0.35 });
   const greyGrip = material({ color: 0x4a4f55, roughness: 0.8 });
   const blade = material({ color: 0xd9dde1, roughness: 0.22, metalness: 1 });
   const bladeLines = material({ color: 0x7d838a, roughness: 0.4, metalness: 0.8 });
-  const knifeBody = new THREE.Mesh(new THREE.BoxGeometry(14, 1.3, 2.4), orange);
-  const knifeGrip = new THREE.Mesh(new THREE.BoxGeometry(6.5, 1.36, 2.46), greyGrip);
+  // Moulded plastic: every edge softly rounded.
+  const knifeBody = new THREE.Mesh(new RoundedBoxGeometry(14, 1.3, 2.4, 3, 0.5), orange);
+  const knifeGrip = new THREE.Mesh(new RoundedBoxGeometry(6.5, 1.36, 2.46, 3, 0.5), greyGrip);
   knifeGrip.position.x = -3.2;
-  const slider = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 1.2), greyGrip);
+  const slider = new THREE.Mesh(new RoundedBoxGeometry(2.2, 0.5, 1.2, 2, 0.2), greyGrip);
   slider.position.set(2.2, 0.85, 0);
   // The blade comes out of the front, cut at an angle; its snap-off lines are thin dark strips.
   const bladeShape = new THREE.Shape([new THREE.Vector2(0, -0.8), new THREE.Vector2(4.2, -0.8), new THREE.Vector2(5.2, 0.8), new THREE.Vector2(0, 0.8)]);
@@ -371,17 +386,19 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
     const a = (i / 4) * Math.PI * 2 + 0.4;
     flangeShape.holes.push(new THREE.Path().absarc(Math.cos(a) * 6.4, Math.sin(a) * 6.4, 1.7, 0, Math.PI * 2, true));
   }
-  const flangeGeometry = new THREE.ExtrudeGeometry(flangeShape, { depth: 0.25, bevelEnabled: false, curveSegments: 24 });
+  const flangeGeometry = new THREE.ExtrudeGeometry(flangeShape, { depth: 0.25, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 2, curveSegments: 32 });
   flangeGeometry.rotateX(-Math.PI / 2);
   const hubGeometry = new THREE.CylinderGeometry(2.6, 2.6, 6.6, 24, 1, true);
   /** A spool lying flat; `full` 0..1 is how much filament is left on it. */
-  function makeSpool(colour: THREE.Material, full: number) {
+  function makeSpool(colour: THREE.MeshStandardMaterial, full: number) {
     const spool = new THREE.Group();
     const bottom = new THREE.Mesh(flangeGeometry, card);
     const top = new THREE.Mesh(flangeGeometry, card);
     top.position.y = 6.5;
     const radius = 3.2 + 6.4 * full;
-    const wound = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 6.1, 48), colour);
+    // The filament wound round and round: a groove for every turn.
+    const windings = material({ color: colour.color, roughness: 0.36, bumpMap: grooves, bumpScale: 1.2 });
+    const wound = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 6.1, 64), windings);
     wound.position.y = 3.35;
     const hub = new THREE.Mesh(hubGeometry, card);
     hub.position.y = 3.35;
@@ -434,11 +451,28 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
   const caliper = new THREE.Group();
   const steelBright = material({ color: 0xcfd4d8, roughness: 0.25, metalness: 1 });
   const dark = material({ color: 0x1d2226, roughness: 0.55 });
-  const lcd = material({ color: 0x9fb1a0, roughness: 0.3, emissive: 0x1a221b });
+  // Its display reads the mug's diameter.
+  const lcdCanvas = document.createElement("canvas");
+  lcdCanvas.width = 256;
+  lcdCanvas.height = 112;
+  const l = lcdCanvas.getContext("2d")!;
+  l.fillStyle = "#a9b8a6";
+  l.fillRect(0, 0, 256, 112);
+  l.fillStyle = "#1c231d";
+  l.font = "700 64px Inter, system-ui, sans-serif";
+  l.textAlign = "right";
+  l.textBaseline = "middle";
+  l.fillText("84.00", 200, 60);
+  l.font = "600 26px Inter, system-ui, sans-serif";
+  l.fillText("mm", 246, 74);
+  const lcdTexture = new THREE.CanvasTexture(lcdCanvas);
+  lcdTexture.colorSpace = THREE.SRGBColorSpace;
+  lcdTexture.anisotropy = 8;
+  const lcd = material({ map: lcdTexture, roughness: 0.3, emissive: 0x1a221b });
   const beam = new THREE.Mesh(new THREE.BoxGeometry(22, 0.35, 1.6), steelBright);
   const fixedJaw = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.35, 5), steelBright);
   fixedJaw.position.set(-10.4, 0, 2.6);
-  const slideBody = new THREE.Mesh(new THREE.BoxGeometry(6.5, 1.1, 3.4), dark);
+  const slideBody = new THREE.Mesh(new RoundedBoxGeometry(6.5, 1.1, 3.4, 2, 0.3), dark);
   slideBody.position.set(-4.2, 0.5, 0.4);
   const display = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.1, 1.6), lcd);
   display.position.set(-4.2, 1.08, 0.3);
@@ -537,19 +571,21 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
   const kraft = material({ color: 0xb98f62, roughness: 0.95 });
   const coffeeFront = material({ map: coffeeTexture, roughness: 0.92 });
   // Lying flat: the top face (+y) carries the label.
-  const coffee = new THREE.Mesh(new THREE.BoxGeometry(12, 4.5, 19, 4, 1, 4), [kraft, kraft, coffeeFront, kraft, kraft, kraft]);
-  // A soft, pillowy bag rather than a box: round the top a little.
+  const coffee = new THREE.Mesh(new THREE.BoxGeometry(12, 4.5, 19, 16, 2, 24), [kraft, kraft, coffeeFront, kraft, kraft, kraft]);
+  // A soft, pillowy bag rather than a box: round the top a little, and crinkle the paper.
   const bag = coffee.geometry.getAttribute("position");
   for (let i = 0; i < bag.count; i++) {
-    const y = bag.getY(i);
-    if (y > 0) bag.setY(i, y - (Math.abs(bag.getX(i)) / 6) ** 2 * 1.1 - (Math.abs(bag.getZ(i)) / 9.5) ** 4 * 0.8);
+    const [x, y, z] = [bag.getX(i), bag.getY(i), bag.getZ(i)];
+    const crinkle = Math.sin(x * 2.1 + z * 1.3) * Math.sin(z * 1.7 - x) * 0.14;
+    bag.setY(i, y + crinkle - (y > 0 ? (Math.abs(x) / 6) ** 2 * 1.1 + (Math.abs(z) / 9.5) ** 4 * 0.8 : 0));
   }
   coffee.geometry.computeVertexNormals();
   coffee.rotation.y = 0.5;
   coffee.position.set(94, 2.25, 60);
 
   // A calibration cube, the first thing every new printer prints, on the mat's edge.
-  const cube = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), teal);
+  const printedTeal = material({ color: 0x2aa898, roughness: 0.42, bumpMap: grooves, bumpScale: 0.8 });
+  const cube = new THREE.Mesh(new RoundedBoxGeometry(2, 2, 2, 2, 0.1), printedTeal);
   cube.scale.setScalar(S);
   cube.rotation.y = 0.5;
   cube.position.set(66, 0.3 + S, -40);
@@ -661,6 +697,8 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
       });
       for (const m of materials) m.dispose();
       matTexture.dispose();
+      grooves.dispose();
+      lcdTexture.dispose();
       Object.values(surfaces).forEach((t) => t.dispose());
       rulerTexture.dispose();
     },
