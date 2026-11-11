@@ -80,6 +80,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 - The design-program selection box, unused since the story opens on a sheet
   of paper, is removed; the 3D code is back within its 200 KB budget.
 
+### Still frames in the new look
+- The story's still frames (shown with reduced motion or without WebGL, and
+  as the opening's poster before the 3D scene loads) are rendered again, so
+  they match the one dark room, the cream lettering and the hand that holds
+  the mug up.
+
 ## 2026-10-27
 
 ### The shading stays
