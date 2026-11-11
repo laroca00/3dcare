@@ -100,6 +100,11 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 - The check that reads back each shader's error log, which makes the
   browser wait for the shader, now runs in development only.
 
+### The desk, a little more real
+- The sheet of drawing paper now throws a soft shadow on the mat, away from
+  the window, so it lies on the desk instead of floating over it.
+- The mat's grid lines are thinner and whiter.
+
 ## 2026-10-27
 
 ### The shading stays

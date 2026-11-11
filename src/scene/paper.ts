@@ -14,15 +14,24 @@ export interface Paper {
 const W = 59.4;
 const D = 84.1;
 const PX = 14;
+/** Clear room round the sheet (cm) for the soft shadow it throws on the mat, painted with it. */
+const MARGIN = 4;
 
 function paintPaper(canvas: HTMLCanvasElement, title: string) {
-  canvas.width = Math.round(W * PX);
-  canvas.height = Math.round(D * PX);
+  const w = Math.round(W * PX);
+  const h = Math.round(D * PX);
+  canvas.width = w + 2 * MARGIN * PX;
+  canvas.height = h + 2 * MARGIN * PX;
   const c = canvas.getContext("2d")!;
-  const w = canvas.width;
-  const h = canvas.height;
+  // The sheet, with its shadow falling away from the window; the rest is drawn in the sheet's own coordinates.
+  c.translate(MARGIN * PX, MARGIN * PX);
+  c.shadowColor = "rgba(18, 12, 4, 0.6)";
+  c.shadowBlur = 1.8 * PX;
+  c.shadowOffsetX = 0.7 * PX;
+  c.shadowOffsetY = 0.6 * PX;
   c.fillStyle = "#f2ede2";
   c.fillRect(0, 0, w, h);
+  c.shadowColor = "transparent";
   // Paper grain: faint fibres and a soft unevenness.
   for (let i = 0; i < 6000; i++) {
     const tone = (i * 37) % 9;
@@ -66,7 +75,7 @@ export function createPaper(title: string): Paper {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
   const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.95, metalness: 0, transparent: true });
-  const geometry = new THREE.PlaneGeometry(W, D);
+  const geometry = new THREE.PlaneGeometry(W + 2 * MARGIN, D + 2 * MARGIN);
   geometry.rotateX(-Math.PI / 2);
   const object = new THREE.Mesh(geometry, material);
   object.receiveShadow = true;

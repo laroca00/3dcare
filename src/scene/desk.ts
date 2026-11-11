@@ -71,9 +71,9 @@ function paintMat(canvas: HTMLCanvasElement) {
   const cell = CELL * PX;
   const left = 3.4 * cell * 0.5;
   const bottom = H - 3.4 * cell * 0.5;
-  const line = "rgba(236, 232, 206, 0.62)";
+  const line = "rgba(240, 240, 228, 0.55)";
   c.strokeStyle = line;
-  c.lineWidth = Math.max(1.6, PX * 0.2);
+  c.lineWidth = Math.max(1.2, PX * 0.14);
   c.beginPath();
   for (let x = left; x <= W - cell * 0.3; x += cell) {
     c.moveTo(x, 0);

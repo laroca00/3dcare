@@ -25,12 +25,8 @@ const PALM_FACES = new THREE.Vector3(-0.6, 0, -0.8).normalize();
 /** How far below the hand starts (cm). */
 const AWAY = 46;
 
-/**
- * Skin detail, made in code and tiled over the hand: a height field of fine
- * pores and creases turned into a faint normal map, and the slightest
- * unevenness of colour, so the skin is smooth without looking like plastic.
- */
-function skinMaps() {
+/** Skin detail, made in code and tiled over the hand: fine pores as a faint normal map, so the smooth skin does not look like plastic. */
+function skinNormalMap() {
   const N = 256;
   // Smooth value noise on a wrapping grid, so the texture tiles seamlessly.
   const noise = (cell: number, seed: number) => {
@@ -55,49 +51,29 @@ function skinMaps() {
   };
   const pores = noise(64, 1);
   const fine = noise(128, 2);
-  const creases = noise(16, 3);
-  const blotch = noise(8, 4);
-  const height = new Float32Array(N * N);
+  const h = (x: number, y: number) => pores((x + N) % N, (y + N) % N) * 0.5 + fine((x + N) % N, (y + N) % N) * 0.3;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = N;
+  const c = canvas.getContext("2d")!;
+  const image = c.createImageData(N, N);
+  const d = image.data;
   for (let y = 0; y < N; y++) {
     for (let x = 0; x < N; x++) {
-      // Pores are small dips; creases are thin valleys where the noise crosses its middle.
-      const crease = 1 - Math.min(Math.abs(creases(x, y) - 0.5) * 10, 1);
-      height[y * N + x] = pores(x, y) * 0.5 + fine(x, y) * 0.3 - crease * 0.12;
+      const i = (y * N + x) * 4;
+      const dx = (h(x + 1, y) - h(x - 1, y)) * 2.2;
+      const dy = (h(x, y + 1) - h(x, y - 1)) * 2.2;
+      const len = Math.hypot(dx, dy, 1);
+      d[i] = (-dx / len) * 127 + 128;
+      d[i + 1] = (dy / len) * 127 + 128;
+      d[i + 2] = (1 / len) * 127 + 128;
+      d[i + 3] = 255;
     }
   }
-  const make = (paint: (data: Uint8ClampedArray, i: number, x: number, y: number) => void, colour: boolean) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = N;
-    const c = canvas.getContext("2d")!;
-    const image = c.createImageData(N, N);
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) paint(image.data, (y * N + x) * 4, x, y);
-    c.putImageData(image, 0, 0);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(26, 26);
-    if (colour) texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-  };
-  const h = (x: number, y: number) => height[((y + N) % N) * N + ((x + N) % N)];
-  const normalMap = make((d, i, x, y) => {
-    const dx = (h(x + 1, y) - h(x - 1, y)) * 2.2;
-    const dy = (h(x, y + 1) - h(x, y - 1)) * 2.2;
-    const len = Math.hypot(dx, dy, 1);
-    d[i] = (-dx / len) * 127 + 128;
-    d[i + 1] = (dy / len) * 127 + 128;
-    d[i + 2] = (1 / len) * 127 + 128;
-    d[i + 3] = 255;
-  }, false);
-  const map = make((d, i, x, y) => {
-    // Warm, slightly uneven skin: redder blotches, a little lighter in the creases' ridges.
-    const b = blotch(x, y);
-    const v = 0.92 + h(x, y) * 0.08;
-    d[i] = Math.min(255, 255 * v);
-    d[i + 1] = Math.min(255, (240 - b * 12) * v);
-    d[i + 2] = Math.min(255, (232 - b * 16) * v);
-    d[i + 3] = 255;
-  }, true);
-  return { map, normalMap };
+  c.putImageData(image, 0, 0);
+  const normalMap = new THREE.CanvasTexture(canvas);
+  normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+  normalMap.repeat.set(26, 26);
+  return normalMap;
 }
 
 export async function loadHand(url: string): Promise<Hand> {
@@ -105,7 +81,7 @@ export async function loadHand(url: string): Promise<Hand> {
   const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
   const gltf = await new GLTFLoader().loadAsync(url);
   const model = gltf.scene;
-  const skin = skinMaps();
+  const pores = skinNormalMap();
   const bones = new Map<string, THREE.Bone>();
   model.traverse((o) => {
     if ((o as THREE.Bone).isBone) bones.set(o.name, o as THREE.Bone);
@@ -121,9 +97,8 @@ export async function loadHand(url: string): Promise<Hand> {
       mesh.material = nails
         ? new THREE.MeshPhysicalMaterial({ color: 0x9a7466, roughness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.25 })
         : new THREE.MeshPhysicalMaterial({
-        color: 0x4f3329,
-        map: skin.map,
-        normalMap: skin.normalMap,
+        color: 0x4b2f25,
+        normalMap: pores,
         normalScale: new THREE.Vector2(0.035, 0.035),
         roughness: 0.52,
         metalness: 0,
