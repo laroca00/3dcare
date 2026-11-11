@@ -57,7 +57,7 @@ function paintMat(canvas: HTMLCanvasElement) {
   const c = canvas.getContext("2d")!;
   const W = canvas.width;
   const H = canvas.height;
-  c.fillStyle = "#57674f";
+  c.fillStyle = "#3b5847";
   c.fillRect(0, 0, W, H);
   // A faint mottle, like the mat's rubbery surface.
   for (let i = 0; i < 9000; i++) {
@@ -306,7 +306,7 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
   // The graphite tip, in the pencil's own coordinates, for drawing on the mat.
   const tipPoint = new THREE.Vector3(0, 10.7, 0);
 
-  // A 30 cm steel ruler along the front edge.
+  // A 30 cm steel ruler on the wood to the left of the mat, clear of the opening's text.
   const rulerCanvas = document.createElement("canvas");
   paintRuler(rulerCanvas);
   const rulerTexture = new THREE.CanvasTexture(rulerCanvas);
@@ -316,9 +316,9 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
   const rulerTop = new THREE.MeshStandardMaterial({ map: rulerTexture, roughness: 0.4, metalness: 0.6 });
   // Box faces: +x, -x, +y (top), -y, +z, -z.
   const ruler = new THREE.Mesh(new THREE.BoxGeometry(32, 0.12, 3), [steel, steel, rulerTop, steel, steel, steel]);
-  ruler.rotation.y = 1.42;
+  ruler.rotation.y = 1.5;
   ruler.scale.set(RULER_SCALE, 1.5, RULER_SCALE);
-  ruler.position.set(92, 0.39, 2);
+  ruler.position.set(-76, 0.08, -8);
 
   // --- The rest of the desk: what a 3D printing workshop's desk holds. ---
   const S = PENCIL_SCALE;
@@ -480,8 +480,8 @@ export function createDesk(floorY: number, onLoad: () => void = () => {}): Desk 
   slideJaw.position.set(-7.6, 0, 2.6);
   caliper.add(beam, fixedJaw, slideBody, display, slideJaw);
   caliper.scale.setScalar(S * 0.6);
-  caliper.rotation.y = -1.5;
-  caliper.position.set(112, 0.3 + 0.2 * S, -18);
+  caliper.rotation.y = -0.3;
+  caliper.position.set(108, 0.3 + 0.2 * S, 58);
 
   // A square sticky note on the mat with a pencil sketch of a mug's handle,
   // the first idea of a design.

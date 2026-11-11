@@ -38,6 +38,12 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
   screens the links still open in a side sheet. The animation library the
   old bar needed is no longer part of the site.
 
+### A clearer opening desk
+- The opening's lead text now lies on clear mat: the ruler moved onto the
+  wood at the left and the caliper to the bottom right corner, and the text
+  sits a little lower and narrower, past the paper's corner.
+- The cutting mat is a deeper, calmer green.
+
 ## 2026-10-27
 
 ### The shading stays

@@ -3001,9 +3001,10 @@ html:has(.story--live)::-webkit-scrollbar {
 
   .story:not(.story--stills) .story__hero-lead {
     position: absolute;
-    right: 4vw;
-    top: 44%;
-    width: min(31rem, 32vw);
+    right: 3vw;
+    top: 49%;
+    width: min(27rem, 28vw);
+    letter-spacing: -0.02em;
   }
 
   .story:not(.story--stills) .story__hero-card {
