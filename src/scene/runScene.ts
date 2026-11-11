@@ -29,7 +29,7 @@ import { STEAM_LAYER, createSteam } from "./steam";
 import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, endingMotion, heroLooks, labelOpacity, nozzlePath, printProgress, revealMotion, screenZoom, slicerProgress } from "./storyMotion";
 import { createLineup } from "./lineup";
 import { FLOOR_LAYER, createStudio } from "./studio";
-import { clamp01, localProgress, smoothstep } from "./timeline";
+import { type SceneId, at, clamp01, localProgress, smoothstep } from "./timeline";
 
 export interface LabelPosition {
   id: PartId;
@@ -235,6 +235,16 @@ const TYPE_BEHIND = 40;
 /** The close: where the camera ends up above the ten tools. */
 const OUTRO_WIDE = new THREE.Vector3(14, 80, 130);
 const OUTRO_NARROW = new THREE.Vector3(0, 120, 190);
+
+/** The moments of the story (scene, how far through it, and the closing's progress) whose shaders are prepared before it starts. */
+const WARM_UP: readonly [SceneId, number, number][] = [
+  ["draw", 0.3, 0], ["draw", 0.6, 0], ["draw", 0.8, 0], ["meet", 0.5, 0], ["explode", 0.8, 0],
+  ["print", 0.1, 0], ["print", 0.2, 0], ["print", 0.3, 0], ["print", 0.45, 0], ["print", 0.55, 0], ["print", 0.7, 0], ["print", 0.97, 0],
+  ["reveal", 0.1, 0], ["reveal", 0.3, 0], ["reveal", 0.5, 0], ["reveal", 0.75, 0], ["reveal", 0.95, 0],
+  ["heat", 0.5, 0], ["plan", 0.6, 0], ["layers", 0.5, 0], ["material", 0.5, 0],
+  ["package", 0.1, 0], ["package", 0.3, 0], ["package", 0.6, 0], ["package", 0.95, 0],
+  ["use", 0.3, 0], ["use", 0.5, 0], ["use", 0.7, 0], ["use", 0.9, 0], ["use", 1, 0.6], ["draw", 0, 0],
+];
 
 export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Promise<SceneHandle> {
   // A scene that starts at full quality keeps its shading (shadows, contact
@@ -893,6 +903,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   }
 
   let raf = 0;
+  // Set while the shaders are prepared: the story moment (and the closing's) the scene is set up at.
+  let warm: [number, number] | null = null;
   // The printer's meshes that cast shadows once it is solid.
   const printerShadowCasters: THREE.Object3D[] = [];
   printer.root.traverse((o) => {
@@ -935,7 +947,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     last = now;
     const transitioning = studio.update(dt);
 
-    const p = opts.getProgress();
+    const p = warm ? warm[0] : opts.getProgress();
     const breathing = updateBreath(now, dt, p);
     printer.setIdle(breath.fan, breath.amount > 0.5 && Math.floor(now / 530) % 2 === 0);
 
@@ -1101,7 +1113,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       hiddenForPackage.length = 0;
     }
     const zoom = screenZoom(p);
-    const outro = opts.getOutro?.() ?? 0;
+    const outro = warm ? warm[1] : (opts.getOutro?.() ?? 0);
     // The tools stand in two rows on the table, starting at the mug.
     stage.worldToLocal(lineup.object.position.copy(mugWorld));
     lineup.object.rotation.y = -stage.rotation.y + 0.15;
@@ -1154,6 +1166,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // The floor is out of the picture while the desk covers it and while the
     // camera is close on the hovering mug; its reflection and its contact
     // shadow are not drawn then. The morning's table covers the reflection too.
+    // A warm-up frame only sets the scene up; nothing is drawn.
+    if (warm) return;
     const floorSeen = deskAmount < 1 && !(looks.hero >= 1 && pk.frame <= 0);
     studio.setReflection(quality.level === 2 && floorSeen && morning < 1);
     // Nor in the contact shadow on the floor.
@@ -1265,11 +1279,23 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   hand = await handLoading;
   opts.onProgress?.(0.8);
   if (hand) job.object.add(hand.object);
-  // Compile shaders in parallel where supported, so the first frame does not
-  // stall. They are compiled as they will be used: drawing into the lens's
-  // buffer rather than straight to the screen.
+  // Compile shaders in parallel where supported, so that no frame has to
+  // stall for them. Materials change as the story goes (the drawing turns
+  // solid, the print starts, the hand comes in, the morning's table fades
+  // in), and each change needs its own shaders: so the scene is set up, not
+  // drawn, at every such moment of the story in turn, and what is new is
+  // compiled in the background. They are compiled as they will be used:
+  // drawing into the lens's buffer rather than straight to the screen.
   renderer.setRenderTarget(composer.readBuffer);
-  await renderer.compileAsync(scene, camera);
+  for (const [id, t, outro] of WARM_UP) {
+    warm = [at(id, t), outro];
+    frame(performance.now());
+    await renderer.compileAsync(scene, camera);
+  }
+  warm = null;
+  last = firstFrameAt = 0;
+  // The floor's soft shadow has a few small shaders of its own; drawing it once prepares them.
+  studio.renderShadow(noContactShadow);
   renderer.setRenderTarget(null);
   opts.onProgress?.(0.95);
   resizeObserver.observe(canvas);
