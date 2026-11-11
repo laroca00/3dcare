@@ -44,6 +44,20 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
   sits a little lower and narrower, past the paper's corner.
 - The cutting mat is a deeper, calmer green.
 
+### The rest of the page, in the same room
+- The pictures that come out of the model package now pass in front of the
+  room's own dark backdrop, which closes before they arrive and opens after
+  they leave, so the inside of the box no longer shows through them.
+- The closing figures and the package's contents are plain type over dotted
+  rules, without frosted boxes.
+- The site's dark tones are warmed to match the stage, so the story ends
+  into the page without a change of colour. Page and section titles are set
+  larger and tighter, sections are divided by dotted rules, and the partner
+  list, the four steps and the call to join the network lost their boxes.
+- The loading screen uses the same dark room and cream type.
+- Away from the story's stage the menu has a stronger shade behind it, so
+  page text no longer shows through the links.
+
 ## 2026-10-27
 
 ### The shading stays

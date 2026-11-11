@@ -330,6 +330,8 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
 
     const io = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
+      // The navigation's shade is lighter while the stage is behind it.
+      document.documentElement.toggleAttribute("data-stage", visible);
       if (visible) handle?.invalidate();
     });
     io.observe(section);
@@ -488,6 +490,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       window.removeEventListener("resize", measure);
       stopWheel();
       io.disconnect();
+      document.documentElement.removeAttribute("data-stage");
       handle?.dispose();
       sceneRef.current = null;
     };
