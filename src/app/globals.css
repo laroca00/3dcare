@@ -76,38 +76,38 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #101416;
-  --surface: #192024;
-  --ink: #e8eeeb;
-  --muted: #a3b1ab;
+  --paper: #131413;
+  --surface: #1c1d1b;
+  --ink: #f3eee4;
+  --muted: #b3ada1;
   --teal: #3cc2b0;
   --teal-dark: #74dccd;
   --on-accent: #0b1a1c;
   --violet: #a48be6;
-  --plate: #2a3338;
-  --plate-soft: #20282c;
-  --footer-bg: #0b0f11;
-  --footer-text: #e8eeeb;
-  --footer-muted: #a3b1ab;
+  --plate: #30312e;
+  --plate-soft: #232422;
+  --footer-bg: #0c0d0c;
+  --footer-text: #f3eee4;
+  --footer-muted: #b3ada1;
 }
 
 /* Same palette when the device prefers dark and the pre-paint script has not run. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --paper: #101416;
-    --surface: #192024;
-    --ink: #e8eeeb;
-    --muted: #a3b1ab;
+    --paper: #131413;
+    --surface: #1c1d1b;
+    --ink: #f3eee4;
+    --muted: #b3ada1;
     --teal: #3cc2b0;
     --teal-dark: #74dccd;
     --on-accent: #0b1a1c;
     --violet: #a48be6;
-    --plate: #2a3338;
-    --plate-soft: #20282c;
-    --footer-bg: #0b0f11;
-    --footer-text: #e8eeeb;
-    --footer-muted: #a3b1ab;
+    --plate: #30312e;
+    --plate-soft: #232422;
+    --footer-bg: #0c0d0c;
+    --footer-text: #f3eee4;
+    --footer-muted: #b3ada1;
   }
 }
 
@@ -929,7 +929,8 @@ html:has(.story--live)::-webkit-scrollbar {
 
 /* Titles are set large and tight in the site's own grotesque; the text under
    them is small and quiet. */
-.story__text h2 {
+.story__text h2,
+.story__beat--outro h2 {
   margin-bottom: 0.45em;
   color: var(--story-ink);
   font-weight: 600;
@@ -1508,10 +1509,11 @@ html:has(.story--live)::-webkit-scrollbar {
 
 .story__delivers > div {
   --t: clamp(0, (var(--reveal, 2) - 0.25 - var(--i, 0) * 0.14) * 5, 1);
-  padding: 16px 18px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  backdrop-filter: blur(10px);
+  /* Plain figures on the stage, each over a dotted rule. */
+  padding: 14px 0 0;
+  border-top: 1px dotted color-mix(in srgb, var(--story-ink) 70%, transparent);
+  color: var(--story-ink);
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.55);
   transform: translateY(calc((1 - var(--t)) * 24px));
   opacity: var(--t);
 }
@@ -1529,21 +1531,29 @@ html:has(.story--live)::-webkit-scrollbar {
 }
 
 .story__delivers dt {
-  font-size: 2.4rem;
+  font-size: clamp(2.8rem, 4.6vw, 4.2rem);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
 }
 
 .story__delivers dd {
-  font-size: 0.92rem;
+  margin-top: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 .story__publish {
   --t: clamp(0, (var(--reveal, 2) - 0.95) * 5, 1);
-  margin-top: 18px;
-  padding: 14px 18px;
-  border-left: 3px solid var(--teal);
-  border-radius: 0 14px 14px 0;
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  backdrop-filter: blur(10px);
+  margin-top: 26px;
+  padding-top: 14px;
+  border-top: 1px dotted color-mix(in srgb, var(--story-ink) 70%, transparent);
+  color: var(--story-ink);
+  font-size: 0.95rem;
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.55);
   transform: translateY(calc((1 - var(--t)) * 18px));
   opacity: var(--t);
 }
@@ -2472,14 +2482,12 @@ html:has(.story--live)::-webkit-scrollbar {
 
 .story__package-contents li {
   --t: clamp(0, var(--pk-contents, 0) * 6 - var(--i), 1);
-  padding: 6px 12px;
-  border: 1px dashed currentColor;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  color: var(--ink);
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  padding: 0 0 6px;
+  border-bottom: 1px dotted color-mix(in srgb, var(--story-ink) 70%, transparent);
+  color: var(--story-ink);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   opacity: var(--t);
   transform: translateY(calc((1 - var(--t)) * 10px));
@@ -2513,13 +2521,15 @@ html:has(.story--live)::-webkit-scrollbar {
   pointer-events: none;
 }
 
-/* The stage dims behind the pictures. */
-.story__package-cards::before {
-  content: "";
+/* Behind the pictures the stage is the same dark room, with its teal glow in
+   the corner. It closes before the pictures have fully arrived and opens
+   after they have left, so the inside of the box never shows through them. */
+.story__package-shade {
   position: absolute;
-  inset: -20%;
-  z-index: -1;
-  background: var(--paper);
+  inset: 0;
+  background: radial-gradient(circle at 0% 100%, #0d4641 0, rgb(13 70 65 / 0) 58%), #131413;
+  opacity: clamp(0, var(--pk-cards, 0) * 3.5, 1);
+  pointer-events: none;
 }
 
 .story__package-title {
@@ -2527,10 +2537,10 @@ html:has(.story--live)::-webkit-scrollbar {
   max-width: 1120px;
   margin: 0 auto 16px;
   padding-inline: var(--gutter);
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: var(--story-ink);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
 }
 
@@ -2567,14 +2577,17 @@ html:has(.story--live)::-webkit-scrollbar {
 }
 
 .story__package-strip strong {
-  font-size: 1.05rem;
+  color: var(--story-ink);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
 .story__package-strip span {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--story-ink) 70%, transparent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
 }
 

@@ -707,6 +707,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             </li>
           ))}
         </ul>
+        <div className="story__package-shade" aria-hidden="true" />
         {mode === "live" && packageNear && (
           <div className="story__package-cards" aria-hidden="true">
             <p className="story__package-title">{t.story.packageCardsTitle}</p>
