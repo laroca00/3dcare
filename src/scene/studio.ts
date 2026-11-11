@@ -324,7 +324,10 @@ export function createStudio(
   // Soft-edged shadows, like sunlight through a window.
   sun.shadow.radius = 6;
   sun.shadow.bias = -0.0005;
-  sun.visible = false;
+  // The light stays in the scene even at zero strength: taking it out and
+  // putting it back would make every material compile its shader again, in
+  // the middle of the story. While it is dark its shadow is not redrawn.
+  sun.shadow.autoUpdate = false;
   floorParent.add(sun, sun.target);
   let spread = 0;
   let leafTime = 0;
@@ -385,7 +388,7 @@ export function createStudio(
       return changing;
     },
     setMorning(amount, target, sunlight = amount) {
-      table.visible = sun.visible = amount > 0;
+      table.visible = amount > 0;
       tableMaterial.opacity = amount;
       const opaque = amount >= 1;
       if (tableMaterial.transparent === opaque) {
@@ -395,7 +398,7 @@ export function createStudio(
       }
       // From further away the light keeps its strength on the desk.
       sun.intensity = sunlight * 70000 * (1 + spread * 0.9) ** 2;
-      sun.visible = sunlight > 0;
+      sun.shadow.autoUpdate = sunlight > 0;
       floorParent.worldToLocal(sun.target.position.copy(target));
       const far = 1 + spread * 0.9;
       sun.position.set(sun.target.position.x - 55 * far, sun.target.position.y + 70 * far, sun.target.position.z - 45 * far);

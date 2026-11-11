@@ -1267,14 +1267,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   if (hand) job.object.add(hand.object);
   // Compile shaders in parallel where supported, so the first frame does not
   // stall. They are compiled as they will be used: drawing into the lens's
-  // buffer rather than straight to the screen, once without the window's
-  // sunlight and once with it, so that neither the first frame nor the
-  // moment the sun comes on has to stop and compile.
+  // buffer rather than straight to the screen.
   renderer.setRenderTarget(composer.readBuffer);
   await renderer.compileAsync(scene, camera);
-  studio.setMorning(1, mugWorld, 1);
-  await renderer.compileAsync(scene, camera);
-  studio.setMorning(0, mugWorld, 0);
   renderer.setRenderTarget(null);
   opts.onProgress?.(0.95);
   resizeObserver.observe(canvas);

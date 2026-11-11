@@ -63,13 +63,17 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 - While the story moves, the 3D scene is now drawn once per frame instead of
   twice: the pass that refines edges takes over only when the picture holds
   still. Measured on a desktop with a steady scroll through the whole page:
-  38 → 51 frames a second on average, and the typical frame 18 → 8 ms.
+  38 → 84 frames a second on average, and the typical frame 18 → 6 ms.
 - The floor's reflection and soft shadow are no longer drawn while the floor
   is out of the picture (under the opening desk, and while the camera is
   close on the hovering mug).
+- The window's sunlight now stays in the scene at zero strength instead of
+  being switched off and on, which made every material prepare its shader
+  again in the middle of the story: the longest stall in the last scene
+  went from about 3 s to under 1 s.
 - Shaders are prepared before the story starts for the way they are really
-  used, with and without the window's sunlight, and the page is no longer
-  asked to lay itself out several times in every frame.
+  used, and the page is no longer asked to lay itself out several times in
+  every frame.
 - The design-program selection box, unused since the story opens on a sheet
   of paper, is removed; the 3D code is back within its 200 KB budget.
 

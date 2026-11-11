@@ -155,7 +155,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const slicerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const revealCaptionRef = useRef<HTMLDivElement>(null);
-  const selectionRef = useRef<HTMLDivElement>(null);
   const planRef = useRef<SVGSVGElement>(null);
   const scaleRef = useRef<HTMLDivElement>(null);
   const packageStripRef = useRef<HTMLOListElement>(null);
