@@ -66,8 +66,6 @@
   --footer-muted: #c9d3cf;
 
   --font: "Inter Variable", "Inter Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  /* The story's headings, set like an editorial title. */
-  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   --radius: 16px;
   --gutter: 16px;
   --measure: 68ch;
@@ -345,8 +343,22 @@ main:focus {
 /* The story reaches up under the floating navigation (the header's 80px),
    so the 3D stage fills the whole first screen. */
 .story {
+  /* The story's type is one warm cream, on the stage and over the desk. */
+  --story-ink: #fff6e8;
   position: relative;
   margin-top: -80px;
+  /* The opening spans the full window width, scrollbar included. */
+  overflow-x: clip;
+}
+
+/* The live story shows its own progress tab on the right edge instead of the
+   browser's scrollbar; keyboard and wheel scrolling work as ever. */
+html:has(.story--live) {
+  scrollbar-width: none;
+}
+
+html:has(.story--live)::-webkit-scrollbar {
+  display: none;
 }
 
 .story__stage {
@@ -636,12 +648,12 @@ main:focus {
   right: 16px;
   top: 84px;
   margin: 0;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  color: var(--ink);
-  font-size: 0.85rem;
-  font-weight: 600;
+  color: var(--story-ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.5);
   opacity: 0;
   transform: translateY(8px);
   transition: opacity 0.4s ease, transform 0.4s ease;
@@ -814,12 +826,22 @@ main:focus {
   will-change: transform;
 }
 
+/* Titles are set large and tight in the site's own grotesque; the text under
+   them is small and quiet. */
 .story__text h2 {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(2.1rem, 3.8vw, 3rem);
-  line-height: 1.04;
-  letter-spacing: -0.01em;
+  margin-bottom: 0.45em;
+  color: var(--story-ink);
+  font-weight: 600;
+  font-size: clamp(2.3rem, 4.5vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.story__text p {
+  max-width: 25rem;
+  color: color-mix(in srgb, var(--story-ink) 80%, transparent);
+  font-size: 1rem;
+  line-height: 1.45;
 }
 
 .story:not(.story--stills) .story__beat:not([data-in]) .story__line > span {
@@ -862,20 +884,26 @@ main:focus {
   bottom: 3svh;
   width: min(40rem, calc(100% - 32px));
   margin: 0;
-  padding: 12px 20px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  backdrop-filter: blur(10px);
+  color: var(--story-ink);
   text-align: center;
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.55);
   opacity: var(--caption, 0);
   transform: translate(-50%, calc((1 - var(--caption, 0)) * 12px));
   pointer-events: none;
 }
 
-/* Under the freshly printed mug, below the giant line. */
+/* Under the freshly printed mug, below the giant line: a few short lines in capitals. */
 .story__caption--reveal {
-  bottom: 7svh;
-  width: min(30rem, calc(100% - 32px));
+  bottom: 9svh;
+  width: min(24rem, calc(100% - 32px));
+}
+
+.story__caption.story__caption--reveal p {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
 }
 
 :root[data-story-still] .story__caption--reveal {
@@ -888,9 +916,11 @@ main:focus {
 }
 
 .story__caption .story__caption-title {
-  margin-bottom: 4px;
-  font-size: 1.15rem;
-  font-weight: 700;
+  margin-bottom: 6px;
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
 /* Shown once the parts can be dragged. */
@@ -1229,13 +1259,10 @@ main:focus {
 
 .story__chapters ol {
   display: flex;
-  gap: 2px;
+  gap: 14px;
   margin: 0;
-  padding: 4px;
+  padding: 0;
   list-style: none;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  backdrop-filter: blur(8px);
 }
 
 .story__chapters button {
@@ -1243,21 +1270,23 @@ main:focus {
   align-items: baseline;
   gap: 6px;
   margin: 0;
-  padding: 4px 10px;
+  padding: 4px 0;
   border: 0;
-  border-radius: 999px;
   background: transparent;
-  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  color: color-mix(in srgb, var(--story-ink) 60%, transparent);
   font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.5);
   cursor: pointer;
   transition: color 0.3s ease;
 }
 
 .story__chapters button:hover,
 .story__chapters button[aria-current] {
-  color: var(--ink);
+  color: var(--story-ink);
 }
 
 .story__chapters button:focus-visible {
@@ -1266,7 +1295,6 @@ main:focus {
 }
 
 .story__chapter-number {
-  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1275,7 +1303,8 @@ main:focus {
 }
 
 .story__chapter-name {
-  background: linear-gradient(currentColor, currentColor) left bottom / 0 1.5px no-repeat;
+  padding-bottom: 3px;
+  background: repeating-linear-gradient(90deg, currentColor 0 2px, transparent 2px 4px) left bottom / 0 1.5px no-repeat;
   transition: background-size 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -1290,28 +1319,18 @@ main:focus {
   }
 }
 
-/* A thin bar down the right edge fills as the story goes on. */
+/* A cream tab on the right edge travels down the screen as the story goes on. */
 .story__progress {
+  --tab: min(22svh, 200px);
   position: absolute;
-  top: 50%;
-  right: 12px;
-  width: 2px;
-  height: min(40svh, 320px);
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--ink) 14%, transparent);
-  transform: translateY(-50%);
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: var(--tab);
+  background: var(--story-ink);
+  transform: translateY(calc(var(--progress, 0) * (100svh - var(--tab))));
   opacity: calc(1 - var(--fade, 0));
   pointer-events: none;
-}
-
-.story__progress::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--teal);
-  transform: scaleY(var(--progress, 0));
-  transform-origin: top;
 }
 
 /* At the top of the page: a nudge to start scrolling. */
@@ -1323,7 +1342,7 @@ main:focus {
   align-items: center;
   gap: 10px;
   margin: 0;
-  color: #fff6e8;
+  color: var(--story-ink);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -2764,7 +2783,7 @@ main:focus {
    frosted card at the bottom left. The desk looks the same in both themes,
    so these words stay warm white with a soft shadow. */
 .story__hero {
-  --hero-ink: #fff6e8;
+  --hero-ink: var(--story-ink);
   display: flex;
   flex-direction: column;
   gap: 16px;

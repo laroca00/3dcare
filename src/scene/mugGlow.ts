@@ -1,7 +1,7 @@
 // While the visitor touches the freshly printed mug (or a hand holds it), the
-// whole background lights up: colour washes in from the edges of the frame,
-// its hue slowly running through the spectrum, with a large soft light
-// drifting round the picture (after the "glowing shadow" effect). It is a
+// whole background lights up: the room's teal washes in from the edges of the
+// frame, warming a little as it goes, with a large soft light drifting round
+// the picture. It is a
 // backdrop: it stands behind the giant line, filling the view, so the mug,
 // the hand and the line all stay in front of it, and the middle is left
 // darker so they read clearly.
@@ -32,22 +32,17 @@ export function createMugGlow(theme: Theme): MugGlow {
       uniform float light;
       uniform float aspect;
       varying vec2 vUv;
-      vec3 hue(float h) {
-        vec3 k = vec3(0.0, 2.0 / 3.0, 1.0 / 3.0);
-        return clamp(abs(fract(h + k) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
-      }
       void main() {
         vec2 p = (vUv - 0.5) * vec2(aspect, 1.0);
-        float h = time / 8.0;
         // Colour rises towards the edges of the frame; the middle stays clear.
         float edge = smoothstep(0.18, 0.75, length(p * vec2(0.8, 1.15)));
         // A large soft light drifts round the picture once every nine seconds.
         float a = time * 6.2831853 / 9.0;
         vec2 c = vec2(cos(a) * 0.55 * aspect, sin(a) * 0.32);
         float spot = exp(-dot(p - c, p - c) * 3.2);
-        // Two hues a third of the wheel apart, mixed across the frame.
-        vec3 tint = mix(hue(h), hue(h + 0.33), 0.5 + 0.5 * sin(atan(p.y, p.x) + time * 0.4));
-        float strength = clamp(edge * 0.75 + spot * 0.65, 0.0, 1.0) * amount;
+        // The room's teal, with a little warm cream where the light passes.
+        vec3 tint = mix(vec3(0.05, 0.42, 0.38), vec3(0.5, 0.42, 0.3), spot * 0.6 + 0.12 * sin(atan(p.y, p.x) + time * 0.4));
+        float strength = clamp(edge * 0.55 + spot * 0.5, 0.0, 1.0) * amount;
         gl_FragColor = light > 0.5
           ? vec4(mix(vec3(1.0), tint, 0.55), strength * 0.55)
           : vec4(tint * strength * 0.9, strength);

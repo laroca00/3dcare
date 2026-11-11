@@ -5,6 +5,24 @@ Fikirler Derneği) under WP5, Activity 5.1 (Dissemination of Project Results
 and Stakeholder Outreach). Every change is also recorded in the commit history
 of this repository: https://github.com/laroca00/3dcare/commits/main
 
+## 2026-11-11
+
+### One room, one voice
+- The home story now plays in one room from start to finish: a warm
+  near-black stage with a teal glow in its lower left corner. The violet,
+  ink-blue and blueprint backgrounds are gone; only the lamps change from
+  scene to scene.
+- The giant line behind the freshly printed mug is plain cream lettering
+  instead of a neon glow, and the light that washes in when the mug is
+  touched stays in the room's teal instead of running through the rainbow.
+- Story titles are set large and tight in Inter again, with small quiet
+  text under them; Instrument Serif is no longer loaded.
+- Captions, hints and the four chapter tabs are plain capitals on the stage,
+  without boxes; the current chapter has a dotted underline.
+- A cream tab on the right edge travels down the screen with the story and
+  takes the place of the browser's scrollbar on the home page. The page no
+  longer scrolls sideways.
+
 ## 2026-10-27
 
 ### The shading stays

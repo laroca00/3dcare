@@ -1,8 +1,8 @@
-// The story told in light: a cool blueprint at the start, a neutral studio when
-// the printer appears, a focused workshop while it is apart, a slightly warmer
-// room while it prints, darkness round the freshly printed mug, a thermal
-// camera's cold violet, the blueprint again for its plan, a warm cream room
-// for its material, and a sunny morning at the end.
+// The story told in light. In the dark theme it is one room throughout: a
+// warm near-black with a teal glow in its lower left corner. Only the lamps
+// change: cooler for the drawing and the plan, one strong light while the
+// printer is apart, a strong rim round the freshly printed mug, almost none
+// for the thermal camera, warm for the material, and a sunny morning at the end.
 import type { Theme } from "../theme/theme";
 import { mixStudio, type StudioValues } from "./studioMix.ts";
 import { at, smoothstep } from "./timeline.ts";
@@ -10,9 +10,9 @@ import { at, smoothstep } from "./timeline.ts";
 export type Mood = "desk" | "blueprint" | "studio" | "workshop" | "printing" | "hero" | "thermal" | "material" | "morning";
 
 const DARK_STUDIO: StudioValues = {
-  background: 0x101416,
-  glow: 0x0f3b3c,
-  glowStrength: 0.85,
+  background: 0x131413,
+  glow: 0x0d4641,
+  glowStrength: 0.9,
   key: 0xe4efff,
   keyIntensity: 3.6,
   rim: 0x6fe0cf,
@@ -39,16 +39,15 @@ export const MOODS: Record<Theme, Record<Mood, StudioValues>> = {
   dark: {
     // The opening desk: warm afternoon light, soft fill, no cool tint.
     desk: { ...DARK_STUDIO, background: 0x1c140d, glow: 0x3a2716, glowStrength: 0.8, key: 0xfff0de, keyIntensity: 1.1, rim: 0xffe2c4, rimIntensity: 0.8, fill: 0.3, env: 0.42, shadow: 0.8 },
-    blueprint: { ...DARK_STUDIO, background: 0x0b1420, glow: 0x123352, key: 0xcfe0ff, keyIntensity: 3, rim: 0x7fbfff, fill: 0.36 },
+    blueprint: { ...DARK_STUDIO, key: 0xdce8ff, keyIntensity: 3, fill: 0.36 },
     studio: DARK_STUDIO,
     // Darker surroundings, one strong light on the parts.
-    workshop: { ...DARK_STUDIO, background: 0x0b0e10, glow: 0x0c2b2b, glowStrength: 0.7, key: 0xf4f7ff, keyIntensity: 4.6, fill: 0.16, env: 0.5 },
-    printing: { ...DARK_STUDIO, background: 0x121514, glow: 0x183530, key: 0xfff0dd, fill: 0.28 },
+    workshop: { ...DARK_STUDIO, background: 0x0e0f0e, glow: 0x0b3330, glowStrength: 0.75, key: 0xf4f7ff, keyIntensity: 4.6, fill: 0.16, env: 0.5 },
+    printing: { ...DARK_STUDIO, key: 0xfff0dd, fill: 0.28 },
     // The printer goes into the dark; one light and a strong rim on the mug.
-    // Deep ink blue with a violet glow, so the teal mug and line stand out.
-    hero: { ...DARK_STUDIO, background: 0x050a18, glow: 0x3a2580, glowStrength: 1, keyIntensity: 3.2, rimIntensity: 5.5, fill: 0.1, env: 0.4 },
+    hero: { ...DARK_STUDIO, background: 0x100f0e, glow: 0x0d4f49, glowStrength: 1, keyIntensity: 3.2, rimIntensity: 5.5, fill: 0.1, env: 0.4 },
     // Seen through a thermal camera, everything round the warm mug is cold.
-    thermal: { ...DARK_STUDIO, background: 0x08051a, glow: 0x2a0e4a, glowStrength: 0.8, keyIntensity: 1.2, rimIntensity: 1.5, fill: 0.1, env: 0.2 },
+    thermal: { ...DARK_STUDIO, background: 0x0e0e0e, glow: 0x0b2b29, glowStrength: 0.7, keyIntensity: 1.2, rimIntensity: 1.5, fill: 0.1, env: 0.2 },
     // Warm and dim, with sunlight filtering through leaves.
     material: { ...DARK_STUDIO, background: 0x16120d, glow: 0x3b2c15, glowStrength: 0.8, key: 0xffe2b8, keyIntensity: 2.6, rim: 0xffd9a0, rimIntensity: 2.5, fill: 0.22 },
     // Studio lights dim so the sunbeam through the window reads on the table.

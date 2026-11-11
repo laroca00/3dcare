@@ -335,7 +335,8 @@ export function createStudio(
     const c = canvas.getContext("2d")!;
     c.fillStyle = hex(v.background);
     c.fillRect(0, 0, 256, 256);
-    const g = c.createRadialGradient(20, 236, 0, 20, 236, 230);
+    // It stays in its corner; most of the room is left dark.
+    const g = c.createRadialGradient(10, 250, 0, 10, 250, 185);
     g.addColorStop(0, hex(v.glow));
     g.addColorStop(1, hex(v.background));
     c.globalAlpha = v.glowStrength;
