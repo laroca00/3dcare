@@ -377,21 +377,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           if (touching) section.dataset.glow = "1";
           else delete section.dataset.glow;
         },
-        onSelection(box, [width, depth, height]) {
-          // At the start the drawing is "selected", as in a design program, with its size.
-          const selection = selectionRef.current;
-          if (!selection) return;
-          selection.style.visibility = box ? "visible" : "hidden";
-          if (!box) return;
-          selection.style.transform = `translate(${box.x}px, ${box.y}px)`;
-          selection.style.width = `${box.width}px`;
-          selection.style.height = `${box.height}px`;
-          selection.style.opacity = String(box.opacity);
-          selection.dataset.size = `${width} × ${depth} × ${height} cm`;
-          // While the drawing grows, a cursor drags its corner handle.
-          if (box.growing) selection.dataset.growing = "1";
-          else delete selection.dataset.growing;
-        },
         onMug(frame) {
           // The mug's plan and the close-up's scale, drawn over the mug.
           if (planRef.current) drawPlan(planRef.current, frame, shapeRef.current);
@@ -670,15 +655,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         style={{ "--poster": `url(${POSTER.src})` } as CSSProperties}
       >
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
-        {/* At the start the printer's drawing is selected, as in a design program. */}
-        <div className="story__selection" ref={selectionRef} aria-hidden="true" data-file={t.story.selectionFile}>
-          {["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
-            <span key={handle} className={`story__handle story__handle--${handle}`} />
-          ))}
-          <svg className="story__cursor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 3l14 8-6 1.6L10 19z" />
-          </svg>
-        </div>
         {/* The mug's plan: outline, dimensions, and construction circles that gather into the wordmark. */}
         <svg className="story__plan" ref={planRef} aria-hidden="true">
           <path className="story__plan-axis" />

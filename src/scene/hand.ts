@@ -1,41 +1,34 @@
-// A hand that rises under the freshly printed mug and carries it on its palm.
-// The model is "First Person hands rigged" by David Fischer (CC BY 4.0), in cm
-// like the mug; only its right arm is used. The wrist is bent back until the
-// palm faces away from the elbow, as a waiter carries a tray, then the hand is
-// placed so that the palm lies flat under the mug's base with the forearm
-// coming up from below.
+// A hand that rises under the freshly printed mug and holds it up. The model
+// is "First Person hands rigged" by David Fischer (CC BY 4.0), in cm like the
+// mug; only its right arm is used. The forearm comes straight up from below
+// with the hand upright and open, the back of the hand turned three quarters
+// to the camera; the fingers reach up, a little cupped, and the mug stands on
+// their tips.
 import * as THREE from "three";
 import { smoothstep } from "./timeline";
 
 export interface Hand {
   /** Add to the mug, so the hand moves with it. */
   object: THREE.Group;
-  /** reach 0..1: from below the picture to under the mug; grip 0..1: fingers open to cupped round its base. */
+  /** reach 0..1: from below the picture to under the mug; grip 0..1: the fingers settle under its base. */
   update(reach: number, grip: number): void;
   dispose(): void;
 }
 
 const FINGERS = ["index", "middle", "ring", "pinky"] as const;
-/** How far each finger joint bends when the hand cups the mug (radians), knuckle first: the fingertips curl up behind the base. */
-const CUPPED = [0.1, 0.55, 0.5];
-/** While it rises, the hand is held open this much of the way to cupped. */
-const OPEN = 0.25;
-/** How far the wrist bends back (radians). The rest leaves the forearm leaning towards the camera. */
-const WRIST = 1.25;
-/** The palm's skin lies this far above the line of its bones (cm). */
-const PALM_THICKNESS = 1.5;
-/** How far along the palm, from the wrist to the middle knuckle, the mug's centre stands. */
-const PALM_CENTRE = 0.7;
-/** Where the fingers point, seen from above in the mug's frame (the camera is at +z): to the left and away from the camera. */
-const FINGERS_POINT = new THREE.Vector3(-0.8, 0, -0.6).normalize();
+/** How far each finger joint bends when the hand holds the mug (radians), knuckle first: open, a little cupped. */
+const HOLDING = [0.3, 0.3, 0.25];
+/** While it rises, the fingers are cupped this much of the way. */
+const OPEN = 0.3;
+/** Where the palm faces, in the mug's frame (the camera is at +z): away from the camera, turned a little so the thumb's side shows. */
+const PALM_FACES = new THREE.Vector3(-0.6, 0, -0.8).normalize();
 /** How far below the hand starts (cm). */
 const AWAY = 46;
 
 /**
  * Skin detail, made in code and tiled over the hand: a height field of fine
- * pores and creases turned into a normal map, slight blotches of colour, and
- * a roughness that varies with them, so the skin catches the light unevenly
- * as real skin does.
+ * pores and creases turned into a faint normal map, and the slightest
+ * unevenness of colour, so the skin is smooth without looking like plastic.
  */
 function skinMaps() {
   const N = 256;
@@ -81,7 +74,7 @@ function skinMaps() {
     c.putImageData(image, 0, 0);
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(14, 14);
+    texture.repeat.set(26, 26);
     if (colour) texture.colorSpace = THREE.SRGBColorSpace;
     return texture;
   };
@@ -100,16 +93,11 @@ function skinMaps() {
     const b = blotch(x, y);
     const v = 0.92 + h(x, y) * 0.08;
     d[i] = Math.min(255, 255 * v);
-    d[i + 1] = Math.min(255, (232 - b * 26) * v);
-    d[i + 2] = Math.min(255, (222 - b * 34) * v);
+    d[i + 1] = Math.min(255, (240 - b * 12) * v);
+    d[i + 2] = Math.min(255, (232 - b * 16) * v);
     d[i + 3] = 255;
   }, true);
-  const roughnessMap = make((d, i, x, y) => {
-    const r = 150 + (pores(x, y) - 0.5) * 70 + blotch(x, y) * 30;
-    d[i] = d[i + 1] = d[i + 2] = r;
-    d[i + 3] = 255;
-  }, false);
-  return { map, normalMap, roughnessMap };
+  return { map, normalMap };
 }
 
 export async function loadHand(url: string): Promise<Hand> {
@@ -128,22 +116,19 @@ export async function loadHand(url: string): Promise<Hand> {
       // creases; the small mesh is the nails, paler and a little glossy.
       const old = mesh.material as THREE.MeshStandardMaterial;
       const nails = mesh.geometry.getAttribute("position").count < 1000;
-      // A deep skin tone that sits in the room's low light, lit mostly by its rim.
+      // Deep, smooth skin that sits in the room's low light: a soft sheen on
+      // its curves, the faintest pores, and paler, glossier nails.
       mesh.material = nails
-        ? new THREE.MeshPhysicalMaterial({ color: 0xb98a76, roughness: 0.35, clearcoat: 0.4, clearcoatRoughness: 0.3 })
+        ? new THREE.MeshPhysicalMaterial({ color: 0x9a7466, roughness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.25 })
         : new THREE.MeshPhysicalMaterial({
-        color: 0x74503f,
+        color: 0x4f3329,
         map: skin.map,
         normalMap: skin.normalMap,
-        normalScale: new THREE.Vector2(0.1, 0.1),
-        roughnessMap: skin.roughnessMap,
-        roughness: 1,
+        normalScale: new THREE.Vector2(0.035, 0.035),
+        roughness: 0.52,
         metalness: 0,
-        sheen: 0.5,
-        sheenRoughness: 0.4,
-        sheenColor: new THREE.Color(0xd99a7c),
-        clearcoat: 0.08,
-        clearcoatRoughness: 0.6,
+        clearcoat: 0.12,
+        clearcoatRoughness: 0.5,
       });
       old.dispose();
       // The skinned arm moves far from its bind pose, so its box would cull it wrongly.
@@ -154,55 +139,42 @@ export async function loadHand(url: string): Promise<Hand> {
 
   // Only the right arm: the left one is folded away to nothing.
   bone("clavicleL").scale.setScalar(1e-4);
+  // (Its hand hangs on a chain of its own.)
+  bone("forearmL001").scale.setScalar(1e-4);
 
   const joints = FINGERS.map((f) => [1, 2, 3].map((j) => bone(`f_${f}0${j}R`)));
   const thumb = [1, 2, 3].map((j) => bone(`thumb0${j}R`));
   const rest = new Map([...joints.flat(), ...thumb].map((b) => [b, b.rotation.x]));
 
-  /** Bends the fingers: 0 as the model rests, 1 cupped round the mug's base. */
+  /** Bends the fingers: 0 as the model rests, 1 cupped under the mug. */
   function curl(amount: number) {
-    joints.forEach((finger) => finger.forEach((b, j) => (b.rotation.x = rest.get(b)! + CUPPED[j] * amount)));
-    thumb.forEach((b, j) => (b.rotation.x = rest.get(b)! + [0.1, 0.3, 0.25][j] * amount));
+    joints.forEach((finger) => finger.forEach((b, j) => (b.rotation.x = rest.get(b)! + HOLDING[j] * amount)));
+    thumb.forEach((b, j) => (b.rotation.x = rest.get(b)! + [0.15, 0.35, 0.3][j] * amount));
   }
 
   const at = (b: THREE.Bone) => b.getWorldPosition(new THREE.Vector3());
-  const wristBone = bone("handR");
-  const middle = joints[1][0];
-  /** The hand's own directions: along the fingers, and out of the palm. */
-  function palmFrame() {
-    model.updateMatrixWorld(true);
-    const wrist = at(wristBone);
-    const knuckle = at(middle);
-    const along = knuckle.clone().sub(wrist).normalize();
-    const across = at(joints[0][0]).sub(at(joints[3][0])).normalize();
-    const out = along.clone().cross(across).normalize();
-    return { wrist, knuckle, along, out };
-  }
-  // Which side the palm is on: the side the fingertips curl towards.
-  curl(3);
-  const curled = at(bone("f_middle03R_end")).sub(at(middle));
-  curl(0);
-  let frame = palmFrame();
-  const side = Math.sign(frame.out.dot(curled)) || 1;
-  // Bend the wrist back: the fingers swing towards the back of the hand.
-  const backwards = frame.along.clone().cross(frame.out.clone().multiplyScalar(-side)).normalize();
-  const parentTurn = wristBone.parent!.getWorldQuaternion(new THREE.Quaternion());
-  const turned = new THREE.Quaternion().setFromAxisAngle(backwards, WRIST).multiply(wristBone.getWorldQuaternion(new THREE.Quaternion()));
-  wristBone.quaternion.copy(parentTurn.invert().multiply(turned));
-
-  // Turn the model so the palm faces up and the fingers point where they
-  // should, with the mug's base centre on the palm.
+  // The hand's own directions, measured as the model rests: up the forearm
+  // into the hand, and out of the palm (the side the fingertips curl towards).
+  model.updateMatrixWorld(true);
+  const wrist = at(bone("handR"));
+  const upHand = wrist.clone().sub(at(bone("forearmR"))).normalize();
+  const across = at(joints[0][0]).sub(at(joints[3][0])).normalize();
+  const out = upHand.clone().cross(across).normalize();
   curl(1);
-  frame = palmFrame();
-  const up = frame.out.multiplyScalar(side);
-  const along = frame.along.addScaledVector(up, -frame.along.dot(up)).normalize();
-  const centre = frame.wrist.lerp(frame.knuckle, PALM_CENTRE).addScaledVector(up, PALM_THICKNESS);
-  const from = new THREE.Matrix4().makeBasis(up.clone().cross(along), up, along);
+  model.updateMatrixWorld(true);
+  if (out.dot(at(bone("f_middle03R_end")).sub(at(joints[1][0]))) < 0) out.negate();
+  // The mug stands on the four fingertips.
+  const seat = new THREE.Vector3();
+  for (const f of FINGERS) seat.add(at(bone(`f_${f}03R_end`)));
+  seat.multiplyScalar(1 / 4);
+  // Turn the model so the forearm stands upright under the mug, the palm
+  // faces where it should, and the seat is at the middle of the mug's base.
+  const from = new THREE.Matrix4().makeBasis(upHand.clone().cross(out), upHand, out);
   const Y = new THREE.Vector3(0, 1, 0);
-  const to = new THREE.Matrix4().makeBasis(Y.clone().cross(FINGERS_POINT), Y, FINGERS_POINT);
+  const to = new THREE.Matrix4().makeBasis(Y.clone().cross(PALM_FACES), Y, PALM_FACES);
   const placed = new THREE.Group();
   placed.add(model);
-  model.applyMatrix4(to.multiply(from.invert()).multiply(new THREE.Matrix4().makeTranslation(-centre.x, -centre.y, -centre.z)));
+  model.applyMatrix4(to.multiply(from.invert()).multiply(new THREE.Matrix4().makeTranslation(-seat.x, -seat.y, -seat.z)));
 
   const object = new THREE.Group();
   object.add(placed);
@@ -210,11 +182,13 @@ export async function loadHand(url: string): Promise<Hand> {
 
   return {
     object,
-    update(reach, cupped) {
+    update(reach, holding) {
       object.visible = reach > 0.001;
       if (!object.visible) return;
-      object.position.y = -(1 - smoothstep(reach)) * AWAY;
-      curl(OPEN + (1 - OPEN) * smoothstep(cupped));
+      const settled = smoothstep(holding);
+      // It stops just short of the mug, then the fingertips come up under its base.
+      object.position.y = -(1 - smoothstep(reach)) * AWAY - (1 - settled) * 1.5;
+      curl(OPEN + (1 - OPEN) * settled);
     },
     dispose() {
       model.traverse((o) => {

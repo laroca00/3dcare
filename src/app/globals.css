@@ -510,68 +510,6 @@ html:has(.story--live)::-webkit-scrollbar {
   cursor: pointer;
 }
 
-/* At the start the printer's drawing is selected, as in a design program:
-   a thin frame with eight handles, the file name above and the size below. */
-.story__selection {
-  position: absolute;
-  left: 0;
-  top: 0;
-  visibility: hidden;
-  border: 1px solid var(--violet);
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-.story__selection::before,
-.story__selection::after {
-  position: absolute;
-  left: -1px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.story__selection::before {
-  content: attr(data-file);
-  bottom: calc(100% + 6px);
-  background: var(--violet);
-  color: #fff;
-}
-
-.story__selection::after {
-  content: attr(data-size);
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--violet);
-  font-variant-numeric: tabular-nums;
-}
-
-.story__handle {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  margin: -4px 0 0 -4px;
-  border: 1px solid var(--violet);
-  background: var(--paper);
-}
-
-.story__handle--nw { left: 0; top: 0; }
-.story__handle--n { left: 50%; top: 0; }
-.story__handle--ne { left: 100%; top: 0; }
-.story__handle--e { left: 100%; top: 50%; }
-.story__handle--se { left: 100%; top: 100%; }
-.story__handle--s { left: 50%; top: 100%; }
-.story__handle--sw { left: 0; top: 100%; }
-.story__handle--w { left: 0; top: 50%; }
-
-.story--stills .story__selection,
-:root[data-story-still] .story__selection {
-  display: none;
-}
-
 /* The mug's plan, drawn over its side: outline, axis, dimensions, and the
    construction circles that gather into the wordmark above it. Positions are
    set from script each frame. */
@@ -2634,33 +2572,6 @@ html:has(.story--live)::-webkit-scrollbar {
   :root:not([data-theme="dark"]) .story:not(.story--stills) .story__beat:not(.story__beat--intro) .story__text {
     text-shadow: 0 0 2px var(--paper), 0 0 22px var(--paper);
   }
-}
-
-/* The opening: while the printer's drawing grows, a cursor drags its corner
-   handle, as in a design program. */
-.story__cursor {
-  position: absolute;
-  left: 100%;
-  top: 100%;
-  width: 26px;
-  height: 26px;
-  margin: 2px 0 0 2px;
-  fill: #fff;
-  stroke: #15232b;
-  stroke-width: 1.6;
-  stroke-linejoin: round;
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.35));
-}
-
-.story__selection[data-growing] .story__cursor {
-  opacity: 1;
-}
-
-.story__selection[data-growing] .story__handle--se {
-  background: var(--violet);
-  transform: scale(1.4);
 }
 
 /* The pencil and the ruler can be picked up. */

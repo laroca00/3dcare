@@ -69,12 +69,6 @@ export interface SceneOptions {
    * (top left, top right, bottom left, bottom right), while the camera is up close to it.
    */
   onScreen?: (corners: [Point, Point, Point, Point] | null) => void;
-  /**
-   * Called after each frame with where the printer's drawing is on the canvas,
-   * for the selection box drawn round it at the start (null once it has gone),
-   * and its size in cm (width, depth, height).
-   */
-  onSelection?: (box: { x: number; y: number; width: number; height: number; opacity: number; growing: boolean } | null, size: [number, number, number]) => void;
   /** Called when the pointer moves onto or off the freshly printed mug (or a finger presses it), while it stands in front of the giant line. */
   onTouchMug?: (touching: boolean) => void;
   /** Called after each frame with where the mug is on the canvas, while its plan or its layers are shown (null otherwise). */
@@ -210,8 +204,10 @@ const REVEAL_FORWARD = 22;
 const REVEAL_SLIDE = 80;
 const REVEAL_ASIDE = 105;
 /** While the hand carries the mug: how far the camera rises, and how far below the mug's middle it aims (cm). */
-const HELD_RISE = 9;
-const HELD_DROP = 3.5;
+const HELD_RISE = 4;
+const HELD_DROP = 6.5;
+/** ...and how much further back it stands, so the mug, the hand and the forearm all fit. */
+const HELD_BACK = 0.22;
 /** How far the camera is from the mug then; narrow screens need more room for the handles. */
 const REVEAL_DISTANCE_WIDE = 54;
 const REVEAL_DISTANCE_NARROW = 82;
@@ -258,11 +254,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
 
   const printer = buildPrinter(opts.quality);
   // The printer's own size (before the drawing and the print are added to it),
-  // for the selection box round its drawing at the start.
+  // for laying the paper under its drawing.
   printer.root.updateMatrixWorld(true);
-  const printerBox = new THREE.Box3().setFromObject(printer.root).applyMatrix4(printer.root.matrixWorld.clone().invert());
-  const printerSize = printerBox.getSize(new THREE.Vector3());
-  const sizeCm: [number, number, number] = [Math.round(printerSize.x), Math.round(printerSize.z), Math.round(printerSize.y)];
+  const printerSize = new THREE.Box3().setFromObject(printer.root).getSize(new THREE.Vector3());
   opts.onProgress?.(0.3);
   await yieldToMain();
   const stage = new THREE.Group();
@@ -530,9 +524,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // centres it, leaving the printer behind in the dark.
     const hero = smoothstep(reveal);
     mugMiddle.copy(mug).y += (LAYERS * LAYER_HEIGHT) / 2;
-    revealView.copy(mugMiddle).addScaledVector(revealDir, wide ? REVEAL_DISTANCE_WIDE : REVEAL_DISTANCE_NARROW).y += 3;
-    // While the hand carries the mug, the camera stands a little higher and
-    // aims a little lower, so the palm under the mug and the forearm show.
+    revealView.copy(mugMiddle).addScaledVector(revealDir, (wide ? REVEAL_DISTANCE_WIDE : REVEAL_DISTANCE_NARROW) * (1 + HELD_BACK * held)).y += 3;
+    // While the hand holds the mug up, the camera stands a little higher and
+    // further back and aims lower, so the hand and the forearm show under it.
     revealView.y += HELD_RISE * held;
     camera.position.lerp(revealView, hero);
     lookAt.copy(home).lerp(mugMiddle, hero);
@@ -626,28 +620,6 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       return [((corner.x + 1) / 2) * w, ((1 - corner.y) / 2) * h] as Point;
     });
     opts.onScreen(corners as [Point, Point, Point, Point]);
-  }
-
-  const boxCorner = new THREE.Vector3();
-  /** Reports the outline of the drawing's footprint on the mat, while the selection box shows. */
-  function updateSelection(opacity: number, grow: number) {
-    if (!opts.onSelection) return;
-    if (opacity <= 0 || grow <= 0) return opts.onSelection(null, sizeCm);
-    const { clientWidth: w, clientHeight: h } = canvas;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (let i = 0; i < 4; i++) {
-      boxCorner.set(i & 1 ? printerBox.max.x : printerBox.min.x, printerBox.min.y, i & 2 ? printerBox.max.z : printerBox.min.z);
-      printer.root.localToWorld(boxCorner).project(camera);
-      const x = ((boxCorner.x + 1) / 2) * w;
-      const y = ((1 - boxCorner.y) / 2) * h;
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
-    }
-    // While the drawing grows, its size counts up with it.
-    const size = sizeCm.map((cm) => Math.round(cm * printer.root.scale.x)) as [number, number, number];
-    opts.onSelection({ x: minX, y: minY, width: maxX - minX, height: maxY - minY, opacity, growing: grow < 1 }, size);
   }
 
   const onScreen = (v: THREE.Vector3): Point => {
@@ -1184,8 +1156,6 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       renderer.render(scene, camera);
     }
     updateLabels(apart);
-    // The sketch on paper needs no design-program selection box.
-    updateSelection(0, 1);
     updateScreen(zoom);
     updateMug(looks);
     if (transitioning || turning || steaming || drifting || focusing || breathing || glowing || growing || deskMoving) handle.invalidate();
