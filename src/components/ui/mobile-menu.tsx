@@ -2,7 +2,6 @@
 
 import type * as React from "react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTitle } from "./sheet";
 
 type Item = { href: string; label: string; active: boolean };
@@ -49,7 +48,7 @@ export default function MobileMenu({
                   href={item.href}
                   aria-current={item.active ? "page" : undefined}
                   onClick={close}
-                  className={cn(linkClass, "px-4 py-3 text-base")}
+                  className={linkClass}
                 >
                   {item.label}
                 </Link>

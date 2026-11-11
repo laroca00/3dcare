@@ -69,12 +69,6 @@ export interface SceneOptions {
    * (top left, top right, bottom left, bottom right), while the camera is up close to it.
    */
   onScreen?: (corners: [Point, Point, Point, Point] | null) => void;
-  /**
-   * Called after each frame with where the printer's drawing is on the canvas,
-   * for the selection box drawn round it at the start (null once it has gone),
-   * and its size in cm (width, depth, height).
-   */
-  onSelection?: (box: { x: number; y: number; width: number; height: number; opacity: number; growing: boolean } | null, size: [number, number, number]) => void;
   /** Called when the pointer moves onto or off the freshly printed mug (or a finger presses it), while it stands in front of the giant line. */
   onTouchMug?: (touching: boolean) => void;
   /** Called after each frame with where the mug is on the canvas, while its plan or its layers are shown (null otherwise). */
@@ -209,6 +203,11 @@ const REVEAL_FORWARD = 22;
 /** How far the printer slides back into the dark behind it, and aside, out of the giant line's way. */
 const REVEAL_SLIDE = 80;
 const REVEAL_ASIDE = 105;
+/** While the hand carries the mug: how far the camera rises, and how far below the mug's middle it aims (cm). */
+const HELD_RISE = 4;
+const HELD_DROP = 6.5;
+/** ...and how much further back it stands, so the mug, the hand and the forearm all fit. */
+const HELD_BACK = 0.22;
 /** How far the camera is from the mug then; narrow screens need more room for the handles. */
 const REVEAL_DISTANCE_WIDE = 54;
 const REVEAL_DISTANCE_NARROW = 82;
@@ -255,11 +254,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
 
   const printer = buildPrinter(opts.quality);
   // The printer's own size (before the drawing and the print are added to it),
-  // for the selection box round its drawing at the start.
+  // for laying the paper under its drawing.
   printer.root.updateMatrixWorld(true);
-  const printerBox = new THREE.Box3().setFromObject(printer.root).applyMatrix4(printer.root.matrixWorld.clone().invert());
-  const printerSize = printerBox.getSize(new THREE.Vector3());
-  const sizeCm: [number, number, number] = [Math.round(printerSize.x), Math.round(printerSize.z), Math.round(printerSize.y)];
+  const printerSize = new THREE.Box3().setFromObject(printer.root).getSize(new THREE.Vector3());
   opts.onProgress?.(0.3);
   await yieldToMain();
   const stage = new THREE.Group();
@@ -336,13 +333,19 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const bokeh = new BokehPass(scene, depthCamera, { focus: 100, aperture: 0, maxblur: 0.012 });
   const focusUniforms = bokeh.uniforms as Record<"focus" | "aperture" | "maxblur", THREE.IUniform<number>>;
   const lens = new ShaderPass(LensShader);
-  // At full quality the scene is drawn through a temporal anti-aliasing pass:
-  // while anything moves it renders normally (with MSAA); once the picture
-  // holds still, it blends 32 slightly shifted renders over the next frames,
-  // so thin lines and edges come out clean.
+  // While anything moves the scene is drawn once, plainly (with MSAA at full
+  // quality). At full quality, once the picture holds still, a temporal
+  // anti-aliasing pass takes over and blends 32 slightly shifted renders
+  // over the next frames, so thin lines and edges come out clean. (Left on
+  // while moving, that pass would draw the whole scene twice every frame.)
+  const plain = new RenderPass(scene, camera);
+  composer.addPass(plain);
   const taa = opts.quality === 2 ? new TAARenderPass(scene, camera) : null;
-  if (taa) taa.sampleLevel = 1;
-  composer.addPass(taa ?? new RenderPass(scene, camera));
+  if (taa) {
+    taa.sampleLevel = 1;
+    taa.enabled = false;
+    composer.addPass(taa);
+  }
   // Ambient occlusion on the opening desk: the soft contact shadow where
   // things meet the wood and the mat (and each other), as in a photograph.
   // Full quality only, and only while the desk is in view.
@@ -389,17 +392,22 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // Slowed down from full quality, resolution goes first (the anti-aliasing keeps edges clean).
     const ratio = level === 2 ? 2 : level === 1 && opts.quality !== 2 ? 1.5 : 1;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, ratio));
-    // The glow and the floor reflection are the first to go on a slow device.
+    // The glow (and the floor reflection, see the frame) is the first to go on a slow device.
     for (const pass of glowPasses) pass.enabled = level === 2;
-    studio.setReflection(level === 2);
     composer.setPixelRatio(renderer.getPixelRatio());
   }
   applyPixelRatio(quality.level);
 
   let wide = true;
+  // The canvas's size in CSS pixels, kept from the last resize: asking the
+  // page for it every frame would make it lay itself out again each time.
+  let viewW = 1;
+  let viewH = 1;
   function resize() {
     const { clientWidth: w, clientHeight: h } = canvas;
     if (!w || !h) return;
+    viewW = w;
+    viewH = h;
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
     drawing.setResolution(w, h);
@@ -504,7 +512,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const wallPoint = new THREE.Vector3();
   const macroView = new THREE.Vector3();
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number, looks: ReturnType<typeof heroLooks>, pk: ReturnType<typeof packageMotion>) {
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number, looks: ReturnType<typeof heroLooks>, pk: ReturnType<typeof packageMotion>, held: number) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -527,9 +535,13 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // centres it, leaving the printer behind in the dark.
     const hero = smoothstep(reveal);
     mugMiddle.copy(mug).y += (LAYERS * LAYER_HEIGHT) / 2;
-    revealView.copy(mugMiddle).addScaledVector(revealDir, wide ? REVEAL_DISTANCE_WIDE : REVEAL_DISTANCE_NARROW).y += 3;
+    revealView.copy(mugMiddle).addScaledVector(revealDir, (wide ? REVEAL_DISTANCE_WIDE : REVEAL_DISTANCE_NARROW) * (1 + HELD_BACK * held)).y += 3;
+    // While the hand holds the mug up, the camera stands a little higher and
+    // further back and aims lower, so the hand and the forearm show under it.
+    revealView.y += HELD_RISE * held;
     camera.position.lerp(revealView, hero);
     lookAt.copy(home).lerp(mugMiddle, hero);
+    lookAt.y -= HELD_DROP * held;
     // On narrow screens the text fills the top, so the desk sits lower in the view.
     if (above > 0) lookAt.lerp(deskTarget, smoothstep(above));
     if (!wide && above > 0) lookAt.z -= smoothstep(above) * 30;
@@ -612,7 +624,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     if (!opts.onScreen) return;
     if (zoom < 0.5) return opts.onScreen(null);
     camera.updateMatrixWorld();
-    const { clientWidth: w, clientHeight: h } = canvas;
+    const w = viewW;
+    const h = viewH;
     const corners = SCREEN_CORNERS.map(([sx, sy]) => {
       corner.set((sx * SCREEN_SIZE.width) / 2, (sy * SCREEN_SIZE.height) / 2, 0.01);
       printer.screen.localToWorld(corner).project(camera);
@@ -621,32 +634,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     opts.onScreen(corners as [Point, Point, Point, Point]);
   }
 
-  const boxCorner = new THREE.Vector3();
-  /** Reports the outline of the drawing's footprint on the mat, while the selection box shows. */
-  function updateSelection(opacity: number, grow: number) {
-    if (!opts.onSelection) return;
-    if (opacity <= 0 || grow <= 0) return opts.onSelection(null, sizeCm);
-    const { clientWidth: w, clientHeight: h } = canvas;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (let i = 0; i < 4; i++) {
-      boxCorner.set(i & 1 ? printerBox.max.x : printerBox.min.x, printerBox.min.y, i & 2 ? printerBox.max.z : printerBox.min.z);
-      printer.root.localToWorld(boxCorner).project(camera);
-      const x = ((boxCorner.x + 1) / 2) * w;
-      const y = ((1 - boxCorner.y) / 2) * h;
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
-    }
-    // While the drawing grows, its size counts up with it.
-    const size = sizeCm.map((cm) => Math.round(cm * printer.root.scale.x)) as [number, number, number];
-    opts.onSelection({ x: minX, y: minY, width: maxX - minX, height: maxY - minY, opacity, growing: grow < 1 }, size);
-  }
-
   const onScreen = (v: THREE.Vector3): Point => {
-    const { clientWidth: w, clientHeight: h } = canvas;
     v.project(camera);
-    return [((v.x + 1) / 2) * w, ((1 - v.y) / 2) * h];
+    return [((v.x + 1) / 2) * viewW, ((1 - v.y) / 2) * viewH];
   };
   const mugPoint = new THREE.Vector3();
   const mugAcross = new THREE.Vector3();
@@ -681,7 +671,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   function updateLabels(apart: number) {
     if (!opts.onLabels) return;
     const opacity = labelOpacity(apart);
-    const { clientWidth: w, clientHeight: h } = canvas;
+    const w = viewW;
+    const h = viewH;
     opts.onLabels(
       printer.parts.map((part) => {
         anchor.copy(part.labelAnchor).applyMatrix4(part.object.matrixWorld).project(camera);
@@ -927,7 +918,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     raf = 0;
     stillFrames = dirty ? 0 : stillFrames + 1;
     dirty = false;
-    if (taa) taa.accumulate = stillFrames >= 1;
+    if (taa) {
+      taa.accumulate = taa.enabled = stillFrames >= 1;
+      plain.enabled = !taa.enabled;
+    }
     // Only consecutive frames say something about the device's speed.
     // The first seconds (shaders compiling, textures uploading, the opening
     // growing in) are slow on any device, so they do not count.
@@ -1113,7 +1107,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     lineup.object.rotation.y = -stage.rotation.y + 0.15;
     lineup.object.updateMatrixWorld();
     lineup.setReveal((outro - 0.08) / 0.5);
-    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8, looks, pk);
+    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8, looks, pk, smoothstep(reveal.reach));
     heroMug = reveal.type > 0.6 && !opts.frozen;
     if (!heroMug) setTouchingMug(false);
     // The line sits a little above the mug's middle, so the mug covers the lower half of the letters.
@@ -1157,8 +1151,13 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // At the close everything comes into focus for the overview.
     const aperture = Math.max(mugBlur * 0.0004 * (1 - smoothstep(outro / 0.3)), focusAmount * 0.00022);
 
+    // The floor is out of the picture while the desk covers it and while the
+    // camera is close on the hovering mug; its reflection and its contact
+    // shadow are not drawn then. The morning's table covers the reflection too.
+    const floorSeen = deskAmount < 1 && !(looks.hero >= 1 && pk.frame <= 0);
+    studio.setReflection(quality.level === 2 && floorSeen && morning < 1);
     // Nor in the contact shadow on the floor.
-    studio.renderShadow(printerCastsShadow ? noContactShadow : [...noContactShadow, printer.root]);
+    if (floorSeen) studio.renderShadow(printerCastsShadow ? noContactShadow : [...noContactShadow, printer.root]);
     if (quality.level > 0) {
       bokeh.enabled = aperture > 0.000004;
       if (bokeh.enabled) {
@@ -1177,8 +1176,6 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       renderer.render(scene, camera);
     }
     updateLabels(apart);
-    // The sketch on paper needs no design-program selection box.
-    updateSelection(0, 1);
     updateScreen(zoom);
     updateMug(looks);
     if (transitioning || turning || steaming || drifting || focusing || breathing || glowing || growing || deskMoving) handle.invalidate();
@@ -1206,7 +1203,6 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     },
     setShape(id) {
       job.setShape(id);
-      hand?.setShape(id);
       handle.invalidate();
     },
     snapshot() {
@@ -1269,8 +1265,12 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   hand = await handLoading;
   opts.onProgress?.(0.8);
   if (hand) job.object.add(hand.object);
-  // Compile shaders in parallel where supported, so the first frame does not stall.
+  // Compile shaders in parallel where supported, so the first frame does not
+  // stall. They are compiled as they will be used: drawing into the lens's
+  // buffer rather than straight to the screen.
+  renderer.setRenderTarget(composer.readBuffer);
   await renderer.compileAsync(scene, camera);
+  renderer.setRenderTarget(null);
   opts.onProgress?.(0.95);
   resizeObserver.observe(canvas);
   return handle;

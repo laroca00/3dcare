@@ -1,4 +1,4 @@
-// A giant glowing line behind the hero object, like a poster the mug passes in
+// A giant line behind the hero object, like a poster the mug passes in
 // front of. It is drawn straight after the background, before anything else,
 // so the whole scene stays in front of it. The same line is in the page as
 // text; this is only its picture.
@@ -8,10 +8,11 @@ import type { Theme } from "../theme/theme";
 /** Its own layer keeps it out of the contact shadow, the floor reflection and the blur's depth pass. */
 export const TYPE_LAYER = 3;
 
-const FONT = '800 {size}px "Inter Variable", Inter, system-ui, sans-serif';
+const FONT = '700 {size}px "Inter Variable", Inter, system-ui, sans-serif';
 
 const STYLE: Record<Theme, { color: string; glow: string; blur: number }> = {
-  dark: { color: "#e6fffa", glow: "#22c8b1", blur: 0.22 },
+  // Plain cream letters with only a breath of light round them, like a printed poster.
+  dark: { color: "#f6efe2", glow: "rgba(246, 239, 226, 0.28)", blur: 0.05 },
   light: { color: "#00756a", glow: "rgba(0, 117, 106, 0.5)", blur: 0.14 },
 };
 
@@ -63,13 +64,17 @@ export async function createGiantType(text: string, theme: Theme): Promise<Giant
     const parts = rows === 1 || words.length < 2 ? [text] : [words.slice(0, split).join(" "), words.slice(split).join(" ")];
     const ctx = canvas.getContext("2d")!;
     // Fit the longest row to the width, leaving room for the glow.
+    // Set tight, as a display line is (where the browser can).
+    const tighten = (size: number) => { if ("letterSpacing" in ctx) ctx.letterSpacing = `${-size * 0.045}px`; };
     ctx.font = FONT.replace("{size}", "100");
+    tighten(100);
     const widest = Math.max(...parts.map((p) => ctx.measureText(p).width));
     canvas.width = 2048;
     const size = Math.floor((100 * canvas.width * 0.84) / widest);
     const lineHeight = size * 0.98;
     canvas.height = Math.ceil(lineHeight * parts.length + size * 0.7);
     ctx.font = FONT.replace("{size}", String(size));
+    tighten(size);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const top = canvas.height / 2 - (lineHeight * (parts.length - 1)) / 2;

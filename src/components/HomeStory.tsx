@@ -155,7 +155,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
   const slicerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const revealCaptionRef = useRef<HTMLDivElement>(null);
-  const selectionRef = useRef<HTMLDivElement>(null);
   const planRef = useRef<SVGSVGElement>(null);
   const scaleRef = useRef<HTMLDivElement>(null);
   const packageStripRef = useRef<HTMLOListElement>(null);
@@ -205,10 +204,16 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     let handle: SceneHandle | null = null;
     let visible = true;
     let cancelled = false;
+    let labelsShown = true;
     // Part labels can be reached by keyboard only while the printer is apart.
     labelLayer.inert = true;
     slicer.inert = true;
 
+    let stripWidth = 0;
+    const onResize = () => {
+      stripWidth = 0;
+      measure();
+    };
     function measure() {
       if (fixed === null) {
         const rect = section.getBoundingClientRect();
@@ -254,7 +259,9 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       if (progress > at("material", 0)) setPackageNear(true);
       const strip = packageStripRef.current;
       if (strip) {
-        const travel = Math.max(strip.scrollWidth - window.innerWidth, 0);
+        // Measured once (and again after a resize), not on every scroll.
+        if (!stripWidth) stripWidth = strip.scrollWidth;
+        const travel = Math.max(stripWidth - window.innerWidth, 0);
         strip.style.transform = `translateX(${-pk.slide * travel}px)`;
       }
       if (live && pk.cards > 0.5) section.dataset.package = "1";
@@ -326,10 +333,12 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
     window.addEventListener("scroll", measure, { passive: true });
     // The mouse wheel glides through the live story.
     const stopWheel = live && fixed === null ? smoothWheel() : () => {};
-    window.addEventListener("resize", measure);
+    window.addEventListener("resize", onResize);
 
     const io = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
+      // The navigation's shade is lighter while the stage is behind it.
+      document.documentElement.toggleAttribute("data-stage", visible);
       if (visible) handle?.invalidate();
     });
     io.observe(section);
@@ -375,21 +384,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           if (touching) section.dataset.glow = "1";
           else delete section.dataset.glow;
         },
-        onSelection(box, [width, depth, height]) {
-          // At the start the drawing is "selected", as in a design program, with its size.
-          const selection = selectionRef.current;
-          if (!selection) return;
-          selection.style.visibility = box ? "visible" : "hidden";
-          if (!box) return;
-          selection.style.transform = `translate(${box.x}px, ${box.y}px)`;
-          selection.style.width = `${box.width}px`;
-          selection.style.height = `${box.height}px`;
-          selection.style.opacity = String(box.opacity);
-          selection.dataset.size = `${width} × ${depth} × ${height} cm`;
-          // While the drawing grows, a cursor drags its corner handle.
-          if (box.growing) selection.dataset.growing = "1";
-          else delete selection.dataset.growing;
-        },
         onMug(frame) {
           // The mug's plan and the close-up's scale, drawn over the mug.
           if (planRef.current) drawPlan(planRef.current, frame, shapeRef.current);
@@ -406,6 +400,12 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
           // Labels sit at the end of a short line drawn outwards from the
           // middle of the parts, like callouts on a technical drawing.
           const visibleOnes = positions.filter((p) => p.opacity > 0);
+          // Nothing to place while they are all hidden (after hiding them once).
+          if (!visibleOnes.length && !labelsShown) return;
+          labelsShown = visibleOnes.length > 0;
+          // Read every label's size first, then move them: reading between
+          // moves would make the page lay itself out once per label.
+          const sizes = new Map(positions.map((p) => [p.id, [labelRefs.current[p.id]?.offsetWidth ?? 0, labelRefs.current[p.id]?.offsetHeight ?? 0]]));
           const cx = visibleOnes.reduce((sum, p) => sum + p.x, 0) / (visibleOnes.length || 1);
           const cy = visibleOnes.reduce((sum, p) => sum + p.y, 0) / (visibleOnes.length || 1);
           const width = canvas.clientWidth;
@@ -422,10 +422,11 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             const endY = y + dy * LEADER * 0.6;
             // Labels point away from the middle, and never run off either edge.
             let flip = dx < 0;
-            if (flip && endX - el.offsetWidth < 8) flip = false;
-            if (!flip && endX + el.offsetWidth > width - 8) flip = true;
+            const [labelW, labelH] = sizes.get(id)!;
+            if (flip && endX - labelW < 8) flip = false;
+            if (!flip && endX + labelW > width - 8) flip = true;
             el.classList.toggle("story__label--flip", flip);
-            el.style.transform = `translate(${flip ? endX - el.offsetWidth : endX}px, ${endY - el.offsetHeight / 2}px)`;
+            el.style.transform = `translate(${flip ? endX - labelW : endX}px, ${endY - labelH / 2}px)`;
             el.style.opacity = String(opacity);
             const [line, dot] = leader.children as unknown as [SVGLineElement, SVGCircleElement];
             line.setAttribute("x1", String(x));
@@ -485,9 +486,10 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
       delete document.documentElement.dataset.loading;
       INTENT.forEach((type) => window.removeEventListener(type, load));
       window.removeEventListener("scroll", measure);
-      window.removeEventListener("resize", measure);
+      window.removeEventListener("resize", onResize);
       stopWheel();
       io.disconnect();
+      document.documentElement.removeAttribute("data-stage");
       handle?.dispose();
       sceneRef.current = null;
     };
@@ -667,15 +669,6 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
         style={{ "--poster": `url(${POSTER.src})` } as CSSProperties}
       >
         <canvas ref={canvasRef} className="story__canvas" aria-hidden="true" />
-        {/* At the start the printer's drawing is selected, as in a design program. */}
-        <div className="story__selection" ref={selectionRef} aria-hidden="true" data-file={t.story.selectionFile}>
-          {["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
-            <span key={handle} className={`story__handle story__handle--${handle}`} />
-          ))}
-          <svg className="story__cursor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 3l14 8-6 1.6L10 19z" />
-          </svg>
-        </div>
         {/* The mug's plan: outline, dimensions, and construction circles that gather into the wordmark. */}
         <svg className="story__plan" ref={planRef} aria-hidden="true">
           <path className="story__plan-axis" />
@@ -707,6 +700,7 @@ export function HomeStory({ lang, t }: { lang: Locale; t: Dictionary["home"] }) 
             </li>
           ))}
         </ul>
+        <div className="story__package-shade" aria-hidden="true" />
         {mode === "live" && packageNear && (
           <div className="story__package-cards" aria-hidden="true">
             <p className="story__package-title">{t.story.packageCardsTitle}</p>

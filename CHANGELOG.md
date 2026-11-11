@@ -5,6 +5,78 @@ Fikirler Derneği) under WP5, Activity 5.1 (Dissemination of Project Results
 and Stakeholder Outreach). Every change is also recorded in the commit history
 of this repository: https://github.com/laroca00/3dcare/commits/main
 
+## 2026-11-11
+
+### One room, one voice
+- The home story now plays in one room from start to finish: a warm
+  near-black stage with a teal glow in its lower left corner. The violet,
+  ink-blue and blueprint backgrounds are gone; only the lamps change from
+  scene to scene.
+- The giant line behind the freshly printed mug is plain cream lettering
+  instead of a neon glow, and the light that washes in when the mug is
+  touched stays in the room's teal instead of running through the rainbow.
+- Story titles are set large and tight in Inter again, with small quiet
+  text under them; Instrument Serif is no longer loaded.
+- Captions, hints and the four chapter tabs are plain capitals on the stage,
+  without boxes; the current chapter has a dotted underline.
+- A cream tab on the right edge travels down the screen with the story and
+  takes the place of the browser's scrollbar on the home page. The page no
+  longer scrolls sideways.
+
+### A hand that holds the mug up
+- The hand no longer reaches in from the side for a handle. A forearm comes
+  straight up from the bottom of the picture with the hand upright and open,
+  and the freshly printed mug stands on its fingertips, while the camera
+  steps back and aims lower so the hand and the forearm show under the mug.
+  The skin is deep and smooth, with a soft sheen and paler nails, and sits in
+  the room's low light. The scene's caption moved to the bottom left, clear
+  of the forearm.
+
+### A plain menu
+- The floating menu bar that folded into a circle is replaced by the logo at
+  the top left and the links in small capitals at the top right, lying
+  straight on the page; the current page has a dotted underline. On narrow
+  screens the links still open in a side sheet. The animation library the
+  old bar needed is no longer part of the site.
+
+### A clearer opening desk
+- The opening's lead text now lies on clear mat: the ruler moved onto the
+  wood at the left and the caliper to the bottom right corner, and the text
+  sits a little lower and narrower, past the paper's corner.
+- The cutting mat is a deeper, calmer green.
+
+### The rest of the page, in the same room
+- The pictures that come out of the model package now pass in front of the
+  room's own dark backdrop, which closes before they arrive and opens after
+  they leave, so the inside of the box no longer shows through them.
+- The closing figures and the package's contents are plain type over dotted
+  rules, without frosted boxes.
+- The site's dark tones are warmed to match the stage, so the story ends
+  into the page without a change of colour. Page and section titles are set
+  larger and tighter, sections are divided by dotted rules, and the partner
+  list, the four steps and the call to join the network lost their boxes.
+- The loading screen uses the same dark room and cream type.
+- Away from the story's stage the menu has a stronger shade behind it, so
+  page text no longer shows through the links.
+
+### Smoother scrolling
+- While the story moves, the 3D scene is now drawn once per frame instead of
+  twice: the pass that refines edges takes over only when the picture holds
+  still. Measured on a desktop with a steady scroll through the whole page:
+  38 → 84 frames a second on average, and the typical frame 18 → 6 ms.
+- The floor's reflection and soft shadow are no longer drawn while the floor
+  is out of the picture (under the opening desk, and while the camera is
+  close on the hovering mug).
+- The window's sunlight now stays in the scene at zero strength instead of
+  being switched off and on, which made every material prepare its shader
+  again in the middle of the story: the longest stall in the last scene
+  went from about 3 s to under 1 s.
+- Shaders are prepared before the story starts for the way they are really
+  used, and the page is no longer asked to lay itself out several times in
+  every frame.
+- The design-program selection box, unused since the story opens on a sheet
+  of paper, is removed; the 3D code is back within its 200 KB budget.
+
 ## 2026-10-27
 
 ### The shading stays

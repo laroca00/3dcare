@@ -65,9 +65,10 @@
   --footer-text: #f5f7f6;
   --footer-muted: #c9d3cf;
 
+  /* Type that lies on the 3D stage and over the desk: one warm cream. */
+  --story-ink: #fff6e8;
+
   --font: "Inter Variable", "Inter Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  /* The story's headings, set like an editorial title. */
-  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   --radius: 16px;
   --gutter: 16px;
   --measure: 68ch;
@@ -75,38 +76,38 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #101416;
-  --surface: #192024;
-  --ink: #e8eeeb;
-  --muted: #a3b1ab;
+  --paper: #131413;
+  --surface: #1c1d1b;
+  --ink: #f3eee4;
+  --muted: #b3ada1;
   --teal: #3cc2b0;
   --teal-dark: #74dccd;
   --on-accent: #0b1a1c;
   --violet: #a48be6;
-  --plate: #2a3338;
-  --plate-soft: #20282c;
-  --footer-bg: #0b0f11;
-  --footer-text: #e8eeeb;
-  --footer-muted: #a3b1ab;
+  --plate: #30312e;
+  --plate-soft: #232422;
+  --footer-bg: #0c0d0c;
+  --footer-text: #f3eee4;
+  --footer-muted: #b3ada1;
 }
 
 /* Same palette when the device prefers dark and the pre-paint script has not run. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --paper: #101416;
-    --surface: #192024;
-    --ink: #e8eeeb;
-    --muted: #a3b1ab;
+    --paper: #131413;
+    --surface: #1c1d1b;
+    --ink: #f3eee4;
+    --muted: #b3ada1;
     --teal: #3cc2b0;
     --teal-dark: #74dccd;
     --on-accent: #0b1a1c;
     --violet: #a48be6;
-    --plate: #2a3338;
-    --plate-soft: #20282c;
-    --footer-bg: #0b0f11;
-    --footer-text: #e8eeeb;
-    --footer-muted: #a3b1ab;
+    --plate: #30312e;
+    --plate-soft: #232422;
+    --footer-bg: #0c0d0c;
+    --footer-text: #f3eee4;
+    --footer-muted: #b3ada1;
   }
 }
 
@@ -143,9 +144,10 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(2.25rem, 5.5vw, 3.5rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.5rem, 6.5vw, 4.6rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.05em;
 }
 
 h2 {
@@ -237,6 +239,112 @@ main:focus {
 /* The navigation floats over the page; the header keeps its room at the top. */
 .site-header {
   height: 80px;
+}
+
+/* The logo at the top left, the links in small capitals at the top right,
+   straight on the page; a soft shade behind them keeps them readable over
+   whatever scrolls underneath. */
+.site-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 64px;
+  padding: 0 max(var(--gutter), 3vw);
+  color: var(--story-ink);
+  pointer-events: none;
+}
+
+.site-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -36px;
+  z-index: -1;
+  background: linear-gradient(rgb(19 20 19 / 0.96), rgb(19 20 19 / 0.8) 55%, rgb(19 20 19 / 0));
+  transition: opacity 0.4s ease;
+}
+
+/* Over the home story's stage the pictures run to the top edge, so the shade is lighter. */
+:root[data-stage] .site-nav::before {
+  opacity: 0.55;
+}
+
+.site-nav > * {
+  pointer-events: auto;
+}
+
+.site-nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.site-nav__brand:hover {
+  color: inherit;
+}
+
+.site-nav__mark {
+  width: 26px;
+  height: 26px;
+}
+
+.site-nav__links {
+  display: none;
+}
+
+.site-nav__links ul {
+  display: flex;
+  gap: clamp(14px, 1.7vw, 26px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav__links a,
+.site-nav__menu {
+  display: block;
+  padding: 8px 0 5px;
+  border: 0;
+  background: repeating-linear-gradient(90deg, currentColor 0 2px, transparent 2px 4px) left bottom / 0 1.5px no-repeat;
+  color: inherit;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-size 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The current page, and the link under the pointer, get a dotted underline. */
+.site-nav__links a:hover,
+.site-nav__links a[aria-current],
+.site-nav__menu:hover {
+  background-size: 100% 1.5px;
+  color: inherit;
+}
+
+@media (min-width: 1024px) {
+  .site-nav__links {
+    display: block;
+  }
+
+  .site-nav__menu {
+    display: none;
+  }
 }
 
 /* The 404 page has no navigation, only the logo in the header. */
@@ -347,6 +455,18 @@ main:focus {
 .story {
   position: relative;
   margin-top: -80px;
+  /* The opening spans the full window width, scrollbar included. */
+  overflow-x: clip;
+}
+
+/* The live story shows its own progress tab on the right edge instead of the
+   browser's scrollbar; keyboard and wheel scrolling work as ever. */
+html:has(.story--live) {
+  scrollbar-width: none;
+}
+
+html:has(.story--live)::-webkit-scrollbar {
+  display: none;
 }
 
 .story__stage {
@@ -388,68 +508,6 @@ main:focus {
 
 .story__canvas[data-mug="1"] {
   cursor: pointer;
-}
-
-/* At the start the printer's drawing is selected, as in a design program:
-   a thin frame with eight handles, the file name above and the size below. */
-.story__selection {
-  position: absolute;
-  left: 0;
-  top: 0;
-  visibility: hidden;
-  border: 1px solid var(--violet);
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-.story__selection::before,
-.story__selection::after {
-  position: absolute;
-  left: -1px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.story__selection::before {
-  content: attr(data-file);
-  bottom: calc(100% + 6px);
-  background: var(--violet);
-  color: #fff;
-}
-
-.story__selection::after {
-  content: attr(data-size);
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--violet);
-  font-variant-numeric: tabular-nums;
-}
-
-.story__handle {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  margin: -4px 0 0 -4px;
-  border: 1px solid var(--violet);
-  background: var(--paper);
-}
-
-.story__handle--nw { left: 0; top: 0; }
-.story__handle--n { left: 50%; top: 0; }
-.story__handle--ne { left: 100%; top: 0; }
-.story__handle--e { left: 100%; top: 50%; }
-.story__handle--se { left: 100%; top: 100%; }
-.story__handle--s { left: 50%; top: 100%; }
-.story__handle--sw { left: 0; top: 100%; }
-.story__handle--w { left: 0; top: 50%; }
-
-.story--stills .story__selection,
-:root[data-story-still] .story__selection {
-  display: none;
 }
 
 /* The mug's plan, drawn over its side: outline, axis, dimensions, and the
@@ -636,12 +694,12 @@ main:focus {
   right: 16px;
   top: 84px;
   margin: 0;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  color: var(--ink);
-  font-size: 0.85rem;
-  font-weight: 600;
+  color: var(--story-ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.5);
   opacity: 0;
   transform: translateY(8px);
   transition: opacity 0.4s ease, transform 0.4s ease;
@@ -814,12 +872,23 @@ main:focus {
   will-change: transform;
 }
 
-.story__text h2 {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(2.1rem, 3.8vw, 3rem);
-  line-height: 1.04;
-  letter-spacing: -0.01em;
+/* Titles are set large and tight in the site's own grotesque; the text under
+   them is small and quiet. */
+.story__text h2,
+.story__beat--outro h2 {
+  margin-bottom: 0.45em;
+  color: var(--story-ink);
+  font-weight: 600;
+  font-size: clamp(2.2rem, 3.9vw, 3.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.story__text p {
+  max-width: 25rem;
+  color: color-mix(in srgb, var(--story-ink) 80%, transparent);
+  font-size: 1rem;
+  line-height: 1.45;
 }
 
 .story:not(.story--stills) .story__beat:not([data-in]) .story__line > span {
@@ -862,20 +931,30 @@ main:focus {
   bottom: 3svh;
   width: min(40rem, calc(100% - 32px));
   margin: 0;
-  padding: 12px 20px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  backdrop-filter: blur(10px);
+  color: var(--story-ink);
   text-align: center;
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.55);
   opacity: var(--caption, 0);
   transform: translate(-50%, calc((1 - var(--caption, 0)) * 12px));
   pointer-events: none;
 }
 
-/* Under the freshly printed mug, below the giant line. */
+/* Beside the hand that carries the freshly printed mug: a few short lines in
+   capitals at the bottom left, clear of the forearm. */
 .story__caption--reveal {
-  bottom: 7svh;
-  width: min(30rem, calc(100% - 32px));
+  left: max(var(--gutter), 3vw);
+  bottom: 9svh;
+  width: min(19rem, calc(100% - 32px));
+  text-align: left;
+  transform: translateY(calc((1 - var(--caption, 0)) * 12px));
+}
+
+.story__caption.story__caption--reveal p {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
 }
 
 :root[data-story-still] .story__caption--reveal {
@@ -888,9 +967,11 @@ main:focus {
 }
 
 .story__caption .story__caption-title {
-  margin-bottom: 4px;
-  font-size: 1.15rem;
-  font-weight: 700;
+  margin-bottom: 6px;
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
 /* Shown once the parts can be dragged. */
@@ -1229,13 +1310,10 @@ main:focus {
 
 .story__chapters ol {
   display: flex;
-  gap: 2px;
+  gap: 14px;
   margin: 0;
-  padding: 4px;
+  padding: 0;
   list-style: none;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  backdrop-filter: blur(8px);
 }
 
 .story__chapters button {
@@ -1243,21 +1321,23 @@ main:focus {
   align-items: baseline;
   gap: 6px;
   margin: 0;
-  padding: 4px 10px;
+  padding: 4px 0;
   border: 0;
-  border-radius: 999px;
   background: transparent;
-  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  color: color-mix(in srgb, var(--story-ink) 60%, transparent);
   font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.5);
   cursor: pointer;
   transition: color 0.3s ease;
 }
 
 .story__chapters button:hover,
 .story__chapters button[aria-current] {
-  color: var(--ink);
+  color: var(--story-ink);
 }
 
 .story__chapters button:focus-visible {
@@ -1266,7 +1346,6 @@ main:focus {
 }
 
 .story__chapter-number {
-  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1275,7 +1354,8 @@ main:focus {
 }
 
 .story__chapter-name {
-  background: linear-gradient(currentColor, currentColor) left bottom / 0 1.5px no-repeat;
+  padding-bottom: 3px;
+  background: repeating-linear-gradient(90deg, currentColor 0 2px, transparent 2px 4px) left bottom / 0 1.5px no-repeat;
   transition: background-size 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -1290,28 +1370,18 @@ main:focus {
   }
 }
 
-/* A thin bar down the right edge fills as the story goes on. */
+/* A cream tab on the right edge travels down the screen as the story goes on. */
 .story__progress {
+  --tab: min(22svh, 200px);
   position: absolute;
-  top: 50%;
-  right: 12px;
-  width: 2px;
-  height: min(40svh, 320px);
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--ink) 14%, transparent);
-  transform: translateY(-50%);
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: var(--tab);
+  background: var(--story-ink);
+  transform: translateY(calc(var(--progress, 0) * (100svh - var(--tab))));
   opacity: calc(1 - var(--fade, 0));
   pointer-events: none;
-}
-
-.story__progress::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--teal);
-  transform: scaleY(var(--progress, 0));
-  transform-origin: top;
 }
 
 /* At the top of the page: a nudge to start scrolling. */
@@ -1323,7 +1393,7 @@ main:focus {
   align-items: center;
   gap: 10px;
   margin: 0;
-  color: #fff6e8;
+  color: var(--story-ink);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -1384,10 +1454,11 @@ main:focus {
 
 .story__delivers > div {
   --t: clamp(0, (var(--reveal, 2) - 0.25 - var(--i, 0) * 0.14) * 5, 1);
-  padding: 16px 18px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  backdrop-filter: blur(10px);
+  /* Plain figures on the stage, each over a dotted rule. */
+  padding: 14px 0 0;
+  border-top: 1px dotted color-mix(in srgb, var(--story-ink) 70%, transparent);
+  color: var(--story-ink);
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.55);
   transform: translateY(calc((1 - var(--t)) * 24px));
   opacity: var(--t);
 }
@@ -1405,21 +1476,29 @@ main:focus {
 }
 
 .story__delivers dt {
-  font-size: 2.4rem;
+  font-size: clamp(2.8rem, 4.6vw, 4.2rem);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
 }
 
 .story__delivers dd {
-  font-size: 0.92rem;
+  margin-top: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 .story__publish {
   --t: clamp(0, (var(--reveal, 2) - 0.95) * 5, 1);
-  margin-top: 18px;
-  padding: 14px 18px;
-  border-left: 3px solid var(--teal);
-  border-radius: 0 14px 14px 0;
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  backdrop-filter: blur(10px);
+  margin-top: 26px;
+  padding-top: 14px;
+  border-top: 1px dotted color-mix(in srgb, var(--story-ink) 70%, transparent);
+  color: var(--story-ink);
+  font-size: 0.95rem;
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.55);
   transform: translateY(calc((1 - var(--t)) * 18px));
   opacity: var(--t);
 }
@@ -1657,8 +1736,18 @@ main:focus {
 }
 
 .section {
-  padding-block: 56px;
-  border-top: 2px solid var(--plate);
+  padding-block: clamp(56px, 9vw, 104px);
+  border-top: 1px dotted color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+/* Section titles are set large and tight, like the story's. */
+.section > h2,
+.callout h2 {
+  margin-bottom: 0.6em;
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
 }
 
 .delivers {
@@ -1674,8 +1763,6 @@ main:focus {
   letter-spacing: -0.04em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  padding-bottom: 12px;
-  border-bottom: 6px solid var(--layer);
   display: inline-block;
   min-width: 2ch;
 }
@@ -1697,8 +1784,8 @@ main:focus {
 
 .process li {
   counter-increment: step;
-  border-left: 4px solid var(--teal);
-  padding-left: 16px;
+  border-top: 1px dotted color-mix(in srgb, var(--ink) 45%, transparent);
+  padding-top: 16px;
 }
 
 .process h3::before {
@@ -1717,14 +1804,12 @@ main:focus {
   margin: 24px 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 18px 28px;
 }
 
 .partner-strip li {
-  background: var(--surface);
-  border: 2px solid var(--plate);
-  border-radius: 999px;
-  padding: 8px 18px;
+  border-bottom: 1px dotted color-mix(in srgb, var(--ink) 45%, transparent);
+  padding: 0 0 8px;
   display: flex;
   gap: 8px;
   align-items: baseline;
@@ -2054,11 +2139,7 @@ main:focus {
 /* Call to action */
 
 .callout {
-  background: var(--surface);
-  border: 2px solid var(--plate);
-  border-left: 8px solid var(--teal);
-  border-radius: var(--radius);
-  padding: 32px;
+  max-width: 44rem;
 }
 
 .callout p {
@@ -2348,14 +2429,12 @@ main:focus {
 
 .story__package-contents li {
   --t: clamp(0, var(--pk-contents, 0) * 6 - var(--i), 1);
-  padding: 6px 12px;
-  border: 1px dashed currentColor;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  color: var(--ink);
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  padding: 0 0 6px;
+  border-bottom: 1px dotted color-mix(in srgb, var(--story-ink) 70%, transparent);
+  color: var(--story-ink);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   opacity: var(--t);
   transform: translateY(calc((1 - var(--t)) * 10px));
@@ -2389,13 +2468,15 @@ main:focus {
   pointer-events: none;
 }
 
-/* The stage dims behind the pictures. */
-.story__package-cards::before {
-  content: "";
+/* Behind the pictures the stage is the same dark room, with its teal glow in
+   the corner. It closes before the pictures have fully arrived and opens
+   after they have left, so the inside of the box never shows through them. */
+.story__package-shade {
   position: absolute;
-  inset: -20%;
-  z-index: -1;
-  background: var(--paper);
+  inset: 0;
+  background: radial-gradient(circle at 0% 100%, #0d4641 0, rgb(13 70 65 / 0) 58%), #131413;
+  opacity: clamp(0, var(--pk-cards, 0) * 3.5, 1);
+  pointer-events: none;
 }
 
 .story__package-title {
@@ -2403,10 +2484,10 @@ main:focus {
   max-width: 1120px;
   margin: 0 auto 16px;
   padding-inline: var(--gutter);
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: var(--story-ink);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
 }
 
@@ -2443,14 +2524,17 @@ main:focus {
 }
 
 .story__package-strip strong {
-  font-size: 1.05rem;
+  color: var(--story-ink);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
 .story__package-strip span {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--story-ink) 70%, transparent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
 }
 
@@ -2490,33 +2574,6 @@ main:focus {
   }
 }
 
-/* The opening: while the printer's drawing grows, a cursor drags its corner
-   handle, as in a design program. */
-.story__cursor {
-  position: absolute;
-  left: 100%;
-  top: 100%;
-  width: 26px;
-  height: 26px;
-  margin: 2px 0 0 2px;
-  fill: #fff;
-  stroke: #15232b;
-  stroke-width: 1.6;
-  stroke-linejoin: round;
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.35));
-}
-
-.story__selection[data-growing] .story__cursor {
-  opacity: 1;
-}
-
-.story__selection[data-growing] .story__handle--se {
-  background: var(--violet);
-  transform: scale(1.4);
-}
-
 /* The pencil and the ruler can be picked up. */
 .story__canvas[data-desk="1"] {
   cursor: grab;
@@ -2534,9 +2591,10 @@ main:focus {
    goes on its own. */
 .loader {
   --load: 0;
-  --mat: #10302b;
-  --line: rgb(170 240 225 / 0.16);
-  --handle: #f5c400;
+  /* The story's own dark room, before the story begins. */
+  --mat: #131413;
+  --line: rgb(255 246 232 / 0.16);
+  --handle: var(--story-ink);
   --box: min(42vmin, 380px);
   position: fixed;
   inset: 0;
@@ -2545,20 +2603,23 @@ main:focus {
   place-content: center;
   justify-items: center;
   background-color: var(--mat);
-  /* Dashed construction lines through the selection's edges, right across the screen. */
+  /* Dashed construction lines through the selection's edges, right across
+     the screen, over the room's teal glow in the lower left corner. */
   background-image:
     repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px),
     repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px),
     repeating-linear-gradient(0deg, var(--line) 0 6px, transparent 6px 12px),
-    repeating-linear-gradient(0deg, var(--line) 0 6px, transparent 6px 12px);
-  background-size: 100% 1px, 100% 1px, 1px 100%, 1px 100%;
+    repeating-linear-gradient(0deg, var(--line) 0 6px, transparent 6px 12px),
+    radial-gradient(circle at 0% 100%, #0d4641 0, rgb(13 70 65 / 0) 58%);
+  background-size: 100% 1px, 100% 1px, 1px 100%, 1px 100%, 100% 100%;
   background-position:
     0 calc(50% - var(--box) / 2),
     0 calc(50% + var(--box) / 2),
     calc(50% - var(--box) / 2) 0,
-    calc(50% + var(--box) / 2) 0;
+    calc(50% + var(--box) / 2) 0,
+    0 0;
   background-repeat: no-repeat;
-  color: #e3f4ef;
+  color: var(--story-ink);
   transition: opacity 0.9s ease, filter 0.9s ease;
   /* A safety net: lifts by itself if the page's script never takes over. */
   animation: loader-fallback 0s linear 12s forwards;
@@ -2615,11 +2676,12 @@ main:focus {
   left: -1px;
   bottom: calc(100% + 8px);
   padding: 2px 7px;
-  border-radius: 3px;
-  background: var(--violet);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 600;
+  background: var(--story-ink);
+  color: #131413;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 /* The fill sweeps round like a clock hand as the scene loads. */
@@ -2764,7 +2826,7 @@ main:focus {
    frosted card at the bottom left. The desk looks the same in both themes,
    so these words stay warm white with a soft shadow. */
 .story__hero {
-  --hero-ink: #fff6e8;
+  --hero-ink: var(--story-ink);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -2877,9 +2939,10 @@ main:focus {
 
   .story:not(.story--stills) .story__hero-lead {
     position: absolute;
-    right: 4vw;
-    top: 44%;
-    width: min(31rem, 32vw);
+    right: 3vw;
+    top: 49%;
+    width: min(27rem, 28vw);
+    letter-spacing: -0.02em;
   }
 
   .story:not(.story--stills) .story__hero-card {
