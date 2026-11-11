@@ -29,7 +29,7 @@ import { STEAM_LAYER, createSteam } from "./steam";
 import { LAYERS, LAYER_HEIGHT, MUG_RADIUS, endingMotion, heroLooks, labelOpacity, nozzlePath, printProgress, revealMotion, screenZoom, slicerProgress } from "./storyMotion";
 import { createLineup } from "./lineup";
 import { FLOOR_LAYER, createStudio } from "./studio";
-import { type SceneId, at, clamp01, localProgress, smoothstep } from "./timeline";
+import { SCENES, at, clamp01, localProgress, smoothstep } from "./timeline";
 
 export interface LabelPosition {
   id: PartId;
@@ -238,22 +238,15 @@ const TYPE_BEHIND = 40;
 const OUTRO_WIDE = new THREE.Vector3(14, 80, 130);
 const OUTRO_NARROW = new THREE.Vector3(0, 120, 190);
 
-/** The moments of the story (scene, how far through it, and the closing's progress) whose shaders are prepared before it starts. */
-const WARM_UP: readonly [SceneId, number, number][] = [
-  ["draw", 0.3, 0], ["draw", 0.6, 0], ["draw", 0.8, 0], ["meet", 0.5, 0], ["explode", 0.8, 0],
-  ["print", 0.1, 0], ["print", 0.2, 0], ["print", 0.3, 0], ["print", 0.45, 0], ["print", 0.55, 0], ["print", 0.7, 0], ["print", 0.97, 0],
-  ["reveal", 0.1, 0], ["reveal", 0.3, 0], ["reveal", 0.5, 0], ["reveal", 0.75, 0], ["reveal", 0.95, 0],
-  ["heat", 0.5, 0], ["plan", 0.6, 0], ["layers", 0.5, 0], ["material", 0.5, 0],
-  ["package", 0.1, 0], ["package", 0.3, 0], ["package", 0.6, 0], ["package", 0.95, 0],
-  ["use", 0.3, 0], ["use", 0.5, 0], ["use", 0.7, 0], ["use", 0.9, 0], ["use", 1, 0.6], ["draw", 0, 0],
-];
-
 export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions): Promise<SceneHandle> {
   // A scene that starts at full quality keeps its shading (shadows, contact
   // shadows, the colour finish) on a slow frame: it gives up resolution and
   // the glow instead, and never drops to the bare level.
   const quality = new QualityController(opts.quality, undefined, opts.quality === 2 ? 1 : 0);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: opts.quality === 2, powerPreference: "high-performance" });
+  // Reading back each shader's error log makes the browser wait for it to
+  // finish compiling; that check is for development only.
+  renderer.debug.checkShaderErrors = process.env.NODE_ENV !== "production";
   // Neutral tone mapping leaves the site colours (background, teal) as they are.
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.shadowMap.enabled = opts.quality > 0;
@@ -907,8 +900,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   }
 
   let raf = 0;
+  let ready = false;
   // Set while the shaders are prepared: the story moment (and the closing's) the scene is set up at.
-  let warm: [number, number] | null = null;
+  // The third value says whether that moment is also drawn (on the still hidden canvas).
+  let warm: [number, number, boolean] | null = null;
   // The printer's meshes that cast shadows once it is solid.
   const printerShadowCasters: THREE.Object3D[] = [];
   printer.root.traverse((o) => {
@@ -1170,8 +1165,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // The floor is out of the picture while the desk covers it and while the
     // camera is close on the hovering mug; its reflection and its contact
     // shadow are not drawn then. The morning's table covers the reflection too.
-    // A warm-up frame only sets the scene up; nothing is drawn.
-    if (warm) return;
+    // A warm-up frame first only sets the scene up; nothing is drawn.
+    if (warm && !warm[2]) return;
     const floorSeen = deskAmount < 1 && !(looks.hero >= 1 && pk.frame <= 0);
     studio.setReflection(quality.level === 2 && floorSeen && morning < 1);
     // Nor in the contact shadow on the floor.
@@ -1196,6 +1191,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     updateLabels(apart);
     updateScreen(zoom);
     updateMug(looks);
+    // A warm-up frame asks for no further frames.
+    if (warm) return;
     if (transitioning || turning || steaming || drifting || focusing || breathing || glowing || growing || deskMoving) handle.invalidate();
     // Once still, keep drawing until the anti-aliasing blend is complete.
     else if (taa && (taa as unknown as { accumulateIndex: number }).accumulateIndex < TAA_SAMPLES && !raf) raf = requestAnimationFrame(frame);
@@ -1249,7 +1246,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     },
     invalidate() {
       dirty = true;
-      if (!raf) raf = requestAnimationFrame(frame);
+      // Nothing is drawn until the shaders are ready: a frame drawn earlier
+      // would compile them all on the spot and freeze the page for seconds.
+      if (!raf && ready) raf = requestAnimationFrame(frame);
     },
     dispose() {
       cancelAnimationFrame(raf);
@@ -1291,10 +1290,18 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   // compiled in the background. They are compiled as they will be used:
   // drawing into the lens's buffer rather than straight to the screen.
   renderer.setRenderTarget(composer.readBuffer);
-  for (const [id, t, outro] of WARM_UP) {
-    warm = [at(id, t), outro];
+  // Three moments of every scene, then the closing, then back to the start.
+  const moments: [number, number][] = SCENES.flatMap(({ id }) => [0.15, 0.5, 0.85].map((t): [number, number] => [at(id, t), 0]));
+  for (const [p, outro] of [...moments, [1, 0.6], [0, 0]]) {
+    warm = [p, outro, false];
     frame(performance.now());
     await renderer.compileAsync(scene, camera);
+    // Then the moment is drawn once on the still hidden canvas, so that each
+    // shader's first use (which costs a little even when it is compiled)
+    // also happens now and not while the visitor scrolls.
+    warm[2] = true;
+    frame(performance.now());
+    renderer.setRenderTarget(composer.readBuffer);
   }
   warm = null;
   last = firstFrameAt = 0;
@@ -1302,6 +1309,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   studio.renderShadow(noContactShadow);
   renderer.setRenderTarget(null);
   opts.onProgress?.(0.95);
+  ready = true;
   resizeObserver.observe(canvas);
   return handle;
 }

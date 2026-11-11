@@ -90,6 +90,16 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
 - On narrow screens the model package now stands below the scene's text
   instead of behind it.
 
+### No stalls while scrolling
+- The 3D scene now draws nothing until its shaders are ready. Behind the
+  loading screen it is set up at three moments of every scene in turn; what
+  each moment needs is compiled in the background and then drawn once on
+  the still hidden canvas. No shader is compiled during the story any more:
+  on a desktop the longest frame in a steady scroll through the whole page
+  went from 0.7 s to under 0.1 s.
+- The check that reads back each shader's error log, which makes the
+  browser wait for the shader, now runs in development only.
+
 ## 2026-10-27
 
 ### The shading stays
