@@ -86,6 +86,10 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
   they match the one dark room, the cream lettering and the hand that holds
   the mug up.
 
+### The package on phones
+- On narrow screens the model package now stands below the scene's text
+  instead of behind it.
+
 ## 2026-10-27
 
 ### The shading stays

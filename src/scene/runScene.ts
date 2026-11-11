@@ -230,6 +230,8 @@ const DESK_NARROW = new THREE.Vector3(0, 330, 46);
 const DESK_TURN = 0.13;
 /** How far the mug lowers into the open model package (cm). */
 const PACKAGE_DROP = 14;
+/** On narrow screens: how far above the package's middle the camera aims, so the box stands below the text (cm). */
+const BOX_BELOW_TEXT = 14;
 /** How far behind the mug the giant line glows. */
 const TYPE_BEHIND = 40;
 /** The close: where the camera ends up above the ten tools. */
@@ -586,7 +588,9 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
       boxAside.crossVectors(revealDir, UP).multiplyScalar(wide ? 11 * (1 - dive) : 0);
       boxView.copy(boxCenter).addScaledVector(revealDir, wide ? 70 : 105).add(boxAside).y += wide ? 34 : 48;
       camera.position.lerp(boxView, ease);
-      lookAt.lerp(boxView.copy(boxCenter).add(boxAside), ease);
+      // On narrow screens the text fills the top, so the camera aims above the box and it sits lower, clear of the words.
+      boxView.copy(boxCenter).add(boxAside).y += wide ? 0 : BOX_BELOW_TEXT * (1 - dive);
+      lookAt.lerp(boxView, ease);
       if (dive > 0) {
         boxView.copy(boxCenter).addScaledVector(revealDir, 0.6).y += 28;
         camera.position.lerp(boxView, dive);
