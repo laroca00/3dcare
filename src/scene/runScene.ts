@@ -333,13 +333,19 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const bokeh = new BokehPass(scene, depthCamera, { focus: 100, aperture: 0, maxblur: 0.012 });
   const focusUniforms = bokeh.uniforms as Record<"focus" | "aperture" | "maxblur", THREE.IUniform<number>>;
   const lens = new ShaderPass(LensShader);
-  // At full quality the scene is drawn through a temporal anti-aliasing pass:
-  // while anything moves it renders normally (with MSAA); once the picture
-  // holds still, it blends 32 slightly shifted renders over the next frames,
-  // so thin lines and edges come out clean.
+  // While anything moves the scene is drawn once, plainly (with MSAA at full
+  // quality). At full quality, once the picture holds still, a temporal
+  // anti-aliasing pass takes over and blends 32 slightly shifted renders
+  // over the next frames, so thin lines and edges come out clean. (Left on
+  // while moving, that pass would draw the whole scene twice every frame.)
+  const plain = new RenderPass(scene, camera);
+  composer.addPass(plain);
   const taa = opts.quality === 2 ? new TAARenderPass(scene, camera) : null;
-  if (taa) taa.sampleLevel = 1;
-  composer.addPass(taa ?? new RenderPass(scene, camera));
+  if (taa) {
+    taa.sampleLevel = 1;
+    taa.enabled = false;
+    composer.addPass(taa);
+  }
   // Ambient occlusion on the opening desk: the soft contact shadow where
   // things meet the wood and the mat (and each other), as in a photograph.
   // Full quality only, and only while the desk is in view.
@@ -386,17 +392,22 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // Slowed down from full quality, resolution goes first (the anti-aliasing keeps edges clean).
     const ratio = level === 2 ? 2 : level === 1 && opts.quality !== 2 ? 1.5 : 1;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, ratio));
-    // The glow and the floor reflection are the first to go on a slow device.
+    // The glow (and the floor reflection, see the frame) is the first to go on a slow device.
     for (const pass of glowPasses) pass.enabled = level === 2;
-    studio.setReflection(level === 2);
     composer.setPixelRatio(renderer.getPixelRatio());
   }
   applyPixelRatio(quality.level);
 
   let wide = true;
+  // The canvas's size in CSS pixels, kept from the last resize: asking the
+  // page for it every frame would make it lay itself out again each time.
+  let viewW = 1;
+  let viewH = 1;
   function resize() {
     const { clientWidth: w, clientHeight: h } = canvas;
     if (!w || !h) return;
+    viewW = w;
+    viewH = h;
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
     drawing.setResolution(w, h);
@@ -613,7 +624,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     if (!opts.onScreen) return;
     if (zoom < 0.5) return opts.onScreen(null);
     camera.updateMatrixWorld();
-    const { clientWidth: w, clientHeight: h } = canvas;
+    const w = viewW;
+    const h = viewH;
     const corners = SCREEN_CORNERS.map(([sx, sy]) => {
       corner.set((sx * SCREEN_SIZE.width) / 2, (sy * SCREEN_SIZE.height) / 2, 0.01);
       printer.screen.localToWorld(corner).project(camera);
@@ -623,9 +635,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   }
 
   const onScreen = (v: THREE.Vector3): Point => {
-    const { clientWidth: w, clientHeight: h } = canvas;
     v.project(camera);
-    return [((v.x + 1) / 2) * w, ((1 - v.y) / 2) * h];
+    return [((v.x + 1) / 2) * viewW, ((1 - v.y) / 2) * viewH];
   };
   const mugPoint = new THREE.Vector3();
   const mugAcross = new THREE.Vector3();
@@ -660,7 +671,8 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   function updateLabels(apart: number) {
     if (!opts.onLabels) return;
     const opacity = labelOpacity(apart);
-    const { clientWidth: w, clientHeight: h } = canvas;
+    const w = viewW;
+    const h = viewH;
     opts.onLabels(
       printer.parts.map((part) => {
         anchor.copy(part.labelAnchor).applyMatrix4(part.object.matrixWorld).project(camera);
@@ -906,7 +918,10 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     raf = 0;
     stillFrames = dirty ? 0 : stillFrames + 1;
     dirty = false;
-    if (taa) taa.accumulate = stillFrames >= 1;
+    if (taa) {
+      taa.accumulate = taa.enabled = stillFrames >= 1;
+      plain.enabled = !taa.enabled;
+    }
     // Only consecutive frames say something about the device's speed.
     // The first seconds (shaders compiling, textures uploading, the opening
     // growing in) are slow on any device, so they do not count.
@@ -1136,8 +1151,13 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     // At the close everything comes into focus for the overview.
     const aperture = Math.max(mugBlur * 0.0004 * (1 - smoothstep(outro / 0.3)), focusAmount * 0.00022);
 
+    // The floor is out of the picture while the desk covers it and while the
+    // camera is close on the hovering mug; its reflection and its contact
+    // shadow are not drawn then. The morning's table covers the reflection too.
+    const floorSeen = deskAmount < 1 && !(looks.hero >= 1 && pk.frame <= 0);
+    studio.setReflection(quality.level === 2 && floorSeen && morning < 1);
     // Nor in the contact shadow on the floor.
-    studio.renderShadow(printerCastsShadow ? noContactShadow : [...noContactShadow, printer.root]);
+    if (floorSeen) studio.renderShadow(printerCastsShadow ? noContactShadow : [...noContactShadow, printer.root]);
     if (quality.level > 0) {
       bokeh.enabled = aperture > 0.000004;
       if (bokeh.enabled) {
@@ -1245,8 +1265,17 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   hand = await handLoading;
   opts.onProgress?.(0.8);
   if (hand) job.object.add(hand.object);
-  // Compile shaders in parallel where supported, so the first frame does not stall.
+  // Compile shaders in parallel where supported, so the first frame does not
+  // stall. They are compiled as they will be used: drawing into the lens's
+  // buffer rather than straight to the screen, once without the window's
+  // sunlight and once with it, so that neither the first frame nor the
+  // moment the sun comes on has to stop and compile.
+  renderer.setRenderTarget(composer.readBuffer);
   await renderer.compileAsync(scene, camera);
+  studio.setMorning(1, mugWorld, 1);
+  await renderer.compileAsync(scene, camera);
+  studio.setMorning(0, mugWorld, 0);
+  renderer.setRenderTarget(null);
   opts.onProgress?.(0.95);
   resizeObserver.observe(canvas);
   return handle;
