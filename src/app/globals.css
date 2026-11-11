@@ -65,6 +65,9 @@
   --footer-text: #f5f7f6;
   --footer-muted: #c9d3cf;
 
+  /* Type that lies on the 3D stage and over the desk: one warm cream. */
+  --story-ink: #fff6e8;
+
   --font: "Inter Variable", "Inter Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --radius: 16px;
   --gutter: 16px;
@@ -237,6 +240,106 @@ main:focus {
   height: 80px;
 }
 
+/* The logo at the top left, the links in small capitals at the top right,
+   straight on the page; a soft shade behind them keeps them readable over
+   whatever scrolls underneath. */
+.site-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 64px;
+  padding: 0 max(var(--gutter), 3vw);
+  color: var(--story-ink);
+  pointer-events: none;
+}
+
+.site-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -28px;
+  z-index: -1;
+  background: linear-gradient(rgb(10 12 12 / 0.62), rgb(10 12 12 / 0));
+}
+
+.site-nav > * {
+  pointer-events: auto;
+}
+
+.site-nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.site-nav__brand:hover {
+  color: inherit;
+}
+
+.site-nav__mark {
+  width: 26px;
+  height: 26px;
+}
+
+.site-nav__links {
+  display: none;
+}
+
+.site-nav__links ul {
+  display: flex;
+  gap: clamp(14px, 1.7vw, 26px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav__links a,
+.site-nav__menu {
+  display: block;
+  padding: 8px 0 5px;
+  border: 0;
+  background: repeating-linear-gradient(90deg, currentColor 0 2px, transparent 2px 4px) left bottom / 0 1.5px no-repeat;
+  color: inherit;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-size 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The current page, and the link under the pointer, get a dotted underline. */
+.site-nav__links a:hover,
+.site-nav__links a[aria-current],
+.site-nav__menu:hover {
+  background-size: 100% 1.5px;
+  color: inherit;
+}
+
+@media (min-width: 1024px) {
+  .site-nav__links {
+    display: block;
+  }
+
+  .site-nav__menu {
+    display: none;
+  }
+}
+
 /* The 404 page has no navigation, only the logo in the header. */
 .site-header__inner {
   display: flex;
@@ -343,8 +446,6 @@ main:focus {
 /* The story reaches up under the floating navigation (the header's 80px),
    so the 3D stage fills the whole first screen. */
 .story {
-  /* The story's type is one warm cream, on the stage and over the desk. */
-  --story-ink: #fff6e8;
   position: relative;
   margin-top: -80px;
   /* The opening spans the full window width, scrollbar included. */
@@ -832,7 +933,7 @@ html:has(.story--live)::-webkit-scrollbar {
   margin-bottom: 0.45em;
   color: var(--story-ink);
   font-weight: 600;
-  font-size: clamp(2.3rem, 4.5vw, 4rem);
+  font-size: clamp(2.2rem, 3.9vw, 3.5rem);
   line-height: 0.98;
   letter-spacing: -0.045em;
 }
@@ -892,10 +993,14 @@ html:has(.story--live)::-webkit-scrollbar {
   pointer-events: none;
 }
 
-/* Under the freshly printed mug, below the giant line: a few short lines in capitals. */
+/* Beside the hand that carries the freshly printed mug: a few short lines in
+   capitals at the bottom left, clear of the forearm. */
 .story__caption--reveal {
+  left: max(var(--gutter), 3vw);
   bottom: 9svh;
-  width: min(24rem, calc(100% - 32px));
+  width: min(19rem, calc(100% - 32px));
+  text-align: left;
+  transform: translateY(calc((1 - var(--caption, 0)) * 12px));
 }
 
 .story__caption.story__caption--reveal p {

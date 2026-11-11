@@ -23,6 +23,21 @@ of this repository: https://github.com/laroca00/3dcare/commits/main
   takes the place of the browser's scrollbar on the home page. The page no
   longer scrolls sideways.
 
+### A hand that carries the mug
+- The hand no longer reaches in from the side for a handle. It rises from
+  the bottom of the picture and carries the freshly printed mug on its open
+  palm, fingers cupped round the base, while the camera stands a little
+  higher so the mug's opening and the palm show. Its skin is a deeper tone
+  that sits in the room's low light. The scene's caption moved to the bottom
+  left, clear of the forearm.
+
+### A plain menu
+- The floating menu bar that folded into a circle is replaced by the logo at
+  the top left and the links in small capitals at the top right, lying
+  straight on the page; the current page has a dotted underline. On narrow
+  screens the links still open in a side sheet. The animation library the
+  old bar needed is no longer part of the site.
+
 ## 2026-10-27
 
 ### The shading stays

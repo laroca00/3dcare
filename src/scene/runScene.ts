@@ -209,6 +209,9 @@ const REVEAL_FORWARD = 22;
 /** How far the printer slides back into the dark behind it, and aside, out of the giant line's way. */
 const REVEAL_SLIDE = 80;
 const REVEAL_ASIDE = 105;
+/** While the hand carries the mug: how far the camera rises, and how far below the mug's middle it aims (cm). */
+const HELD_RISE = 9;
+const HELD_DROP = 3.5;
 /** How far the camera is from the mug then; narrow screens need more room for the handles. */
 const REVEAL_DISTANCE_WIDE = 54;
 const REVEAL_DISTANCE_NARROW = 82;
@@ -504,7 +507,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
   const wallPoint = new THREE.Vector3();
   const macroView = new THREE.Vector3();
 
-  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number, looks: ReturnType<typeof heroLooks>, pk: ReturnType<typeof packageMotion>) {
+  function placeCamera(use: number, apart: number, center: number, mug: THREE.Vector3, zoom: number, printed: number, outro: number, reveal: number, above: number, looks: ReturnType<typeof heroLooks>, pk: ReturnType<typeof packageMotion>, held: number) {
     // The camera moves in while the printer is apart, so the parts fill the
     // stage. In the last scene it follows the mug to the table and frames it
     // close up, beside the text on wide screens.
@@ -528,8 +531,12 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     const hero = smoothstep(reveal);
     mugMiddle.copy(mug).y += (LAYERS * LAYER_HEIGHT) / 2;
     revealView.copy(mugMiddle).addScaledVector(revealDir, wide ? REVEAL_DISTANCE_WIDE : REVEAL_DISTANCE_NARROW).y += 3;
+    // While the hand carries the mug, the camera stands a little higher and
+    // aims a little lower, so the palm under the mug and the forearm show.
+    revealView.y += HELD_RISE * held;
     camera.position.lerp(revealView, hero);
     lookAt.copy(home).lerp(mugMiddle, hero);
+    lookAt.y -= HELD_DROP * held;
     // On narrow screens the text fills the top, so the desk sits lower in the view.
     if (above > 0) lookAt.lerp(deskTarget, smoothstep(above));
     if (!wide && above > 0) lookAt.z -= smoothstep(above) * 30;
@@ -1113,7 +1120,7 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     lineup.object.rotation.y = -stage.rotation.y + 0.15;
     lineup.object.updateMatrixWorld();
     lineup.setReveal((outro - 0.08) / 0.5);
-    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8, looks, pk);
+    placeCamera(u, apart, center, mugWorld, zoom, printed, outro, r / 0.5, 1 - draw / 0.8, looks, pk, smoothstep(reveal.reach));
     heroMug = reveal.type > 0.6 && !opts.frozen;
     if (!heroMug) setTouchingMug(false);
     // The line sits a little above the mug's middle, so the mug covers the lower half of the letters.
@@ -1206,7 +1213,6 @@ export async function startScene(canvas: HTMLCanvasElement, opts: SceneOptions):
     },
     setShape(id) {
       job.setShape(id);
-      hand?.setShape(id);
       handle.invalidate();
     },
     snapshot() {

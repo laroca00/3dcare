@@ -1,5 +1,5 @@
 import type { Dictionary, Locale } from "@/i18n/config";
-import { AnimatedNav } from "./ui/animated-nav";
+import { SiteNav } from "./ui/site-nav";
 
 export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
   const items = [
@@ -17,7 +17,7 @@ export function SiteHeader({ lang, t }: { lang: Locale; t: Dictionary }) {
       <a href="#main" className="skip-link">
         {t.nav.skip}
       </a>
-      <AnimatedNav lang={lang} items={items} t={t.nav} />
+      <SiteNav lang={lang} items={items} t={t.nav} />
     </header>
   );
 }
